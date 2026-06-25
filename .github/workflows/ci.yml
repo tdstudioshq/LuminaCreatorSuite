@@ -68,6 +68,11 @@ jobs:
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
             -v ON_ERROR_STOP=1 -f supabase/tests/member_accounts.sql
 
+      - name: Behavioral checks (follows + blocks + safe public views)
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 -f supabase/tests/social_relationships.sql
+
       - name: Stop Supabase
         if: always()
         run: supabase stop || true

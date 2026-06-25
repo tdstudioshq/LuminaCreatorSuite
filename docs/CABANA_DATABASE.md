@@ -2,10 +2,10 @@
 
 > Target production schema for the full creator-subscription platform, plus the documented current state.
 >
-> This document records the implemented schema through Phase 2B part 1 and plans later additions.
-> The Phase 2A baseline and Phase 2B member-account migration rebuild cleanly from zero. No further
-> product tables—including posts, messaging, payments, or `creator_subscriptions`—are authorized
-> without explicit approval and an RLS/test plan.
+> This document records the implemented schema through Phase 2C and plans later additions. The
+> Phase 2A baseline, Phase 2B member accounts, and Phase 2C relationship migration rebuild cleanly
+> from zero. No posts, messaging, payments, or `creator_subscriptions` are authorized without
+> explicit approval and an RLS/test plan.
 >
 > Conventions: UUID (prefer time-ordered, e.g. UUIDv7, for high-volume event/message tables) primary keys · `timestamptz` everywhere · money as **integer minor units (cents) + explicit `currency`** · index every foreign key · RLS predicates use `(select auth.uid())`.
 
@@ -13,14 +13,17 @@
 
 ## 1. Current Implemented Schema
 
-Source: checked-in migrations plus `src/integrations/supabase/types.ts`. Nine tables, two enums, and
-four database functions. Phase 2B type additions are hand-maintained pending Lovable regeneration.
+Source: checked-in migrations plus `src/integrations/supabase/types.ts`. Eleven tables, two enums,
+safe public profile views, and protected database helpers. Phase 2B/2C type additions are
+hand-maintained pending Lovable regeneration.
 
 | Table              | Columns (current)                                                                                                                   | Notes                                                                                   |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `profiles`         | `id` (=auth.users.id), `email`, `name`, `account_type`, `created_at`, `updated_at`                                                  | Shared identity row; `account_type` defaults to `creator`                               |
 | `creator_profiles` | `id`, `user_id` (nullable!), `handle`, `name`, `bio`, `avatar_url`, `banner_url`, `theme`, `plan`, `created_at`, `updated_at`       | Public creator surface. `user_id` nullable allows ownerless seeds (`aurora`, `oliviac`) |
-| `member_profiles`  | `id`, `user_id`, `display_name`, `bio`, `avatar_url`, `created_at`, `updated_at`                                                    | Private owner-only member profile; no anonymous access                                  |
+| `member_profiles`  | `id`, `user_id`, `username`, `display_name`, `bio`, `avatar_url`, timestamps                                                        | Full row owner-only; safe public subset is exposed through `public_member_profiles`     |
+| `follows`          | `id`, `follower_id` → profiles, `following_creator_id` → creator_profiles, `created_at`                                             | Unique account→creator relationship; authenticated-only base table                      |
+| `blocks`           | `id`, `blocker_id` → profiles, `blocked_user_id` → profiles, `reason`, `created_at`                                                 | Unique private account→account relationship; authenticated-only base table              |
 | `links`            | `id`, `profile_id` → creator_profiles, `title`, `url`, `icon`, `featured`, `scheduled` (text!), `position`, `clicks`, `created_at`  | `scheduled` is a label, not a timestamp                                                 |
 | `products`         | `id`, `profile_id` → creator_profiles, `title`, `price` (text!), `type` (text), `image_url`, `sales`, `position`, `created_at`      | `price` is a display string; no checkout linkage                                        |
 | `analytics_events` | `id`, `profile_id` (nullable) → creator_profiles, `event_type`, `target_id` (nullable), `metadata` (json), `created_at`             | Anonymous inserts allowed for any real profile                                          |
@@ -29,8 +32,8 @@ four database functions. Phase 2B type additions are hand-maintained pending Lov
 | `reserved_handles` | `handle` (PK)                                                                                                                       | Blocked usernames                                                                       |
 
 **Enums:** `app_role` (`admin` | `moderator` | `user`) and `account_type` (`creator` |
-`member`). **Functions:** `handle_new_user`, `has_role`, `validate_creator_handle`, and
-`touch_updated_at`.
+`member`). **Public views:** `public_creator_profiles`, `public_member_profiles`. Relationship RPCs
+accept creator usernames and derive the actor from `auth.uid()`; they never return UUIDs.
 
 **Known current-schema weaknesses** (carried into tech debt): prices/scheduling stored as strings;
 no post/publish model; `creator_profiles.user_id` nullable and exposed by public `select("*")`;
@@ -67,6 +70,33 @@ no post/publish model; `creator_profiles.user_id` nullable and exposed by public
 
 > **Note on `types.ts`:** the generated `src/integrations/supabase/types.ts` was hand-extended with `member_profiles`, `profiles.account_type`, and the `account_type` enum (clearly commented), since Lovable Cloud regeneration requires remote access that is deferred. Reconcile on the next regeneration.
 
+<a id="social-relationships-phase-2c"></a>
+
+### Social relationship migration (Phase 2C)
+
+`supabase/migrations/20260513000000_social_relationships.sql` adds the social graph without posts,
+feeds, messaging, notifications, subscriptions, or payments.
+
+- **`member_profiles.username`** — required lowercase public username, generated during member
+  signup, validated against the reserved-handle set, and case-insensitively unique.
+- **`follows`** — unique (`follower_id`, `following_creator_id`), cascading FKs, reverse index for
+  follower counts. RLS allows users to select/insert/delete their own follows and creators to select
+  rows targeting their creator profile. Anonymous access is revoked.
+- **`blocks`** — unique (`blocker_id`, `blocked_user_id`), no-self check, optional reason capped at
+  280 characters, reverse FK index. Only the blocker can select/insert/delete; anonymous access is
+  revoked.
+- **Safe views** — `public_creator_profiles` and `public_member_profiles` expose only username,
+  display name, avatar/banner, bio, placeholder verification/post counts, and aggregate
+  follower/following counts. They expose no auth/profile UUIDs, email, plan, theme, or private
+  metadata.
+- **Protected relationship RPCs** — accept creator usernames, derive the actor from `auth.uid()`,
+  and expose no identifiers. The TanStack server actions call them with the caller's authenticated
+  RLS-scoped Supabase client; no service role is used.
+
+**Validation:** `supabase/tests/social_relationships.sql` covers follow/block uniqueness, owner and
+creator RLS, cross-user denial, self-follow rejection, anonymous base-table/RPC denial, safe-view
+columns/counts, and protected follow/unfollow behavior. It runs in `db:validate` and CI.
+
 ## 2. Target Production Schema
 
 New tables grouped by dependency. Group letters match the build roadmap (`CABANA_BUILD_ROADMAP.md` §5).
@@ -76,15 +106,17 @@ New tables grouped by dependency. Group letters match the build roadmap (`CABANA
 - **`users`** — application projection over `auth.users`: `id` PK (=auth.users.id), `email`, `status` (`active|restricted|suspended|deleted`), `created_at`, `updated_at`, `deleted_at`.
 - **`profiles`** (extend current) — `user_id` PK, `display_name`, `username` (unique, ci), `avatar_path`, `bio`.
 - **`creator_profiles`** (extend current) — add `verified bool`, `monetization_status` (`disabled|pending|active|restricted`), `subscription_price_cents int`, `default_currency`, `subscriber_count int`; migrate `avatar_url/banner_url` → `*_path`; make `user_id` NOT NULL for real accounts.
-- **`member_profiles`** (extend current) — add `username` (unique, ci), migrate `avatar_url` →
-  `avatar_path`, and add `is_private bool`.
+- **`member_profiles`** (extend current) — migrate `avatar_url` → `avatar_path` and add
+  `is_private bool`.
 - **`admin_users`** — `user_id`, `role`, `permissions jsonb`, `active`, `created_at` (extends/replaces `user_roles` with capability scopes: moderator/support/finance/admin/super-admin).
 - **`settings`** — `user_id` PK, `email_notifications`, `push_notifications`, `message_permissions` (`everyone|followers|subscribers|nobody`), `comment_permissions` (same enum), `marketing_opt_in`, `locale`, `timezone`, `updated_at`.
 
 ### Social graph (Group A)
 
-- **`follows`** — `id`, `follower_user_id`, `creator_profile_id`, `status` (`active|blocked`), `created_at`. Unique (`follower_user_id`, `creator_profile_id`).
-- **`blocks`** — `blocker_user_id`, `blocked_user_id`, `created_at`. Unique pair.
+- **`follows`** — ✅ implemented as `id`, `follower_id`, `following_creator_id`, `created_at`;
+  unique pair with indexed FKs and RLS.
+- **`blocks`** — ✅ implemented as `id`, `blocker_id`, `blocked_user_id`, optional `reason`,
+  `created_at`; unique pair, no-self constraint, indexed FKs, and private RLS.
 
 ### Publishing (Group B)
 
@@ -206,11 +238,13 @@ erDiagram
 | Table                                              | Read                                                                                                                | Write                                                                                    |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | `creator_profiles` (public-safe view)              | Everyone reads published, **owner-id-omitting** view                                                                | Owner updates own                                                                        |
-| `member_profiles`                                  | **Current:** full row owner-only. **Target:** public-safe discovery view plus owner-only full row                   | Owner inserts/updates own; no direct anonymous table access                              |
+| `member_profiles`                                  | Full row owner-only; `public_member_profiles` exposes the explicit safe subset                                      | Owner inserts/updates own; no direct anonymous table access                              |
 | `posts`                                            | `public` rows: everyone. `followers`/`subscribers`/`purchase`: only via `content_entitlements`. Owner reads all own | Creator CRUD own                                                                         |
 | `post_media`                                       | Same access as parent post                                                                                          | Owner writes                                                                             |
 | `comments`                                         | Readable if post readable                                                                                           | Author creates/edits own; post creator can hide                                          |
-| `likes`/`follows`                                  | Aggregate-safe reads                                                                                                | Authenticated user owns write; creator reads own follower list                           |
+| `follows`                                          | User reads own follows; creator reads followers targeting own profile; public view exposes counts only              | Authenticated user inserts/deletes own; no update                                        |
+| `blocks`                                           | Blocker only; blocked user cannot infer the relationship                                                            | Blocker inserts/deletes own; no update                                                   |
+| `likes`                                            | Aggregate-safe reads (planned)                                                                                      | Authenticated user owns write (planned)                                                  |
 | `saves`                                            | Private to owner                                                                                                    | Owner only                                                                               |
 | `creator_subscriptions`                            | Member and creator read scoped rows                                                                                 | **Status written by trusted server only**                                                |
 | `content_entitlements`                             | Owner reads own                                                                                                     | Server only                                                                              |
@@ -221,7 +255,10 @@ erDiagram
 | `audit_logs`                                       | Privileged read by capability                                                                                       | **Append-only**, server only                                                             |
 | `analytics_events`                                 | Owner reads aggregates                                                                                              | Insert constrained + rate-limited (today's check only verifies profile exists — tighten) |
 
-**Public-safe views are mandatory**: a `public_creator_view` that omits `user_id` must replace the current `select("*")` on `creator_profiles` (today it leaks `user_id`).
+**Public-safe views exist:** `public_creator_profiles` and `public_member_profiles` omit all IDs and
+private fields. The legacy public creator bundle still reads `creator_profiles` directly for
+links/products/analytics compatibility; migrating that bundle fully onto safe views remains a
+hardening task before public IDs can be considered eliminated everywhere.
 
 ## 6. Storage Buckets
 

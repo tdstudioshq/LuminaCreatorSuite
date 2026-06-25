@@ -107,6 +107,7 @@ describe("mapMemberProfile", () => {
       mapMemberProfile({
         id: "m1",
         user_id: "u1",
+        username: "ren",
         display_name: "Ren",
         bio: "fan",
         avatar_url: null,
@@ -116,6 +117,7 @@ describe("mapMemberProfile", () => {
     ).toEqual({
       id: "m1",
       userId: "u1",
+      username: "ren",
       displayName: "Ren",
       bio: "fan",
       avatarUrl: null,

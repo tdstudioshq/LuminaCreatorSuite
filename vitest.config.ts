@@ -16,11 +16,12 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "text-summary", "html"],
-      // Pure business-logic layer (Phase 1 money/entitlements + Phase 2B account).
+      // Pure/testable business layer (money, entitlements, accounts, relationships).
       include: [
         "src/lib/cabana-money.ts",
         "src/lib/cabana-entitlements.ts",
         "src/lib/cabana-account.ts",
+        "src/lib/cabana-relationships.ts",
       ],
       thresholds: {
         lines: 95,

@@ -41,17 +41,17 @@
 
 ### Public creator surface
 
-| Route         | File           | Protection | State                                                          |
-| ------------- | -------------- | ---------- | -------------------------------------------------------------- |
-| `/$username`  | $username.tsx  | Public     | ✅ dynamic creator profile (follow temporary, theme unapplied) |
-| `/td`         | td.tsx         | Public     | 🟡 bespoke static microsite                                    |
-| `/eldondolla` | eldondolla.tsx | Public     | 🟡 bespoke static microsite                                    |
+| Route         | File           | Protection | State                                                               |
+| ------------- | -------------- | ---------- | ------------------------------------------------------------------- |
+| `/$username`  | $username.tsx  | Public     | ✅ dynamic creator profile; authenticated Follow/Following persists |
+| `/td`         | td.tsx         | Public     | 🟡 bespoke static microsite                                         |
+| `/eldondolla` | eldondolla.tsx | Public     | 🟡 bespoke static microsite                                         |
 
 ### Member account (Phase 2B)
 
-| Route      | File        | Protection                                                  | State                                                                       |
-| ---------- | ----------- | ----------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `/account` | account.tsx | Client auth gate; **member-only** (creators → `/dashboard`) | ✅ member profile foundation (display name + bio) via the T2 server actions |
+| Route      | File        | Protection                                                  | State                                                                     |
+| ---------- | ----------- | ----------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `/account` | account.tsx | Client auth gate; **member-only** (creators → `/dashboard`) | ✅ member profile foundation (username, display name, bio) via T2 actions |
 
 > The `/dashboard` guard is now account-aware: a signed-in **member** is
 > redirected to `/account`, and `/account` redirects a **creator** back to
@@ -161,6 +161,7 @@ render nothing private until the member layout + server gates land._
 
 ```
 /account → edit private member display name + bio
+/discover → /$username → persistent follow/unfollow
 /discover → /$username → /creator/$username/subscribe → mock checkout → entitlement
 /feed → /post/$postId → comments/likes/saves
 /messages → /messages/$conversationId

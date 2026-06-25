@@ -11,7 +11,7 @@ declare
   expected_tables text[] := array[
     'profiles','creator_profiles','links','products',
     'analytics_events','subscriptions','user_roles','reserved_handles',
-    'member_profiles'
+    'member_profiles','follows','blocks'
   ];
   t text;
 begin
@@ -36,6 +36,20 @@ begin
     where table_schema = 'public' and table_name = 'profiles' and column_name = 'account_type'
   ) then
     raise exception 'MISSING COLUMN: public.profiles.account_type';
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'member_profiles' and column_name = 'username'
+  ) then
+    raise exception 'MISSING COLUMN: public.member_profiles.username';
+  end if;
+
+  -- Phase 2C safe public views
+  if to_regclass('public.public_creator_profiles') is null then
+    raise exception 'MISSING VIEW: public_creator_profiles';
+  end if;
+  if to_regclass('public.public_member_profiles') is null then
+    raise exception 'MISSING VIEW: public_member_profiles';
   end if;
 
   -- Functions
@@ -68,6 +82,12 @@ begin
   end if;
   if not (select relrowsecurity from pg_class where oid = 'public.member_profiles'::regclass) then
     raise exception 'RLS NOT ENABLED: member_profiles';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.follows'::regclass) then
+    raise exception 'RLS NOT ENABLED: follows';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.blocks'::regclass) then
+    raise exception 'RLS NOT ENABLED: blocks';
   end if;
 
   -- member_profiles must NOT be publicly readable (no USING(true) select policy)
