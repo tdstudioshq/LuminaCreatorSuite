@@ -11,7 +11,10 @@
 - Flat dot-notation files map to nested paths: `dashboard.posts.tsx` → `/dashboard/posts`.
 - `dashboard.tsx` is the **layout** route; all `dashboard.*` are children rendered in its `<Outlet/>`.
 - `$username.tsx` is a **top-level dynamic** route. ⚠️ It matches arbitrary top-level slugs, so unknown paths like `/foo` render the creator "not claimed" state rather than the generic 404. Reserved/static top-level routes must be declared explicitly to win precedence.
-- Protection today is **client-side only**: `dashboard.tsx` redirects to `/login?redirect=…` without a session; `admin.tsx` checks `useHasRole('admin')`. No server route loaders guard data. Hardening this is a security item (see `CABANA_TECH_DEBT.md`).
+- Protection today is **client-side only**: `dashboard.tsx` and `account.tsx` enforce session and
+  account-type redirects; `admin.tsx` checks `useHasRole('admin')`. Protected account data itself
+  uses RLS-scoped server actions, but no server route loaders guard pages yet. Hardening this remains
+  a security item (see `CABANA_TECH_DEBT.md`).
 
 ## 2. Existing Routes (34 route files)
 
@@ -38,17 +41,17 @@
 
 ### Public creator surface
 
-| Route         | File           | Protection | State                                                          |
-| ------------- | -------------- | ---------- | -------------------------------------------------------------- |
-| `/$username`  | $username.tsx  | Public     | ✅ dynamic creator profile (follow temporary, theme unapplied) |
-| `/td`         | td.tsx         | Public     | 🟡 bespoke static microsite                                    |
-| `/eldondolla` | eldondolla.tsx | Public     | 🟡 bespoke static microsite                                    |
+| Route         | File           | Protection | State                                                               |
+| ------------- | -------------- | ---------- | ------------------------------------------------------------------- |
+| `/$username`  | $username.tsx  | Public     | ✅ dynamic creator profile; authenticated Follow/Following persists |
+| `/td`         | td.tsx         | Public     | 🟡 bespoke static microsite                                         |
+| `/eldondolla` | eldondolla.tsx | Public     | 🟡 bespoke static microsite                                         |
 
 ### Member account (Phase 2B)
 
-| Route      | File        | Protection                                                  | State                                                                       |
-| ---------- | ----------- | ----------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `/account` | account.tsx | Client auth gate; **member-only** (creators → `/dashboard`) | ✅ member profile foundation (display name + bio) via the T2 server actions |
+| Route      | File        | Protection                                                  | State                                                                     |
+| ---------- | ----------- | ----------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `/account` | account.tsx | Client auth gate; **member-only** (creators → `/dashboard`) | ✅ member profile foundation (username, display name, bio) via T2 actions |
 
 > The `/dashboard` guard is now account-aware: a signed-in **member** is
 > redirected to `/account`, and `/account` redirects a **creator** back to
@@ -118,7 +121,10 @@ From `CABANA_BUILD_ROADMAP.md` §6 and the product spec. `$param` = dynamic.
 
 **Public:** `/`, `/features/ai`, `/pricing`, `/demo`, `/docs/*`, `/$username`, `/td`, `/eldondolla`, all auth routes, future legal pages, `/discover` (public-safe), `/post/$postId` (public posts; gated for restricted).
 
-**Member-auth (future shell):** `/feed`, `/messages`, `/notifications`, `/settings/member`, `/settings/billing`, `/creator/$username/subscribe`. _Today these placeholders are public and must render nothing private until the member layout + server gates land._
+**Member-auth:** `/account` is implemented with a client account-type gate and protected profile
+actions. Future member shell: `/feed`, `/messages`, `/notifications`, `/settings/member`,
+`/settings/billing`, `/creator/$username/subscribe`. _Today those placeholders are public and must
+render nothing private until the member layout + server gates land._
 
 **Creator-auth (`/dashboard/*`):** all Studio routes. Gate today is client-side; add server loaders.
 
@@ -129,9 +135,12 @@ From `CABANA_BUILD_ROADMAP.md` §6 and the product spec. `$param` = dynamic.
 ### Auth
 
 ```
-/signup → Supabase signUp → (trigger creates profiles/creator_profiles/subscriptions/user_roles)
-        → /onboarding → /dashboard
+/signup → choose creator/member → Supabase signUp
+        ├─ creator trigger → profile + creator_profile + subscription + role → /onboarding
+        └─ member trigger  → profile + member_profile + role → /account
 /login  → signInWithPassword → ?redirect or /dashboard
+/dashboard (member) → /account
+/account (creator) → /dashboard
 /dashboard (no session) → /login?redirect=<path>
 /forgot-password → email → /reset-password → /dashboard
 ```
@@ -148,9 +157,11 @@ From `CABANA_BUILD_ROADMAP.md` §6 and the product spec. `$param` = dynamic.
             └─ (future) /posts · /subscribers · /messages · /earnings · /notifications
 ```
 
-### Member (target)
+### Member (current + target)
 
 ```
+/account → edit private member display name + bio
+/discover → /$username → persistent follow/unfollow
 /discover → /$username → /creator/$username/subscribe → mock checkout → entitlement
 /feed → /post/$postId → comments/likes/saves
 /messages → /messages/$conversationId
@@ -166,7 +177,8 @@ From `CABANA_BUILD_ROADMAP.md` §6 and the product spec. `$param` = dynamic.
 
 ## 6. Route Hardening Backlog
 
-- Declare reserved top-level slugs so `/$username` cannot shadow real pages (and reconcile with `reserved_handles`).
+- Keep static top-level routes synchronized with `reserved_handles` (`account` and `member` were
+  added in Phase 2B) so `/$username` cannot shadow real pages.
 - Add server-side route loaders / guards for `/dashboard/*` and `/admin/*` (don't rely on client gates).
 - Introduce the member layout so member routes can require auth and stop being public placeholders.
 - Move admin from local tabs to URL-backed subroutes.

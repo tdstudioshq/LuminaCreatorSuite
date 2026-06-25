@@ -175,6 +175,12 @@ function MemberAccount({ name, email }: { name: string; email: string }) {
               <dt className="text-muted-foreground">Email</dt>
               <dd className="text-foreground/90 truncate">{email}</dd>
             </div>
+            {loaded?.username && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Username</dt>
+                <dd className="text-foreground/90">@{loaded.username}</dd>
+              </div>
+            )}
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Account type</dt>
               <dd className="text-foreground/90">Member</dd>

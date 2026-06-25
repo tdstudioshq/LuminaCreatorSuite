@@ -2,7 +2,9 @@
 
 > The data-access contract for CABANA: what runs as direct (RLS-safe) Supabase client calls vs. trusted server actions, with input/output shapes, auth requirements, error handling, and webhook architecture.
 >
-> **Plan only — authorizes no implementation.** Companion: [`CABANA_DATABASE.md`](./CABANA_DATABASE.md), [`CABANA_PRODUCT_SPEC.md`](./CABANA_PRODUCT_SPEC.md).
+> Documents both implemented contracts and planned interfaces. Planned sections do not authorize
+> implementation. Companion: [`CABANA_DATABASE.md`](./CABANA_DATABASE.md),
+> [`CABANA_PRODUCT_SPEC.md`](./CABANA_PRODUCT_SPEC.md).
 
 ---
 
@@ -16,7 +18,10 @@ CABANA has two ways to reach the database. Choosing the wrong tier is a security
 | **T2 — Server action** | TanStack Start server function guarded by `requireSupabaseAuth` (`auth-middleware.ts`), or Supabase Edge Function | Money, entitlements, signed URLs, admin, provider integrations, anything that must not trust client input      | Bearer token validated server-side → scoped client + `userId` |
 | **T3 — Service role**  | `supabaseAdmin` (`client.server.ts`, bypasses RLS)                                                                | Inside T2 only, for trusted writes (ledger, audit, webhooks). **Never imported into client code.**             | Server process only                                           |
 
-> **Update (Phase 2B):** the **T2 tier is now wired and in use.** `auth-middleware.ts` (`requireSupabaseAuth`, server) is paired with a new client middleware `auth-client-middleware.ts` (`attachSupabaseToken`) that sends the session bearer token, and `src/lib/account-actions.ts` ships the first three protected server actions (see §2b). The rest of the app remains T1 (`cabana-store.ts`, `cabana-auth.ts`, `cabana-analytics.ts`, `cabana-roles.ts`). `client.server.ts` (T3) still has no callers.
+> **Update (Phase 2C):** T2 now covers account and relationship actions.
+> `attachSupabaseToken` sends the caller token and `requireSupabaseAuth` validates it before every
+> action. `account-actions.ts` and `relationship-actions.ts` use the caller's scoped client; T3
+> (`client.server.ts`) still has no callers.
 
 **Every state-changing T2/T3 action must:** validate input (shared Zod schema), authorize on the server, use an idempotency key where money or duplicates are possible, and append an `audit_logs` row for privileged actions.
 
@@ -62,6 +67,26 @@ Client hooks: `useAccountType()` (lightweight direct read used by the
 > to an RPC bridge), so they must NOT live under a `**/server/**` path — the
 > start import-protection plugin blocks those from client bundles.
 
+## 2c. Implemented Relationship Actions (T2 — Phase 2C)
+
+`src/lib/relationship-actions.ts` uses the same middleware pair as account actions. Creator inputs
+are normalized public usernames. Narrow database RPCs derive the actor from `auth.uid()`, expose no
+UUIDs, and enforce self-follow/block rules; block actions accept a target UUID intended for future
+authenticated/private contexts.
+
+| Action                              | Contract                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------------- |
+| `followCreator({username})`         | [auth] idempotently follows a creator; rejects self-follow or an actor-owned block |
+| `unfollowCreator({username})`       | [auth] idempotently removes the caller's follow                                    |
+| `blockUser({targetUserId,reason?})` | [auth] creates the caller's private block; reason capped at 280 characters         |
+| `unblockUser({targetUserId})`       | [auth] removes the caller's private block                                          |
+| `getRelationshipState({username})`  | [auth] → following/blocked/self flags plus follower and caller-following counts    |
+| `getFollowerCount({username})`      | [auth] → aggregate count from `public_creator_profiles`                            |
+| `getFollowingCount()`               | [auth] → caller's RLS-scoped follow count                                          |
+
+Hooks in `use-relationships.ts`: `useRelationship(username)` and `useFollow(username)`. The public
+creator page uses `useFollow` for the minimal persistent Follow/Following proof.
+
 ## 3. Planned Server Actions (T2)
 
 Grouped by domain. Each entry: **name** — input → output [auth]. "Owner" = authenticated owner of the resource; "Server" = service-role inside a guarded action.
@@ -86,10 +111,11 @@ Grouped by domain. Each entry: **name** — input → output [auth]. "Owner" = a
 - `getCreatorFeed(creatorId,cursor)` [public/entitled] · `getMemberFeed(cursor)` [member].
 - `getPostWithEntitlement(postId)` → post + `{entitled:boolean, reason}` [auth] — **server resolves `content_entitlements`, never client flags**.
 
-### Comments / likes / saves / follows (mostly T1, server where moderation matters)
+### Comments / likes / saves / follows
 
 - `toggleLike(postId)` · `toggleSave(postId)` [auth, T1] · `listSavedPosts(cursor)` [owner].
-- `followCreator(creatorId)` · `unfollowCreator(creatorId)` [auth, T1] · `listFollowers`/`listFollowing(cursor)` · `blockUser(userId)` [auth].
+- ~~`followCreator` / `unfollowCreator` / `blockUser` / `unblockUser` / relationship counts~~ ✅
+  Phase 2C. `listFollowers` / `listFollowing` cursor APIs remain planned.
 - `createComment` · `updateOwnComment` · `deleteOwnComment` [author] · `hideCommentAsCreator(id)` [creator] · `listCommentsCursor(postId,cursor)`.
 
 ### Subscriptions & entitlements (T2 — server writes status)

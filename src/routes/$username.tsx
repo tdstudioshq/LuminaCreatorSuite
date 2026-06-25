@@ -1,11 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { BadgeCheck, ShoppingBag, ArrowUpRight, Play, Sparkles, Mail, Crown } from "lucide-react";
+import { toast } from "sonner";
 import cabanaLogo from "@/assets/cabana-logo.webp";
 import { useCreatorByHandle, LINK_ICONS } from "@/lib/cabana-store";
 import { trackPageView, trackLinkClick, trackProductClick } from "@/lib/cabana-analytics";
 import { comingSoon } from "@/lib/coming-soon";
+import { useFollow } from "@/lib/use-relationships";
 
 export const Route = createFileRoute("/$username")({
   component: CreatorProfileRoute,
@@ -35,7 +37,8 @@ function CreatorProfileRoute() {
 }
 
 export function CreatorProfile({ username }: { username: string }) {
-  const [followed, setFollowed] = useState(false);
+  const navigate = useNavigate();
+  const relationship = useFollow(username);
   const { data, isLoading } = useCreatorByHandle(username);
   const profileId = data?.profile.id;
 
@@ -72,6 +75,17 @@ export function CreatorProfile({ username }: { username: string }) {
 
   const { profile, links, products } = data;
   const heroImage = profile.banner || profile.avatar;
+  const handleFollow = async () => {
+    if (!relationship.signedIn) {
+      navigate({ to: "/login", search: { redirect: `/${username}` } as never });
+      return;
+    }
+    try {
+      await relationship.toggle();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn’t update follow status.");
+    }
+  };
 
   return (
     <div className="relative min-h-screen overflow-x-hidden" data-cabana-theme={profile.theme}>
@@ -132,7 +146,18 @@ export function CreatorProfile({ username }: { username: string }) {
                   style={{ color: "oklch(0.85 0.15 195)" }}
                 />
               </div>
-              <p className="text-sm text-muted-foreground mb-3">@{profile.handle || username}</p>
+              <div className="text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                <span>@{profile.handle || username}</span>
+                {relationship.signedIn && !relationship.loading && (
+                  <>
+                    <span aria-hidden>·</span>
+                    <span>
+                      {relationship.followerCount}{" "}
+                      {relationship.followerCount === 1 ? "follower" : "followers"}
+                    </span>
+                  </>
+                )}
+              </div>
 
               {profile.bio && (
                 <motion.p
@@ -155,10 +180,15 @@ export function CreatorProfile({ username }: { username: string }) {
             className="mt-4 grid grid-cols-[1fr_auto] gap-2"
           >
             <button
-              onClick={() => setFollowed(!followed)}
-              className={`btn-luxury !w-full !py-4 ${followed ? "!bg-none" : ""}`}
+              onClick={() => void handleFollow()}
+              disabled={
+                relationship.pending || relationship.data?.isSelf || relationship.blockedByMe
+              }
+              className={`btn-luxury !w-full !py-4 disabled:opacity-60 ${
+                relationship.following ? "!bg-none" : ""
+              }`}
               style={
-                followed
+                relationship.following
                   ? {
                       background: "oklch(1 0 0 / 0.06)",
                       color: "var(--foreground)",
@@ -168,8 +198,19 @@ export function CreatorProfile({ username }: { username: string }) {
                   : {}
               }
             >
-              {followed ? "Following" : `Follow ${profile.name || "creator"}`}
-              {!followed && <Sparkles className="w-4 h-4" />}
+              {relationship.pending
+                ? "Updating…"
+                : relationship.data?.isSelf
+                  ? "Your profile"
+                  : relationship.blockedByMe
+                    ? "Blocked"
+                    : relationship.following
+                      ? "Following"
+                      : `Follow ${profile.name || "creator"}`}
+              {!relationship.following &&
+                !relationship.data?.isSelf &&
+                !relationship.blockedByMe &&
+                !relationship.pending && <Sparkles className="w-4 h-4" />}
             </button>
             <button
               onClick={() => comingSoon("Direct messaging")}

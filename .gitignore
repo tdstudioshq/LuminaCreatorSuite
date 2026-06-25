@@ -42,3 +42,4 @@ supabase/.temp
 *.njsproj
 *.sln
 *.sw?
+AGENTS.md

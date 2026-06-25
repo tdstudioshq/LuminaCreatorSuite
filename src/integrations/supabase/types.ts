@@ -85,6 +85,82 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Phase 2C: relationship tables hand-added pending Lovable regeneration.
+      blocks: {
+        Row: {
+          blocked_user_id: string;
+          blocker_id: string;
+          created_at: string;
+          id: string;
+          reason: string | null;
+        };
+        Insert: {
+          blocked_user_id: string;
+          blocker_id: string;
+          created_at?: string;
+          id?: string;
+          reason?: string | null;
+        };
+        Update: {
+          blocked_user_id?: string;
+          blocker_id?: string;
+          created_at?: string;
+          id?: string;
+          reason?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "blocks_blocked_user_id_fkey";
+            columns: ["blocked_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "blocks_blocker_id_fkey";
+            columns: ["blocker_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      follows: {
+        Row: {
+          created_at: string;
+          follower_id: string;
+          following_creator_id: string;
+          id: string;
+        };
+        Insert: {
+          created_at?: string;
+          follower_id: string;
+          following_creator_id: string;
+          id?: string;
+        };
+        Update: {
+          created_at?: string;
+          follower_id?: string;
+          following_creator_id?: string;
+          id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "follows_follower_id_fkey";
+            columns: ["follower_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "follows_following_creator_id_fkey";
+            columns: ["following_creator_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       links: {
         Row: {
           clicks: number;
@@ -186,6 +262,7 @@ export type Database = {
           id: string;
           updated_at: string;
           user_id: string;
+          username: string;
         };
         Insert: {
           avatar_url?: string | null;
@@ -195,6 +272,7 @@ export type Database = {
           id?: string;
           updated_at?: string;
           user_id: string;
+          username?: string;
         };
         Update: {
           avatar_url?: string | null;
@@ -204,6 +282,7 @@ export type Database = {
           id?: string;
           updated_at?: string;
           user_id?: string;
+          username?: string;
         };
         Relationships: [];
       };
@@ -305,7 +384,34 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      public_creator_profiles: {
+        Row: {
+          avatar_url: string | null;
+          banner_url: string | null;
+          bio: string | null;
+          display_name: string | null;
+          follower_count: number | null;
+          following_count: number | null;
+          post_count: number | null;
+          username: string | null;
+          verified: boolean | null;
+        };
+        Relationships: [];
+      };
+      public_member_profiles: {
+        Row: {
+          avatar_url: string | null;
+          banner_url: string | null;
+          bio: string | null;
+          display_name: string | null;
+          follower_count: number | null;
+          following_count: number | null;
+          post_count: number | null;
+          username: string | null;
+          verified: boolean | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       has_role: {
@@ -314,6 +420,37 @@ export type Database = {
           _user_id: string;
         };
         Returns: boolean;
+      };
+      is_current_user_creator: {
+        Args: {
+          _creator_profile_id: string;
+        };
+        Returns: boolean;
+      };
+      relationship_follow_creator: {
+        Args: {
+          _username: string;
+        };
+        Returns: undefined;
+      };
+      relationship_state: {
+        Args: {
+          _username: string;
+        };
+        Returns: {
+          blocked_by_me: boolean;
+          follower_count: number;
+          following: boolean;
+          following_count: number;
+          is_self: boolean;
+          username: string;
+        }[];
+      };
+      relationship_unfollow_creator: {
+        Args: {
+          _username: string;
+        };
+        Returns: undefined;
       };
     };
     Enums: {

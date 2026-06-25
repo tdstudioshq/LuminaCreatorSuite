@@ -16,22 +16,34 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
-## Latest Status — Phase 2B part 1 COMPLETE (Member Accounts & Auth Infrastructure)
+## Latest Status — Phase 2C COMPLETE (Social Relationship Foundation)
 
-Built on the verified 2A baseline. **All gates green** (`lint` / `tsc` / `test` / `build` / `db:validate`), all run on a real Docker host.
+Built on the verified Phase 2B account/auth layer. No production Supabase, migration repair, or
+deployment was touched.
 
-**Delivered (additive — no `subscriptions` rename, no `creator_subscriptions`/posts/feed/messaging/payments):**
+**Delivered (relationship layer only — no posts/feed/messaging/notifications/subscriptions/payments):**
 
-- **Migration** `supabase/migrations/20260512000000_member_accounts.sql`: `account_type` enum ('creator'|'member', default **creator**); `profiles.account_type` (NOT NULL default creator); private **`member_profiles`** table (owner-only RLS, explicit `authenticated` grants + `anon` revoke, `updated_at` touch); `handle_new_user` now **branches** (creator → creator_profile + free subscription; member → member_profile; both get `user` role); reserves `account`/`member` handles.
-- **Server-action tier (T2) wired**: `src/integrations/supabase/auth-client-middleware.ts` (`attachSupabaseToken`) pairs with the generated `requireSupabaseAuth`; `src/lib/account-actions.ts` exposes `getAccountContext` / `getMemberProfile` / `updateMemberProfile` (RLS-scoped, never service role).
-- **Pure logic** `src/lib/cabana-account.ts` (account-type resolution, member-profile mapping/normalization, context shaping) — 100% covered by `cabana-account.test.ts` (73 tests total).
-- **Client**: signup creator/member toggle (`cabana-auth.ts` `signup({…, accountType})`); account-aware `/dashboard` guard (members → `/account`); new **`/account`** member-profile foundation route; hooks in `src/lib/use-account.ts`.
-- **DB tests**: `supabase/tests/member_accounts.sql` (trigger branching + member RLS incl. anon-deny) added to `db:validate` + CI; `smoke.sql` extended.
-- **`types.ts`** hand-extended (member_profiles + account_type), commented, pending Lovable regen.
+- **Migration** `20260513000000_social_relationships.sql`: member public usernames, `follows`,
+  `blocks`, unique constraints, indexed FKs, authenticated-only base grants, and complete owner /
+  creator RLS.
+- **Safe public views**: `public_creator_profiles` and `public_member_profiles` expose only username,
+  display name, avatar/banner, bio, placeholder verified/post counts, and follower/following counts.
+  No auth/profile UUIDs, email, plan, theme, or private metadata.
+- **Protected actions**: `followCreator`, `unfollowCreator`, `blockUser`, `unblockUser`,
+  `getRelationshipState`, `getFollowerCount`, `getFollowingCount`; all use
+  `attachSupabaseToken` + `requireSupabaseAuth`, the caller's scoped client, and no service role.
+- **Hooks/UI**: `useRelationship`, `useFollow`; the temporary local creator-page follow toggle is now
+  persistent and reports Follow/Following state.
+- **Tests**: relationship validation/action tests plus `social_relationships.sql` for uniqueness,
+  RLS isolation, creator follower visibility, anonymous denial, safe-view columns/counts, and
+  protected RPC behavior.
 
-**Verified on Docker:** from-zero `db reset` (baseline + member migration) clean; smoke + behavioral SQL pass; creator signup → creator_profile+subscription, member signup → member_profile, RLS isolates members, anon denied.
+**Local verification:** migration applies from zero; smoke, member-account, and social-relationship
+SQL suites pass through the database container; 83 unit tests pass with 100% configured coverage.
 
-**Next:** Phase 2B part 2 (follows + social feed: posts/comments/likes/saves, public-safe views, private media) — gated. Also still pending from 2A: remote `supabase db dump` diff + `migration repair` before any production deploy.
+**Next:** Phase 3 — Posts & Feed Foundation — gated on explicit approval. Remote `supabase db dump`
+comparison and migration-history reconciliation remain deferred; do not run migration repair or
+deploy.
 
 ---
 
@@ -57,11 +69,18 @@ Progression since this handoff was first written: **Phase 1 (demo UI + pure help
 - `supabase/seed.sql` (aurora demo so `/demo` + `/$username` render), `supabase/config.toml` (full local config), `supabase/tests/smoke.sql`, `scripts/db-validate.sh`, `supabase/README.md`.
 - `package.json`: `db:reset`, `db:validate`. CI at `.github/workflows/ci.yml` (verify job + Docker-based db-validate job).
 
-**Did NOT:** rename `subscriptions`, add `creator_subscriptions`/`member_profiles`/posts/messaging/notifications/payments, change UI/routes, or touch production data.
+**At the Phase 2A boundary, did NOT:** rename `subscriptions`, add
+`creator_subscriptions`/`member_profiles`/posts/messaging/notifications/payments, change UI/routes,
+or touch production data. Phase 2B later added only `member_profiles` and the `/account` foundation.
 
-**Execution blocker (honest):** the authoring sandbox has **no Docker, no network, no psql**, so a from-zero `supabase db reset` and a remote `supabase db dump` could not be run here. The baseline is **validated by construction** (reconstructed from `types.ts` + the four migrations + architecture doc) and is wired to run for real in CI on a Docker runner. Before trusting it as byte-exact, diff it against a live `supabase db dump` and reconcile remote migration history (`migration repair`). See [`CABANA_DATABASE.md` §"Baseline migration"](../CABANA_DATABASE.md#baseline-migration-phase-2a) and `supabase/README.md`.
+**Historical authoring blocker (local/CI portion now closed):** the original authoring sandbox could
+not run Docker or `psql`. Subsequent Phase 2A/2B verification proved the baseline and member
+migration on local Docker and CI. Remote `supabase db dump` comparison and migration-history
+reconciliation remain intentionally deferred. See
+[`CABANA_DATABASE.md` §"Baseline migration"](../CABANA_DATABASE.md#baseline-migration-phase-2a)
+and `supabase/README.md`.
 
-**Next:** Phase 2B (member accounts + social feed) — gated on explicit go-ahead and on verifying the baseline against the live DB.
+**At the Phase 2A boundary, next was:** Phase 2B. Part 1 is now complete; part 2 remains gated.
 
 ## Current Product State
 
@@ -71,12 +90,17 @@ CABANA currently includes:
 - File-based TanStack Router routing.
 - Supabase Auth with email/password and password recovery.
 - Supabase-backed creator profiles, links, products, storage uploads, and analytics events.
+- Supabase-backed creator/member account branching and private member profiles.
+- Persistent follows, private blocks, and ID-free public profile views.
 - Public creator pages at `/$username`.
 - Authenticated creator dashboard.
+- Authenticated member account foundation at `/account`.
 - Demo-only AI Studio, media kit, settings integrations, and admin portal.
 - Luxury dark, glass, chrome, and iridescent CABANA design system.
 
-The application does not yet have production posts, member profiles, follows, creator subscriptions, messages, notifications, tips, transactions, balances, payouts, reports, or audit logs.
+The application does not yet have production posts/feed, creator subscriptions, messages,
+notifications, tips, transactions, balances, payouts, reports, or audit logs. Member profiles,
+follows, and blocks are implemented with RLS.
 
 ## Phase 1 Foundation Completed
 
@@ -106,7 +130,8 @@ It defines:
 - `Report`
 - `AuditLog`
 
-These are frontend/demo contracts designed to map to future Supabase tables. They do not represent live tables yet.
+These began as frontend/demo contracts. The account and follow shapes now have live Phase 2B/2C
+counterparts; post, message, notification, monetization, report, and audit contracts remain planned.
 
 ### Demo data
 
@@ -175,52 +200,35 @@ Added dashboard navigation links for:
 
 The desktop navigation is scrollable because the item count increased.
 
-## Validation State
+## Phase 2C Validation State
 
-All required checks passed:
-
-```bash
-PATH="$HOME/.bun/bin:$PATH" bun run lint
-PATH="$HOME/.bun/bin:$PATH" bun run build
-PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
-```
-
-Results:
-
-- Lint: zero errors.
-- Lint retains six existing Fast Refresh warnings in scaffolded shadcn UI files.
-- Production client and SSR build: successful.
-- TypeScript: successful.
-- Vite reports an existing advisory that some shared chunks exceed 500 kB.
-
-Bun was installed at:
-
-```text
-~/.bun/bin/bun
-```
-
-If `bun` is not in the new shell PATH, use:
+The complete gate was run before the Phase 2B commit:
 
 ```bash
-export PATH="$HOME/.bun/bin:$PATH"
+bun run lint
+bunx tsc --noEmit
+bun run test:coverage
+bun run build
+supabase start
+bun run db:validate
+docker exec -i supabase_db_dwnricswfskypqqfknnh psql -U postgres -d postgres \
+  -v ON_ERROR_STOP=1 < supabase/tests/smoke.sql
+docker exec -i supabase_db_dwnricswfskypqqfknnh psql -U postgres -d postgres \
+  -v ON_ERROR_STOP=1 < supabase/tests/member_accounts.sql
+docker exec -i supabase_db_dwnricswfskypqqfknnh psql -U postgres -d postgres \
+  -v ON_ERROR_STOP=1 < supabase/tests/social_relationships.sql
+supabase stop
 ```
 
-Dependencies are installed in `node_modules`.
+Results: lint, TypeScript, production build, 83 unit tests, 100% coverage on the selected business
+modules, from-zero rebuild, smoke assertions, account branching, member RLS, follow/block RLS,
+uniqueness, safe public views, protected relationship RPCs, and anonymous denial pass locally.
 
-## Important Repository Note
+## Repository State
 
-The first full lint run exposed 1,069 existing Prettier errors throughout the repository. The repository’s existing `bun run format` command was applied, so many existing source files received formatting-only changes.
-
-Do not interpret every recently modified file as a behavioral change. The intentional functional changes are primarily:
-
-- The new domain/demo files.
-- The shared foundation component.
-- The nine new route files.
-- Dashboard navigation.
-- Documentation.
-- Generated route-tree updates.
-
-The workspace does not currently contain Git metadata, so there is no local diff history or commit baseline.
+The repository is connected to `tdstudioshq/LuminaCreatorSuite`. Phase 2C work is isolated on
+`feat/phase-2c-social-relationships`. Keep Phase 3 limited to posts/feed; do not fold messaging,
+notifications, subscriptions, or monetization into it.
 
 ## Hard Constraints
 
@@ -250,49 +258,30 @@ Continue to:
 
 ## Supabase Risks
 
-Before adding production tables:
-
-- The checked-in migrations must be converted into a complete rebuildable baseline.
-- Current migrations are incremental and do not fully reproduce the live remote schema.
+- The checked-in baseline, member, and relationship migrations rebuild successfully on local Docker.
+- They were reconstructed locally rather than reconciled against a fresh live
+  `supabase db dump`; remote reconciliation remains deferred.
 - The existing `subscriptions` table means CABANA platform SaaS subscriptions, not fan-to-creator subscriptions.
 - Future fan subscriptions should use `creator_subscriptions`.
 - Current public creator reads can expose `creator_profiles.user_id`.
+- The new public views are safe, but the legacy links/products/analytics bundle still depends on the
+  direct creator-profile read; migrate that bundle before removing the old public table path.
 - Current public storage URLs are unsuitable for premium/private media.
 
-Do not create production tables until the baseline migration and RLS strategy are explicitly approved.
+Do not touch production Supabase, run migration repair, or deploy. Any next table still requires an
+approved migration, RLS design, and behavioral tests.
 
-## Recommended Next Task: Phase 1B
+## Recommended Next Task: Phase 3 — Posts & Feed Foundation (Gated)
 
-Replace the placeholder content with demo-data-driven UI, without adding backend writes.
+Do not start automatically. With explicit approval:
 
 Recommended order:
 
-1. Add pure helpers:
-   - `src/lib/cabana-money.ts`
-   - `src/lib/cabana-entitlements.ts`
-2. Render demo posts in `/dashboard/posts`.
-3. Render demo members/subscriptions in `/dashboard/subscribers`.
-4. Render demo transactions and a derived demo balance in `/dashboard/earnings`.
-5. Render the creator demo inbox in `/dashboard/messages`.
-6. Render creator demo notifications in `/dashboard/notifications`.
-7. Build member-facing demo versions for `/feed`, `/messages`, and `/notifications`.
-8. Keep `/discover` a curated demo grid using only public-safe creator data.
-9. Add unit tests for money calculations and entitlement rules.
-
-Do not start with Supabase migrations or real-time messaging.
-
-## Suggested Phase 1B Acceptance Criteria
-
-- Existing screens remain visually and functionally unchanged.
-- New screens use `CABANA_DEMO_DATA`.
-- No private or real Supabase data is loaded by member placeholders.
-- Demo financial totals are derived, not independently hardcoded.
-- Locked-content state comes from a pure entitlement helper.
-- No mock action implies a real charge or payout.
-- Mobile layouts remain usable.
-- Empty and demo-status states are explicit.
-- New interactive controls have accessible labels.
-- `bun run lint`, `bun run build`, and `bunx tsc --noEmit` pass.
+1. Add `posts`, `media`, and `post_media` with creator-owner writes.
+2. Add public/follower read rules using the Phase 2C relationship graph.
+3. Add comments, likes, and saves with per-table behavioral RLS tests.
+4. Keep post media private and issue signed URLs only after authorization.
+5. Build the smallest real feed and composer without messaging, notifications, or monetization.
 
 ## Files To Inspect First
 
@@ -306,7 +295,19 @@ src/components/cabana/dashboard/Sidebar.tsx
 src/routes/dashboard.tsx
 src/styles.css
 src/lib/cabana-store.ts
+src/lib/cabana-account.ts
+src/lib/account-actions.ts
+src/lib/use-account.ts
+src/lib/cabana-relationships.ts
+src/lib/relationship-actions.ts
+src/lib/use-relationships.ts
+src/integrations/supabase/auth-client-middleware.ts
 src/integrations/supabase/types.ts
+src/routes/account.tsx
+supabase/migrations/20260512000000_member_accounts.sql
+supabase/migrations/20260513000000_social_relationships.sql
+supabase/tests/member_accounts.sql
+supabase/tests/social_relationships.sql
 ```
 
 ## End-of-Session Handoff Requirements
