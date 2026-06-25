@@ -24,43 +24,50 @@ App shell (__root.tsx)
 ## 2. Existing Components
 
 ### Layout & shell
-| Component | File | Role | Reuse |
-|-----------|------|------|-------|
-| Root shell | `routes/__root.tsx` | HTML/head/scripts, Query provider, toaster, 404 + error UI | Global |
-| `AuthShell` | `cabana/auth/AuthShell.tsx` | Centered branded auth card (eyebrow/title/subtitle/body/footer) | Reusable (login, signup, forgot, reset) |
-| Dashboard layout | `routes/dashboard.tsx` | Client auth gate → sidebar + mobile tabs + `<Outlet/>` | Layout for all creator routes |
-| Admin shell | `routes/admin.tsx` | Role gate + local-tab admin UI | Page-specific |
+
+| Component        | File                        | Role                                                            | Reuse                                   |
+| ---------------- | --------------------------- | --------------------------------------------------------------- | --------------------------------------- |
+| Root shell       | `routes/__root.tsx`         | HTML/head/scripts, Query provider, toaster, 404 + error UI      | Global                                  |
+| `AuthShell`      | `cabana/auth/AuthShell.tsx` | Centered branded auth card (eyebrow/title/subtitle/body/footer) | Reusable (login, signup, forgot, reset) |
+| Dashboard layout | `routes/dashboard.tsx`      | Client auth gate → sidebar + mobile tabs + `<Outlet/>`          | Layout for all creator routes           |
+| Admin shell      | `routes/admin.tsx`          | Role gate + local-tab admin UI                                  | Page-specific                           |
 
 ### Navigation
-| Component | File | State | Notes |
-|-----------|------|-------|-------|
-| `GlobalNav` | `cabana/GlobalNav.tsx` | mobile-open, route, auth user | Public pages; mobile sheet exposes Studio/Admin (destinations self-gate) |
-| `DashSidebar` | `cabana/dashboard/Sidebar.tsx` | route, profile, auth user | Creator desktop nav; now scrollable (item count grew) |
-| `MobileTabs` | `cabana/dashboard/Sidebar.tsx` | route | Creator mobile nav (horizontal strip, not bottom-fixed) |
+
+| Component     | File                           | State                         | Notes                                                                    |
+| ------------- | ------------------------------ | ----------------------------- | ------------------------------------------------------------------------ |
+| `GlobalNav`   | `cabana/GlobalNav.tsx`         | mobile-open, route, auth user | Public pages; mobile sheet exposes Studio/Admin (destinations self-gate) |
+| `DashSidebar` | `cabana/dashboard/Sidebar.tsx` | route, profile, auth user     | Creator desktop nav; now scrollable (item count grew)                    |
+| `MobileTabs`  | `cabana/dashboard/Sidebar.tsx` | route                         | Creator mobile nav (horizontal strip, not bottom-fixed)                  |
 
 ### Marketing (landing composition only — content is module-level constants, buttons mostly visual)
+
 `Hero`, `Features`, `CreatorShowcase`, `Analytics`, `AISection`, `BrandShowcase`, `Pricing`, `LogoMarquee`, `FinalCTA`, `Footer` — all in `cabana/`.
 
 ### Creator dashboard (functional unless noted)
-| Component | File | Status |
-|-----------|------|--------|
-| `DashHome` | `cabana/dashboard/DashHome.tsx` | ✅ overview (no revenue/subscriber summary yet) |
-| `ProfileEditor` | `cabana/dashboard/ProfileEditor.tsx` | ✅ writes on every input change (no debounce); no banner upload |
-| `LinkManager` | `cabana/dashboard/LinkManager.tsx` | ✅ CRUD/feature/reorder (non-atomic reorder, no URL validation/delete confirm) |
-| `StoreManager` | `cabana/dashboard/StoreManager.tsx` | ✅ product CRUD + image upload (no checkout/orders) |
-| `AnalyticsPage` | `cabana/dashboard/AnalyticsPage.tsx` | ✅ event aggregation (no unique visitors/geo/export) |
-| `MediaKit` | `cabana/dashboard/MediaKit.tsx` | 🟡 hardcoded Aurora; export buttons dead |
-| `AIStudio` | `cabana/dashboard/AIStudio.tsx` | 🟡 simulated generation; Copy/Use dead |
-| `SettingsPanel` | `cabana/dashboard/SettingsPanel.tsx` | 🟡 hardcoded integrations; actions dead |
+
+| Component       | File                                 | Status                                                                         |
+| --------------- | ------------------------------------ | ------------------------------------------------------------------------------ |
+| `DashHome`      | `cabana/dashboard/DashHome.tsx`      | ✅ overview (no revenue/subscriber summary yet)                                |
+| `ProfileEditor` | `cabana/dashboard/ProfileEditor.tsx` | ✅ writes on every input change (no debounce); no banner upload                |
+| `LinkManager`   | `cabana/dashboard/LinkManager.tsx`   | ✅ CRUD/feature/reorder (non-atomic reorder, no URL validation/delete confirm) |
+| `StoreManager`  | `cabana/dashboard/StoreManager.tsx`  | ✅ product CRUD + image upload (no checkout/orders)                            |
+| `AnalyticsPage` | `cabana/dashboard/AnalyticsPage.tsx` | ✅ event aggregation (no unique visitors/geo/export)                           |
+| `MediaKit`      | `cabana/dashboard/MediaKit.tsx`      | 🟡 hardcoded Aurora; export buttons dead                                       |
+| `AIStudio`      | `cabana/dashboard/AIStudio.tsx`      | 🟡 simulated generation; Copy/Use dead                                         |
+| `SettingsPanel` | `cabana/dashboard/SettingsPanel.tsx` | 🟡 hardcoded integrations; actions dead                                        |
 
 ### Public profile (route-embedded)
+
 - `CreatorProfile` (in `routes/$username.tsx`) — reusable, reused by `/demo`. Fetches creator bundle, emits analytics, owns **temporary** follow state. Theme is read but **not applied**.
 - `/td`, `/eldondolla` — bespoke static profiles that bypass the shared data model (intentional microsites).
 
 ### Foundation
+
 - `FoundationPage` (`cabana/foundation/FoundationPage.tsx`) — shared "demo foundation / coming soon" screen. Supports public mode (with `GlobalNav`) and dashboard mode (inside the auth layout); takes icon, title, description, capability list, return route; renders no backend reads and labels payments/messaging/entitlements/payouts inactive. Used by all 9 placeholder routes.
 
 ### UI primitives (`src/components/ui/`, 46 files, shadcn/new-york)
+
 accordion, alert(-dialog), aspect-ratio, avatar, badge, breadcrumb, button, calendar, card, carousel, chart, checkbox, collapsible, command, context-menu, dialog, drawer, dropdown-menu, form, hover-card, input(-otp), label, menubar, navigation-menu, pagination, popover, progress, radio-group, resizable, scroll-area, select, separator, sheet, sidebar, skeleton, slider, sonner, switch, table, tabs, textarea, toggle(-group), tooltip. **Mostly unused scaffold.** Adopt deliberately for accessible interactive surfaces in new modules (tables, dialogs, command palettes).
 
 ## 3. Reusable Components (current + to standardize)

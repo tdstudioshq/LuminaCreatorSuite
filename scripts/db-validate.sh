@@ -39,7 +39,9 @@ supabase db reset
 if command -v psql >/dev/null 2>&1; then
   echo "▸ Running schema/seed smoke checks…"
   psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/smoke.sql
-  echo "✓ db:validate passed — fresh rebuild + smoke checks succeeded."
+  echo "▸ Running Phase 2B behavioral checks (trigger branching + member RLS)…"
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/member_accounts.sql
+  echo "✓ db:validate passed — fresh rebuild + smoke + behavioral checks succeeded."
 else
   echo "⚠ psql not found — 'supabase db reset' succeeded (migration + seed applied cleanly),"
   echo "  but object-level smoke assertions were skipped. Install psql to run them."

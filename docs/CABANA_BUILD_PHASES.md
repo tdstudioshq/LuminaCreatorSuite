@@ -9,6 +9,7 @@
 ---
 
 ## Phase 0 (implicit) — Already done
+
 Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data (`cabana-demo-data.ts`), `FoundationPage`, 9 placeholder routes, dashboard nav. Validation gate (`bun run lint` / `build` / `bunx tsc --noEmit`) passing.
 
 ---
@@ -17,7 +18,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 **Goal:** Stabilize the existing creator OS (fix dead buttons/`#` links, apply saved theme, banner upload, URL/delete validation, atomic reorder, real plan label, reconcile `/docs/data-model`) and turn the 9 placeholders into demo-data-driven UI using pure helpers. **No backend writes, no Supabase changes.** Establish the test runner.
 
-**Files affected:** `src/lib/cabana-money.ts` *(new)*, `src/lib/cabana-entitlements.ts` *(new)*, `src/lib/cabana-permissions.ts` *(new)*; `dashboard.posts/subscribers/earnings/messages/notifications.tsx`; `feed/discover/messages/notifications.tsx`; `ProfileEditor.tsx`, `LinkManager.tsx`, `Sidebar.tsx`, `$username.tsx`; marketing CTA/footer fixes; `docs.data-model.tsx`; `package.json` (+ Vitest), `vite.config.ts`/test config.
+**Files affected:** `src/lib/cabana-money.ts` _(new)_, `src/lib/cabana-entitlements.ts` _(new)_, `src/lib/cabana-permissions.ts` _(new)_; `dashboard.posts/subscribers/earnings/messages/notifications.tsx`; `feed/discover/messages/notifications.tsx`; `ProfileEditor.tsx`, `LinkManager.tsx`, `Sidebar.tsx`, `$username.tsx`; marketing CTA/footer fixes; `docs.data-model.tsx`; `package.json` (+ Vitest), `vite.config.ts`/test config.
 
 **Database changes:** None.
 
@@ -30,6 +31,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 **Dependencies:** Phase 0. Product decision on V1 boundary (spec §10) confirmed.
 
 **Acceptance criteria:**
+
 - Existing screens visually/functionally unchanged; no dead buttons or `#` links remain on shipped surfaces.
 - New screens render from `CABANA_DEMO_DATA`; no private/real Supabase data loaded by member placeholders.
 - Demo balances **derived** via `cabana-money.ts`; locked state from `cabana-entitlements.ts`; no mock action implies a real charge.
@@ -45,7 +47,9 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 >
 > **Phase 2A — Supabase Baseline + CI — ✅ DONE.** Squashed rebuildable-from-zero baseline (`supabase/migrations/20260511000000_baseline.sql`) covering all existing tables/enums/functions/triggers/RLS/storage; demo `seed.sql`; `bun run db:validate` (reset-from-zero + `tests/smoke.sql`); CI (`.github/workflows/ci.yml`) running lint/typecheck/test/build + a Docker-based `db-validate` job. No new product tables, no `subscriptions` rename. See `supabase/README.md` and [`CABANA_DATABASE.md` §"Baseline migration"](./CABANA_DATABASE.md#baseline-migration-phase-2a). Open follow-ups: diff the reconstructed baseline against a live `supabase db dump`; confirm `major_version`; `migration repair` remote history.
 >
-> **Phase 2B — Member Accounts & Social Feed — gated, not started.** Everything below (member role, follows, posts/comments/likes/saves, public-safe views, private media, server-action plumbing) requires explicit go-ahead.
+> **Phase 2B (part 1) — Member Accounts & Auth Infrastructure — ✅ DONE.** Migration `20260512000000_member_accounts.sql` adds the `account_type` enum ('creator'|'member', default creator), stamps `profiles.account_type`, adds a private owner-scoped `member_profiles` table (RLS + explicit `authenticated`-only grants, `anon` revoked), and branches `handle_new_user` (creator → creator_profile + free subscription; member → member_profile; both get the `user` role). The **T2 server-action tier is wired**: `attachSupabaseToken` (client) + `requireSupabaseAuth` (server) guard `getAccountContext` / `getMemberProfile` / `updateMemberProfile` (`src/lib/account-actions.ts`). Client: signup creator/member toggle, account-aware `/dashboard` + new `/account` route, `useAccountType`. Pure logic in `cabana-account.ts` (100% covered); DB behavioral tests (`tests/member_accounts.sql`: trigger branching + member RLS) run in `db:validate` + CI. Existing creator signup/dashboard/public pages unchanged. **NOT** done here: `subscriptions` rename, `creator_subscriptions`, follows, posts, public-safe views, private media.
+>
+> **Phase 2B (part 2) — Social Feed — gated, not started.** Follows, posts/comments/likes/saves, public-safe views, private media buckets — requires explicit go-ahead.
 
 **Goal:** Make the backend reproducible and real. Capture a validated baseline migration, audit RLS, add the **member role/account**, persistent follows, and public social publishing (posts/comments/likes/saves). Stand up the T2 server-action plumbing. This is the largest enabling phase.
 
@@ -62,9 +66,10 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 **Dependencies:** Phase 1. **Hard gate:** baseline migration validated on a fresh instance before any new table. Server-action auth plumbing (`requireSupabaseAuth` + `auth-attacher`) wired.
 
 **Acceptance criteria:**
-- Fresh local/staging Supabase rebuilds from zero via migrations.
-- A user can sign up as a **member** and never see a creator dashboard; existing creator signups unaffected.
-- Follows persist across refresh; creators publish `public`/`followers` posts; members like/comment/save.
+
+- ✅ Fresh local/staging Supabase rebuilds from zero via migrations (baseline + member-accounts; verified on Docker + CI).
+- ✅ A user can sign up as a **member** and never see a creator dashboard; existing creator signups unaffected (trigger branching + guard redirects, behavioral-tested).
+- Follows persist across refresh; creators publish `public`/`followers` posts; members like/comment/save. _(2B part 2)_
 - RLS policy tests pass for guest/member/creator fixtures; public views omit `user_id`.
 - Post media stored in a private bucket; reads via signed URLs.
 - CI runs lint/typecheck/test/migration-validation/build.
@@ -88,6 +93,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 **Dependencies:** Phase 2 (members, posts, RLS, server actions). Mock-money rules from spec §7 / API §6.
 
 **Acceptance criteria:**
+
 - Mock checkout creates a `creator_subscription` + `succeeded` `transaction` + `content_entitlement`; balance updates by derivation; no real charge; visible "Demo" label.
 - `subscribers`-visibility posts are viewable only with a valid entitlement (server-checked), invisible otherwise.
 - Succeeded transactions immutable; balance never independently stored as truth.
@@ -113,6 +119,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 **Dependencies:** Phase 2 (members, server actions, private storage), Phase 3 (entitlement for paid messages; message permissions in `settings`).
 
 **Acceptance criteria:**
+
 - Only participants read/send a conversation (RLS-enforced); Realtime delivers inserts + read-state.
 - Cursor pagination on `(created_at, id)`; read receipts via `conversation_participants.last_read_message_id`.
 - Attachments served by short-lived signed URLs after participant + unlock checks.
@@ -137,6 +144,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 **Dependencies:** Phase 3 (transactions, entitlements), Phase 2 (private media for downloads).
 
 **Acceptance criteria:**
+
 - Paid post unlock and product order create immutable `transactions` + entitlements/orders; balance derives correctly.
 - Digital downloads delivered via signed URLs only after a succeeded order.
 - All amounts integer cents; demo labels present; succeeded values immutable.
@@ -160,6 +168,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 **Dependencies:** Phases 3 & 5 accepted (mock ledger/entitlement/refund behavior proven); legal/KYC groundwork (Phase 10 items may interleave). Explicit go-ahead per guardrails.
 
 **Acceptance criteria:**
+
 - Webhooks are source of truth: signed, idempotent (`webhook_events`), processed via `outbox_jobs`.
 - Card data never touches CABANA; provider-hosted collection only.
 - Ledger immutable; balances reconcile against provider; failed renewals/grace/cancellation/refund/dispute/chargeback handled.
@@ -185,6 +194,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 **Dependencies:** Phase 2 (server actions, roles), Phase 6 (finance data) for finance tools.
 
 **Acceptance criteria:**
+
 - All admin reads/writes are server-authorized (no client-only gate); service role never in browser.
 - Every state-changing admin action appends an immutable `audit_logs` row.
 - Capability scopes (moderator/support/finance/admin/super-admin) enforced; admin MFA required.
@@ -209,6 +219,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 **Dependencies:** Phase 7 (admin shell, audit logs, capability scopes), Phase 2 (content), Phase 4 (message reports).
 
 **Acceptance criteria:**
+
 - Report → triage → temporary restriction → reviewer decision → notice → appeal → final action → audit, all persisted.
 - Blocks/suspensions enforced by RLS, not just UI; media reviewed before publication where required.
 - Moderator capability separated from finance/admin.
@@ -232,6 +243,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 **Dependencies:** Phases 2–8 (the events that generate notifications: follows, comments, subs, messages, tips, payouts, moderation). Outbox pattern from Phase 6.
 
 **Acceptance criteria:**
+
 - Notifications generated server-side for all event types; unread count via indexed query.
 - Mark one/all read (owner RLS); preferences respected; email/push via outbox with retry; external failure never blocks the source write.
 - High-volume events deduplicated/aggregated.
@@ -255,6 +267,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 **Dependencies:** All prior phases (esp. 6 for tax/KYC, 8 for DMCA/takedown).
 
 **Acceptance criteria:**
+
 - Legal pages published; acceptance recorded with version/timestamp before monetization.
 - Security/RLS review + pen-test complete; CSP + headers in place; server-side upload validation.
 - Accessibility + performance passes; backups/PITR + DR runbook tested; monitoring/error-tracking/uptime/alerting live.
@@ -269,7 +282,9 @@ P1 ─▶ P2 ─┬─▶ P3 ─┬─▶ P5 ─▶ P6 ─▶ P7 ─▶ P8
           │       └─▶ P4 ──────────┘        ╲
           └─────────────────────────────────▶ P9 ─▶ P10
 ```
+
 P2 is the keystone (everything social/financial depends on real DB + members + server actions). P6 (real money) must not precede acceptance of P3/P5 mock behavior. P9 trails the event-producing phases. P10 closes out.
 
 ## Cross-Phase Definition of Done (every phase)
+
 `bun run lint` + `bun run build` + `bunx tsc --noEmit` pass · new tables have RLS + policy tests · money is integer cents · privileged writes audit-logged · no service-role key in client code · demo monetization labeled · CI green · end-of-session handoff updated (files changed, schema touched, demo vs prod, results, next task).

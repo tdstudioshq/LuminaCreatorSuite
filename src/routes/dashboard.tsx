@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/
 import { useEffect } from "react";
 import { DashSidebar, MobileTabs } from "@/components/cabana/dashboard/Sidebar";
 import { useAuthSession } from "@/lib/cabana-auth";
+import { useAccountType } from "@/lib/use-account";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -22,14 +23,20 @@ function DashboardLayout() {
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { user, loading } = useAuthSession();
+  // The creator dashboard is creator-only. Members are bounced to /account.
+  const { accountType, loading: accountLoading } = useAccountType();
 
   useEffect(() => {
     if (!loading && !user) {
       navigate({ to: "/login", search: { redirect: path } as never });
+      return;
     }
-  }, [loading, user, navigate, path]);
+    if (user && !accountLoading && accountType === "member") {
+      navigate({ to: "/account" });
+    }
+  }, [loading, user, accountLoading, accountType, navigate, path]);
 
-  if (loading || !user) {
+  if (loading || !user || accountLoading || accountType === "member") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground animate-pulse">

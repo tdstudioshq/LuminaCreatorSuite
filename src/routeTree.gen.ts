@@ -24,6 +24,7 @@ import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as UsernameRouteImport } from './routes/$username'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
@@ -116,6 +117,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UsernameRoute = UsernameRouteImport.update({
@@ -212,6 +218,7 @@ const DashboardAiRoute = DashboardAiRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$username': typeof UsernameRoute
+  '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/demo': typeof DemoRoute
@@ -247,6 +254,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$username': typeof UsernameRoute
+  '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
   '/demo': typeof DemoRoute
   '/discover': typeof DiscoverRoute
@@ -282,6 +290,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$username': typeof UsernameRoute
+  '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/demo': typeof DemoRoute
@@ -319,6 +328,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$username'
+    | '/account'
     | '/admin'
     | '/dashboard'
     | '/demo'
@@ -354,6 +364,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$username'
+    | '/account'
     | '/admin'
     | '/demo'
     | '/discover'
@@ -388,6 +399,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$username'
+    | '/account'
     | '/admin'
     | '/dashboard'
     | '/demo'
@@ -424,6 +436,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   UsernameRoute: typeof UsernameRoute
+  AccountRoute: typeof AccountRoute
   AdminRoute: typeof AdminRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   DemoRoute: typeof DemoRoute
@@ -549,6 +562,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$username': {
@@ -719,6 +739,7 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   UsernameRoute: UsernameRoute,
+  AccountRoute: AccountRoute,
   AdminRoute: AdminRoute,
   DashboardRoute: DashboardRouteWithChildren,
   DemoRoute: DemoRoute,

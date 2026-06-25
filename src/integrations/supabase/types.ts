@@ -176,8 +176,40 @@ export type Database = {
           },
         ];
       };
+      // Phase 2B: account_type hand-added pending Lovable Cloud regeneration.
+      member_profiles: {
+        Row: {
+          avatar_url: string | null;
+          bio: string;
+          created_at: string;
+          display_name: string;
+          id: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          avatar_url?: string | null;
+          bio?: string;
+          created_at?: string;
+          display_name?: string;
+          id?: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          avatar_url?: string | null;
+          bio?: string;
+          created_at?: string;
+          display_name?: string;
+          id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
+          account_type: Database["public"]["Enums"]["account_type"];
           created_at: string;
           email: string | null;
           id: string;
@@ -185,6 +217,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          account_type?: Database["public"]["Enums"]["account_type"];
           created_at?: string;
           email?: string | null;
           id: string;
@@ -192,6 +225,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          account_type?: Database["public"]["Enums"]["account_type"];
           created_at?: string;
           email?: string | null;
           id?: string;
@@ -283,6 +317,7 @@ export type Database = {
       };
     };
     Enums: {
+      account_type: "creator" | "member";
       app_role: "admin" | "moderator" | "user";
     };
     CompositeTypes: {
@@ -409,6 +444,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_type: ["creator", "member"],
       app_role: ["admin", "moderator", "user"],
     },
   },

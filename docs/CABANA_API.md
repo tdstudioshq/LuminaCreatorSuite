@@ -10,13 +10,13 @@
 
 CABANA has two ways to reach the database. Choosing the wrong tier is a security bug.
 
-| Tier | Mechanism | Use for | Auth |
-|------|-----------|---------|------|
-| **T1 — Direct client** | `supabase` (anon key, `src/integrations/supabase/client.ts`), RLS-enforced | Low-risk, RLS-safe CRUD: own profile/links/products, public reads, likes/saves/follows, mark-notification-read | Browser session (JWT) + RLS |
-| **T2 — Server action** | TanStack Start server function guarded by `requireSupabaseAuth` (`auth-middleware.ts`), or Supabase Edge Function | Money, entitlements, signed URLs, admin, provider integrations, anything that must not trust client input | Bearer token validated server-side → scoped client + `userId` |
-| **T3 — Service role** | `supabaseAdmin` (`client.server.ts`, bypasses RLS) | Inside T2 only, for trusted writes (ledger, audit, webhooks). **Never imported into client code.** | Server process only |
+| Tier                   | Mechanism                                                                                                         | Use for                                                                                                        | Auth                                                          |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| **T1 — Direct client** | `supabase` (anon key, `src/integrations/supabase/client.ts`), RLS-enforced                                        | Low-risk, RLS-safe CRUD: own profile/links/products, public reads, likes/saves/follows, mark-notification-read | Browser session (JWT) + RLS                                   |
+| **T2 — Server action** | TanStack Start server function guarded by `requireSupabaseAuth` (`auth-middleware.ts`), or Supabase Edge Function | Money, entitlements, signed URLs, admin, provider integrations, anything that must not trust client input      | Bearer token validated server-side → scoped client + `userId` |
+| **T3 — Service role**  | `supabaseAdmin` (`client.server.ts`, bypasses RLS)                                                                | Inside T2 only, for trusted writes (ledger, audit, webhooks). **Never imported into client code.**             | Server process only                                           |
 
-> Today the app is **entirely T1** (see `cabana-store.ts`, `cabana-auth.ts`, `cabana-analytics.ts`, `cabana-roles.ts`). `auth-middleware.ts` and `client.server.ts` exist but **no feature uses them yet**, and `auth-attacher.ts` is not registered in `src/start.ts`. Standing up the T2 plumbing is a Phase-2 prerequisite for everything monetized.
+> **Update (Phase 2B):** the **T2 tier is now wired and in use.** `auth-middleware.ts` (`requireSupabaseAuth`, server) is paired with a new client middleware `auth-client-middleware.ts` (`attachSupabaseToken`) that sends the session bearer token, and `src/lib/account-actions.ts` ships the first three protected server actions (see §2b). The rest of the app remains T1 (`cabana-store.ts`, `cabana-auth.ts`, `cabana-analytics.ts`, `cabana-roles.ts`). `client.server.ts` (T3) still has no callers.
 
 **Every state-changing T2/T3 action must:** validate input (shared Zod schema), authorize on the server, use an idempotency key where money or duplicates are possible, and append an `audit_logs` row for privileged actions.
 
@@ -24,81 +24,116 @@ CABANA has two ways to reach the database. Choosing the wrong tier is a security
 
 These exist today in `src/lib/`:
 
-| Function | File | Contract |
-|----------|------|----------|
-| `cabanaAuth.signup({name,email,password})` | cabana-auth.ts | → `{ok:true,user}` \| `{ok:false,error}`; validates name/email/≥6-char pw; sets `emailRedirectTo=/dashboard` |
-| `cabanaAuth.login({email,password})` | cabana-auth.ts | → `{ok,user}` \| `{ok:false,error}` |
-| `cabanaAuth.logout()` | cabana-auth.ts | `signOut()` |
-| `cabanaAuth.requestPasswordReset(email)` | cabana-auth.ts | sends recovery email → `/reset-password` |
-| `cabanaAuth.updatePassword(pw)` | cabana-auth.ts | ≥6 chars; updates user |
-| `useAuthSession()` / `useCabanaUser()` | cabana-auth.ts | `{user, loading}` from `onAuthStateChange` |
-| `useHasRole(role)` | cabana-roles.ts | `{loading, hasRole, signedIn}` from `user_roles` |
-| `useCreatorByHandle(handle)` | cabana-store.ts | public read of `creator_profiles`+`links`+`products` bundle |
-| `useCabana()` | cabana-store.ts | owner's creator bundle |
-| `useCabanaMutations()` | cabana-store.ts | `setProfile`, `addLink/updateLink/removeLink/setLinks`, `addProduct/updateProduct/removeProduct`, `uploadAvatar`, `uploadProductImage` — toast-wrapped, invalidate `my-creator`/`creator-by-handle` |
-| `trackPageView/trackLinkClick/trackProductClick` | cabana-analytics.ts | fire-and-forget insert into `analytics_events` |
+| Function                                                | File                | Contract                                                                                                                                                                                                                                   |
+| ------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cabanaAuth.signup({name,email,password,accountType?})` | cabana-auth.ts      | → `{ok:true,user,accountType}` \| `{ok:false,error}`; validates name/email/≥6-char pw; `accountType` defaults to `creator`, passed as `raw_user_meta_data.account_type`; `emailRedirectTo` = `/dashboard` (creator) or `/account` (member) |
+| `cabanaAuth.login({email,password})`                    | cabana-auth.ts      | → `{ok,user}` \| `{ok:false,error}`                                                                                                                                                                                                        |
+| `cabanaAuth.logout()`                                   | cabana-auth.ts      | `signOut()`                                                                                                                                                                                                                                |
+| `cabanaAuth.requestPasswordReset(email)`                | cabana-auth.ts      | sends recovery email → `/reset-password`                                                                                                                                                                                                   |
+| `cabanaAuth.updatePassword(pw)`                         | cabana-auth.ts      | ≥6 chars; updates user                                                                                                                                                                                                                     |
+| `useAuthSession()` / `useCabanaUser()`                  | cabana-auth.ts      | `{user, loading}` from `onAuthStateChange`                                                                                                                                                                                                 |
+| `useHasRole(role)`                                      | cabana-roles.ts     | `{loading, hasRole, signedIn}` from `user_roles`                                                                                                                                                                                           |
+| `useCreatorByHandle(handle)`                            | cabana-store.ts     | public read of `creator_profiles`+`links`+`products` bundle                                                                                                                                                                                |
+| `useCabana()`                                           | cabana-store.ts     | owner's creator bundle                                                                                                                                                                                                                     |
+| `useCabanaMutations()`                                  | cabana-store.ts     | `setProfile`, `addLink/updateLink/removeLink/setLinks`, `addProduct/updateProduct/removeProduct`, `uploadAvatar`, `uploadProductImage` — toast-wrapped, invalidate `my-creator`/`creator-by-handle`                                        |
+| `trackPageView/trackLinkClick/trackProductClick`        | cabana-analytics.ts | fire-and-forget insert into `analytics_events`                                                                                                                                                                                             |
+
+## 2b. Implemented Server Actions (T2 — Phase 2B)
+
+The first protected server-action tier. Each `createServerFn` composes two
+function middlewares: `attachSupabaseToken` (client — attaches the session
+`Authorization: Bearer` header) then `requireSupabaseAuth` (server — validates
+it and yields an RLS-scoped per-request client + `userId`). All access runs
+under the caller's RLS, never the service role. Handlers stay thin and delegate
+to the pure `src/lib/cabana-account.ts` module; React Query hooks live in
+`src/lib/use-account.ts`.
+
+| Action                                   | File               | Contract                                                                                                            |
+| ---------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `getAccountContext()`                    | account-actions.ts | [auth] → `{userId, accountType, roles[], name, email}` (reads `profiles` + `user_roles`)                            |
+| `getMemberProfile()`                     | account-actions.ts | [auth] → `MemberProfile \| null` (reads own `member_profiles` row)                                                  |
+| `updateMemberProfile({displayName,bio})` | account-actions.ts | [auth] → `MemberProfile`; input normalized/length-capped (`normalizeMemberProfileInput`); upsert keyed on `user_id` |
+
+Client hooks: `useAccountType()` (lightweight direct read used by the
+`/dashboard` + `/account` guards/redirects), `useAccountContext()`,
+`useMemberProfile()`, `useUpdateMemberProfile()`.
+
+> **Bundler note:** `createServerFn` modules are client-importable (they compile
+> to an RPC bridge), so they must NOT live under a `**/server/**` path — the
+> start import-protection plugin blocks those from client bundles.
 
 ## 3. Planned Server Actions (T2)
 
 Grouped by domain. Each entry: **name** — input → output [auth]. "Owner" = authenticated owner of the resource; "Server" = service-role inside a guarded action.
 
 ### Auth & account
-- `signUpMember(input)` → `{user}` [public] — creates member-role account (the missing role branch).
+
+- ~~`signUpMember(input)`~~ ✅ **done (Phase 2B)** — implemented via `cabanaAuth.signup({…, accountType:"member"})`; the `handle_new_user` trigger branches on `account_type` to provision a `member_profiles` row instead of a creator profile.
 - `signUpCreator(input)` → `{user, creatorProfile}` [public] — or `upgradeToCreator()` [member] for member→creator.
 - `signIn` / `signOut` / `requestPasswordReset` / `updatePassword` — wrap existing T1.
 - `deleteAccount()` [owner] · `listSessions()` / `revokeSession(id)` [owner].
 
 ### Profiles
+
 - `getPublicCreator(handle)` → public-safe creator view (**omits `user_id`**) [public].
 - `getMyProfile()` [owner] · `updateMyProfile(patch)` [owner].
 - `claimHandle(handle)` → `{ok}` [owner] — checks `reserved_handles` + ci-unique.
 - `submitCreatorVerification(payload)` [creator] · `setCreatorTheme(theme)` [creator].
 
 ### Posts
+
 - `createPost(input)` · `updatePost(id,patch)` · `publishPost(id)` · `schedulePost(id,at)` · `archivePost(id)` [creator, owner].
 - `getCreatorFeed(creatorId,cursor)` [public/entitled] · `getMemberFeed(cursor)` [member].
 - `getPostWithEntitlement(postId)` → post + `{entitled:boolean, reason}` [auth] — **server resolves `content_entitlements`, never client flags**.
 
 ### Comments / likes / saves / follows (mostly T1, server where moderation matters)
+
 - `toggleLike(postId)` · `toggleSave(postId)` [auth, T1] · `listSavedPosts(cursor)` [owner].
 - `followCreator(creatorId)` · `unfollowCreator(creatorId)` [auth, T1] · `listFollowers`/`listFollowing(cursor)` · `blockUser(userId)` [auth].
 - `createComment` · `updateOwnComment` · `deleteOwnComment` [author] · `hideCommentAsCreator(id)` [creator] · `listCommentsCursor(postId,cursor)`.
 
 ### Subscriptions & entitlements (T2 — server writes status)
+
 - `createCreatorSubscriptionCheckout(creatorId,tierId)` → checkout session (mock first) [member].
 - `createPlatformPlanCheckout(plan)` → CABANA SaaS checkout [creator].
 - `openBillingPortal()` · `cancelSubscription(id)` · `resumeSubscription(id)` [owner].
 - `getEntitlement(userId,postId|creatorId)` → `{entitled, source}` [server/auth].
 
 ### Tips & purchases (T2)
+
 - `createTipPayment(creatorId,amountCents,message)` [member].
 - `createProductCheckout(productId,qty)` → order [member].
 - `unlockPost(postId)` · `unlockPaidMessage(messageId)` → entitlement + transaction [member].
 - `requestRefund(transactionId,reason)` [owner].
 
 ### Messages (T2 + Realtime)
+
 - `createConversation(participantUserIds)` [auth] · `listConversationsCursor(cursor)` [participant].
 - `listMessagesCursor(conversationId,cursor)` [participant] · `sendMessage(conversationId,body|mediaId)` [participant].
 - `sendPaidMessage(conversationId, body, priceCents)` [creator] · `markConversationRead(conversationId,messageId)` [participant].
 - `getAttachmentSignedUrl(messageId)` → short-lived signed URL after participant + unlock check [participant].
 
 ### Notifications (mostly T1 reads)
+
 - `listNotificationsCursor(cursor)` · `getUnreadNotificationCount()` [recipient].
 - `markNotificationRead(id)` · `markAllNotificationsRead()` [recipient].
 - Generation is **server-side** from event handlers, not a client action.
 
 ### Uploads / media (T2)
+
 - `createUploadIntent({kind,mime,bytes})` → signed upload URL + media row (`uploaded`) [owner].
 - `completeUpload(mediaId)` → enqueue processing [owner].
 - `deleteMedia(mediaId)` [owner] · `getPublicVariant(mediaId)` [public] · `getEntitledSignedUrl(mediaId)` [entitled].
 - `processMediaWebhook(payload)` [webhook] — see §6.
 
 ### Reports & moderation (T2)
+
 - `createReport(subjectType,subjectId,reason,details)` [auth] · `listMyReports()` [owner].
 - `adminListReports(filter,cursor)` · `adminResolveReport(id,resolution)` [moderator].
 - `adminSuspendUser(userId)` · `adminRestoreUser(userId)` · `adminRemoveContent(type,id)` [moderator/admin].
 
 ### Admin (T2, capability-scoped)
+
 - `adminSearchUsers(query)` · `adminSetRole(userId,role)` [admin].
 - `adminReviewVerification(id,decision)` [admin] · `adminReviewTransaction(id)` [finance].
 - `adminRetryPayout(id)` [finance] · `adminFeatureCreator(creatorId)` [admin] · `adminGetMetrics()` [admin].
@@ -113,15 +148,15 @@ Grouped by domain. Each entry: **name** — input → output [auth]. "Owner" = a
 
 ## 5. Error Handling
 
-| Layer | Pattern |
-|-------|---------|
-| T1 mutations | `useCabanaMutations` already wraps each op in try/catch → `toast.error("<label>: <msg>")` and returns `null`; keep this convention |
-| Analytics | **Swallow silently** — analytics must never break UX (`cabana-analytics.ts` already does this) |
-| T2 auth failures | Throw `Response(msg, {status:401/403})` from middleware (see `requireSupabaseAuth`) |
-| T2 validation | Return `{ok:false,error}` with field-level detail; 400-class |
+| Layer             | Pattern                                                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| T1 mutations      | `useCabanaMutations` already wraps each op in try/catch → `toast.error("<label>: <msg>")` and returns `null`; keep this convention                     |
+| Analytics         | **Swallow silently** — analytics must never break UX (`cabana-analytics.ts` already does this)                                                         |
+| T2 auth failures  | Throw `Response(msg, {status:401/403})` from middleware (see `requireSupabaseAuth`)                                                                    |
+| T2 validation     | Return `{ok:false,error}` with field-level detail; 400-class                                                                                           |
 | T2 money/webhooks | Never partial-commit; wrap ledger writes in a DB transaction; keep external API calls **outside** the DB transaction (don't hold locks across network) |
-| SSR catastrophic | `src/server.ts` already catches thrown + h3-swallowed 500s and renders a branded error page — preserve |
-| Route-level | `__root.tsx` `errorComponent` / `notFoundComponent` |
+| SSR catastrophic  | `src/server.ts` already catches thrown + h3-swallowed 500s and renders a branded error page — preserve                                                 |
+| Route-level       | `__root.tsx` `errorComponent` / `notFoundComponent`                                                                                                    |
 
 **Standard error envelope (T2):** `{ ok:false, error:{ code, message, field? } }`. Codes: `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION`, `CONFLICT`, `RATE_LIMITED`, `ENTITLEMENT_REQUIRED`, `PAYMENT_FAILED`, `INTERNAL`.
 

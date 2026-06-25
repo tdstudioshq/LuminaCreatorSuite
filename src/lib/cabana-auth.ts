@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { type AccountType, resolveAccountType } from "@/lib/cabana-account";
 
 export type CabanaUser = {
   id: string;
@@ -19,7 +20,13 @@ function toCabana(user: User | null): CabanaUser | null {
 }
 
 export const cabanaAuth = {
-  async signup(input: { name: string; email: string; password: string }) {
+  async signup(input: {
+    name: string;
+    email: string;
+    password: string;
+    /** Defaults to "creator" — preserves existing creator signup behavior. */
+    accountType?: AccountType;
+  }) {
     const email = input.email.trim().toLowerCase();
     if (!input.name.trim()) return { ok: false as const, error: "Please enter your name." };
     if (!/^\S+@\S+\.\S+$/.test(email))
@@ -27,16 +34,22 @@ export const cabanaAuth = {
     if (input.password.length < 6)
       return { ok: false as const, error: "Password must be at least 6 characters." };
 
+    const accountType = resolveAccountType(input.accountType);
+    // Members land on /account; creators keep the /dashboard onboarding flow.
+    const landing = accountType === "member" ? "/account" : "/dashboard";
     const emailRedirectTo =
-      typeof window !== "undefined" ? `${window.location.origin}/dashboard` : undefined;
+      typeof window !== "undefined" ? `${window.location.origin}${landing}` : undefined;
 
     const { data, error } = await supabase.auth.signUp({
       email,
       password: input.password,
-      options: { data: { name: input.name.trim() }, emailRedirectTo },
+      options: {
+        data: { name: input.name.trim(), account_type: accountType },
+        emailRedirectTo,
+      },
     });
     if (error) return { ok: false as const, error: error.message };
-    return { ok: true as const, user: toCabana(data.user)! };
+    return { ok: true as const, user: toCabana(data.user)!, accountType };
   },
 
   async login(input: { email: string; password: string }) {

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { AuthShell, AuthField } from "@/components/cabana/auth/AuthShell";
 import { cabanaAuth } from "@/lib/cabana-auth";
+import { type AccountType, accountHomePath } from "@/lib/cabana-account";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/signup")({
@@ -25,6 +26,7 @@ function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [accountType, setAccountType] = useState<AccountType>("creator");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -32,13 +34,16 @@ function SignupPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const res = await cabanaAuth.signup({ name, email, password });
+    const res = await cabanaAuth.signup({ name, email, password, accountType });
     setLoading(false);
     if (!res.ok) {
       setError(res.error);
       return;
     }
-    navigate({ to: "/onboarding" });
+    // Creators continue into the studio onboarding flow; members land on their
+    // account foundation. (Email-confirmation off in local config; with it on,
+    // the emailRedirectTo from cabana-auth handles the landing.)
+    navigate({ to: res.accountType === "member" ? accountHomePath("member") : "/onboarding" });
   };
 
   return (
@@ -56,6 +61,38 @@ function SignupPage() {
       }
     >
       <form onSubmit={onSubmit} className="space-y-4">
+        <fieldset className="space-y-2">
+          <legend className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/80">
+            I'm joining as a
+          </legend>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Account type">
+            {(
+              [
+                { id: "creator", label: "Creator", hint: "Build a page & storefront" },
+                { id: "member", label: "Member", hint: "Follow & support creators" },
+              ] as const
+            ).map((opt) => {
+              const active = accountType === opt.id;
+              return (
+                <button
+                  type="button"
+                  key={opt.id}
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setAccountType(opt.id)}
+                  className={`rounded-xl border px-3 py-3 text-left transition-colors ${
+                    active
+                      ? "border-primary/60 bg-primary/10"
+                      : "border-border/60 hover:border-border"
+                  }`}
+                >
+                  <div className="text-sm font-medium text-foreground">{opt.label}</div>
+                  <div className="text-[11px] text-muted-foreground/80">{opt.hint}</div>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
         <AuthField
           label="Name"
           autoComplete="name"

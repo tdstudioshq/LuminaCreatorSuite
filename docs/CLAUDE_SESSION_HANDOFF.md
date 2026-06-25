@@ -16,7 +16,26 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
-## Latest Status — Phase 2A VERIFIED (Supabase Baseline + CI)
+## Latest Status — Phase 2B part 1 COMPLETE (Member Accounts & Auth Infrastructure)
+
+Built on the verified 2A baseline. **All gates green** (`lint` / `tsc` / `test` / `build` / `db:validate`), all run on a real Docker host.
+
+**Delivered (additive — no `subscriptions` rename, no `creator_subscriptions`/posts/feed/messaging/payments):**
+
+- **Migration** `supabase/migrations/20260512000000_member_accounts.sql`: `account_type` enum ('creator'|'member', default **creator**); `profiles.account_type` (NOT NULL default creator); private **`member_profiles`** table (owner-only RLS, explicit `authenticated` grants + `anon` revoke, `updated_at` touch); `handle_new_user` now **branches** (creator → creator_profile + free subscription; member → member_profile; both get `user` role); reserves `account`/`member` handles.
+- **Server-action tier (T2) wired**: `src/integrations/supabase/auth-client-middleware.ts` (`attachSupabaseToken`) pairs with the generated `requireSupabaseAuth`; `src/lib/account-actions.ts` exposes `getAccountContext` / `getMemberProfile` / `updateMemberProfile` (RLS-scoped, never service role).
+- **Pure logic** `src/lib/cabana-account.ts` (account-type resolution, member-profile mapping/normalization, context shaping) — 100% covered by `cabana-account.test.ts` (73 tests total).
+- **Client**: signup creator/member toggle (`cabana-auth.ts` `signup({…, accountType})`); account-aware `/dashboard` guard (members → `/account`); new **`/account`** member-profile foundation route; hooks in `src/lib/use-account.ts`.
+- **DB tests**: `supabase/tests/member_accounts.sql` (trigger branching + member RLS incl. anon-deny) added to `db:validate` + CI; `smoke.sql` extended.
+- **`types.ts`** hand-extended (member_profiles + account_type), commented, pending Lovable regen.
+
+**Verified on Docker:** from-zero `db reset` (baseline + member migration) clean; smoke + behavioral SQL pass; creator signup → creator_profile+subscription, member signup → member_profile, RLS isolates members, anon denied.
+
+**Next:** Phase 2B part 2 (follows + social feed: posts/comments/likes/saves, public-safe views, private media) — gated. Also still pending from 2A: remote `supabase db dump` diff + `migration repair` before any production deploy.
+
+---
+
+## Phase 2A VERIFIED (Supabase Baseline + CI)
 
 **Verification (June 25, 2026) — gap closed on real Docker + CI:**
 
@@ -301,4 +320,3 @@ At the end of the next session, report:
 - Lint, build, and TypeScript results.
 - Known warnings or blockers.
 - Exact recommended next task.
-

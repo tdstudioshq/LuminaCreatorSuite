@@ -18,31 +18,35 @@ The expansion is **strictly additive**: the working creator OS (profiles, links,
 
 ## 2. Product Goals
 
-| # | Goal | Success signal |
-|---|------|----------------|
-| G1 | Preserve and harden the existing creator OS | No regressions in profile/links/storefront/analytics; dead buttons and `#` links resolved |
-| G2 | Introduce a true member/fan account type distinct from creators | A user can sign up as a fan, follow creators, and never see a creator dashboard |
-| G3 | Ship a social publishing layer (posts, media, comments, likes, saves) | Creators publish posts with `public`/`followers`/`subscribers`/`purchase` visibility |
-| G4 | Enable fan-to-creator subscriptions with content entitlements | Locked content is gated by server-verified entitlement, not client flags |
-| G5 | Add private messaging and a durable notification system | Realtime inbox + notification center scoped by RLS |
-| G6 | Add a real money system (transactions, balances, payouts) — demo first, then real | Immutable ledger; integer-cents money; webhook-sourced truth |
-| G7 | Replace the hardcoded admin with server-gated moderation and operations | Admin actions are server-authorized and audit-logged |
-| G8 | Reach a launch-ready posture: legal, compliance, security, observability | Reproducible DB baseline, RLS audited, CSP, CI, monitoring |
+| #   | Goal                                                                              | Success signal                                                                            |
+| --- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| G1  | Preserve and harden the existing creator OS                                       | No regressions in profile/links/storefront/analytics; dead buttons and `#` links resolved |
+| G2  | Introduce a true member/fan account type distinct from creators                   | A user can sign up as a fan, follow creators, and never see a creator dashboard           |
+| G3  | Ship a social publishing layer (posts, media, comments, likes, saves)             | Creators publish posts with `public`/`followers`/`subscribers`/`purchase` visibility      |
+| G4  | Enable fan-to-creator subscriptions with content entitlements                     | Locked content is gated by server-verified entitlement, not client flags                  |
+| G5  | Add private messaging and a durable notification system                           | Realtime inbox + notification center scoped by RLS                                        |
+| G6  | Add a real money system (transactions, balances, payouts) — demo first, then real | Immutable ledger; integer-cents money; webhook-sourced truth                              |
+| G7  | Replace the hardcoded admin with server-gated moderation and operations           | Admin actions are server-authorized and audit-logged                                      |
+| G8  | Reach a launch-ready posture: legal, compliance, security, observability          | Reproducible DB baseline, RLS audited, CSP, CI, monitoring                                |
 
 **Non-goals (explicit, current):** no adult-content functionality; no real payment processor until mock flows are accepted; no KYC/payout provider until the ledger is proven; no native mobile app (responsive web only).
 
 ## 3. User Personas
 
 ### P1 — Independent Creator ("Aurora")
+
 A visual artist / musician / model / coach with an established audience on other platforms. Wants a flagship page that looks expensive, a place to sell drops, and recurring income from superfans without giving away brand control. Cares about art direction, analytics, and getting paid reliably. **Primary revenue persona.**
 
 ### P2 — Creator-Management / Agency
-Manages several creators. Referenced in marketing and pricing (Empire tier) but has **no working multi-seat product today**. Future need: team roles, multi-creator switching, consolidated finance. *Out of MVP scope; tracked as Long-term.*
+
+Manages several creators. Referenced in marketing and pricing (Empire tier) but has **no working multi-seat product today**. Future need: team roles, multi-creator switching, consolidated finance. _Out of MVP scope; tracked as Long-term._
 
 ### P3 — Member / Fan ("Maya")
+
 Follows creators, subscribes to the ones she loves, buys drops, tips, and messages. Wants a clean feed, a clear "what I'm paying for," and private, respectful access. **Does not exist as a role yet** — every signup currently becomes a creator. Creating this persona is the single biggest unlock (G2).
 
 ### P4 — Admin / Operator (internal)
+
 Anthropic-of-CABANA: trust & safety, finance, support. Needs real user/role management, report queues, verification, payout exceptions, and audit history. Today the `/admin` route is role-gated but entirely hardcoded.
 
 Sub-roles to separate over time: **moderator** (reports, content), **support** (account lookup), **finance** (transactions, payouts, refunds), **admin** (roles, policy), **super-admin** (capability administration).
@@ -103,15 +107,16 @@ Current reality: `/admin` gates on `user_roles.role = 'admin'` (client-side) and
 
 **Revenue primitives (marketplace):**
 
-| Primitive | Fan pays for | Recurrence | Entitlement granted |
-|-----------|-------------|------------|---------------------|
-| Creator subscription | A tier (e.g. "Inner Circle" $19, "Backstage" $39) | Recurring | All `subscribers`-visibility content for that creator |
-| Paid post / unlock | A single locked post | One-time | That post only |
-| Tip | Appreciation | One-time | None (optional thank-you) |
-| Paid message | A locked message/attachment | One-time | That message |
-| Product order | A physical/download/membership item | One-time | The product / download |
+| Primitive            | Fan pays for                                      | Recurrence | Entitlement granted                                   |
+| -------------------- | ------------------------------------------------- | ---------- | ----------------------------------------------------- |
+| Creator subscription | A tier (e.g. "Inner Circle" $19, "Backstage" $39) | Recurring  | All `subscribers`-visibility content for that creator |
+| Paid post / unlock   | A single locked post                              | One-time   | That post only                                        |
+| Tip                  | Appreciation                                      | One-time   | None (optional thank-you)                             |
+| Paid message         | A locked message/attachment                       | One-time   | That message                                          |
+| Product order        | A physical/download/membership item               | One-time   | The product / download                                |
 
 **Money rules (non-negotiable, apply in demo and production):**
+
 - All amounts are **integer minor units (cents)** plus an explicit currency. Never floats, never display strings for math.
 - Creator balance is **derived** from succeeded transactions minus platform fee, processor fee, refunds, and payouts — never independently stored as truth.
 - Settled (`succeeded`) transaction amounts are **immutable**.
@@ -153,45 +158,47 @@ Two app shells will emerge: an **authenticated member layout** (for fan routes) 
 
 Status legend: ✅ Implemented · 🟡 Demo/placeholder · ⬜ Not built
 
-| Domain | Feature | Status | Target phase |
-|--------|---------|--------|--------------|
-| Auth | Email/password signup, login, password reset | ✅ | — |
-| Auth | Member vs creator role choice / upgrade | ⬜ | P1–P2 |
-| Auth | OAuth, MFA, CAPTCHA, email-verify branch | ⬜ | P7 |
-| Profile | Creator profile CRUD (name/handle/bio/avatar/theme) | ✅ | — |
-| Profile | Banner upload | ⬜ | P1 |
-| Profile | Apply saved theme to public page | ⬜ (stored, unused) | P1 |
-| Profile | Member profiles + privacy | ⬜ | P2 |
-| Links | Link CRUD, feature, reorder, click analytics | ✅ | — |
-| Links | URL validation, atomic reorder, true scheduling | 🟡 | P1 |
-| Storefront | Product CRUD + image upload | ✅ | — |
-| Storefront | Checkout, orders, digital delivery, inventory | ⬜ | P6 |
-| Analytics | Page/link/product event capture + dashboard | ✅ | — |
-| Analytics | Unique visitors, geo/device/referrer, export | ⬜ | P10 |
-| Social | Posts (composer, visibility, schedule) | ⬜ (types only) | P2 |
-| Social | Comments, likes, saves | ⬜ (types only) | P2 |
-| Social | Persistent follows | ⬜ (local only) | P2 |
-| Social | Member feed + discovery/search | 🟡 placeholder | P2 |
-| Monetization | Fan subscriptions + entitlements | ⬜ (types/demo) | P3 |
-| Monetization | Tips, paid posts, paid messages | ⬜ (types/demo) | P3–P5 |
-| Monetization | Mock checkout flow | ⬜ | P3 |
-| Payments | Real processor, billing portal, refunds, disputes | ⬜ | P6 |
-| Payouts | Connected accounts, KYC, ledger, payout scheduling | ⬜ | P6 |
-| Messaging | Conversations, messages, realtime, read state, attachments | 🟡 placeholder (types/demo) | P4 |
-| Notifications | Notification center, unread counts, email/push | 🟡 placeholder (types/demo) | P9 |
-| Admin | User/role mgmt, real metrics | 🟡 hardcoded | P7 |
-| Moderation | Reports, blocks, suspensions, takedowns, appeals | ⬜ (types only) | P8 |
-| Media | Private buckets, signed URLs, video/audio, processing | ⬜ | P5–P6 |
-| AI Studio | Bio/CTA/caption/theme generation | 🟡 simulated | Long-term |
-| Media kit | Sponsorship kit + export | 🟡 hardcoded | Long-term |
-| Settings | Integrations (Stripe/Mailchimp/Shopify/Calendly), custom domain | 🟡 hardcoded | Long-term |
-| Compliance | Legal pages, acceptance records, DMCA, tax | ⬜ | P10 |
-| Platform | Reproducible baseline migration, CI, observability | ⬜ | P1–P2 |
+| Domain        | Feature                                                         | Status                      | Target phase |
+| ------------- | --------------------------------------------------------------- | --------------------------- | ------------ |
+| Auth          | Email/password signup, login, password reset                    | ✅                          | —            |
+| Auth          | Member vs creator role choice / upgrade                         | ⬜                          | P1–P2        |
+| Auth          | OAuth, MFA, CAPTCHA, email-verify branch                        | ⬜                          | P7           |
+| Profile       | Creator profile CRUD (name/handle/bio/avatar/theme)             | ✅                          | —            |
+| Profile       | Banner upload                                                   | ⬜                          | P1           |
+| Profile       | Apply saved theme to public page                                | ⬜ (stored, unused)         | P1           |
+| Profile       | Member profiles + privacy                                       | ⬜                          | P2           |
+| Links         | Link CRUD, feature, reorder, click analytics                    | ✅                          | —            |
+| Links         | URL validation, atomic reorder, true scheduling                 | 🟡                          | P1           |
+| Storefront    | Product CRUD + image upload                                     | ✅                          | —            |
+| Storefront    | Checkout, orders, digital delivery, inventory                   | ⬜                          | P6           |
+| Analytics     | Page/link/product event capture + dashboard                     | ✅                          | —            |
+| Analytics     | Unique visitors, geo/device/referrer, export                    | ⬜                          | P10          |
+| Social        | Posts (composer, visibility, schedule)                          | ⬜ (types only)             | P2           |
+| Social        | Comments, likes, saves                                          | ⬜ (types only)             | P2           |
+| Social        | Persistent follows                                              | ⬜ (local only)             | P2           |
+| Social        | Member feed + discovery/search                                  | 🟡 placeholder              | P2           |
+| Monetization  | Fan subscriptions + entitlements                                | ⬜ (types/demo)             | P3           |
+| Monetization  | Tips, paid posts, paid messages                                 | ⬜ (types/demo)             | P3–P5        |
+| Monetization  | Mock checkout flow                                              | ⬜                          | P3           |
+| Payments      | Real processor, billing portal, refunds, disputes               | ⬜                          | P6           |
+| Payouts       | Connected accounts, KYC, ledger, payout scheduling              | ⬜                          | P6           |
+| Messaging     | Conversations, messages, realtime, read state, attachments      | 🟡 placeholder (types/demo) | P4           |
+| Notifications | Notification center, unread counts, email/push                  | 🟡 placeholder (types/demo) | P9           |
+| Admin         | User/role mgmt, real metrics                                    | 🟡 hardcoded                | P7           |
+| Moderation    | Reports, blocks, suspensions, takedowns, appeals                | ⬜ (types only)             | P8           |
+| Media         | Private buckets, signed URLs, video/audio, processing           | ⬜                          | P5–P6        |
+| AI Studio     | Bio/CTA/caption/theme generation                                | 🟡 simulated                | Long-term    |
+| Media kit     | Sponsorship kit + export                                        | 🟡 hardcoded                | Long-term    |
+| Settings      | Integrations (Stripe/Mailchimp/Shopify/Calendly), custom domain | 🟡 hardcoded                | Long-term    |
+| Compliance    | Legal pages, acceptance records, DMCA, tax                      | ⬜                          | P10          |
+| Platform      | Reproducible baseline migration, CI, observability              | ⬜                          | P1–P2        |
 
 ## 10. Roadmap — MVP / Phase 2 / Long-term
 
 ### MVP (the canonical V1 product boundary)
+
 The decision the architecture doc demands: **CABANA V1 is the creator OS + a real member layer + public/free social publishing + fan subscriptions in demo (mock-money) mode.** Concretely:
+
 - Harden existing creator OS (G1).
 - Real member accounts, persistent follows, member feed (G2, G3 public scope).
 - Posts/comments/likes/saves with `public`/`followers`/`subscribers` visibility.
@@ -201,12 +208,14 @@ The decision the architecture doc demands: **CABANA V1 is the creator OS + a rea
 This corresponds to Build Phases 1–3 (+ the platform foundation work threaded through them).
 
 ### Phase 2 (post-MVP, depth)
+
 - Messaging (conversations, realtime, paid messages) — Build Phase 4.
 - Durable notifications + email outbox — Build Phase 9.
 - Admin operations + moderation on real data — Build Phases 7–8.
 - Real payments + payouts (processor, KYC, ledger reconciliation) — Build Phase 6.
 
 ### Long-term (12-month horizon)
+
 - Agency / multi-seat product (P2 persona).
 - Real AI generation service replacing simulated AI Studio.
 - Live media-kit export and real integration connectors (Stripe/Mailchimp/Shopify/Calendly, custom domains, social import).

@@ -10,7 +10,8 @@ do $$
 declare
   expected_tables text[] := array[
     'profiles','creator_profiles','links','products',
-    'analytics_events','subscriptions','user_roles','reserved_handles'
+    'analytics_events','subscriptions','user_roles','reserved_handles',
+    'member_profiles'
   ];
   t text;
 begin
@@ -21,9 +22,20 @@ begin
     end if;
   end loop;
 
-  -- Enum
+  -- Enums
   if not exists (select 1 from pg_type where typname = 'app_role') then
     raise exception 'MISSING ENUM: app_role';
+  end if;
+  if not exists (select 1 from pg_type where typname = 'account_type') then
+    raise exception 'MISSING ENUM: account_type';
+  end if;
+
+  -- Phase 2B: profiles.account_type column (NOT NULL, default creator)
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profiles' and column_name = 'account_type'
+  ) then
+    raise exception 'MISSING COLUMN: public.profiles.account_type';
   end if;
 
   -- Functions
@@ -53,6 +65,18 @@ begin
   end if;
   if not (select relrowsecurity from pg_class where oid = 'public.subscriptions'::regclass) then
     raise exception 'RLS NOT ENABLED: subscriptions';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.member_profiles'::regclass) then
+    raise exception 'RLS NOT ENABLED: member_profiles';
+  end if;
+
+  -- member_profiles must NOT be publicly readable (no USING(true) select policy)
+  if exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'member_profiles'
+      and cmd = 'SELECT' and qual = 'true'
+  ) then
+    raise exception 'SECURITY: member_profiles has a public SELECT policy';
   end if;
 
   -- Storage buckets
