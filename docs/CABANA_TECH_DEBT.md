@@ -8,13 +8,14 @@
 
 ## 1. Migration Baseline (🔴 — the prerequisite debt)
 
-**🟡 Largely addressed in Phase 2A — verification pending.** A squashed, rebuildable-from-zero baseline (`supabase/migrations/20260511000000_baseline.sql`) now reconstructs the full schema — base tables, RLS, storage buckets, the signup trigger, and all functions — and the four incomplete incrementals are archived under `supabase/_archive/pre_baseline_migrations/`. The signup trigger and base RLS are now **in the repo** and auditable.
+**🟡 Validated from-zero (Docker + CI) — only remote byte-exact reconciliation remains.** A squashed, rebuildable-from-zero baseline (`supabase/migrations/20260511000000_baseline.sql`) reconstructs the full schema — base tables, RLS, storage buckets, the signup trigger, and all functions — and the four incomplete incrementals are archived under `supabase/_archive/pre_baseline_migrations/`. The signup trigger and base RLS are now **in the repo** and auditable.
+
+Verified June 25, 2026: `bun run db:validate` rebuilt from zero on a real Docker daemon and the smoke assertions passed; **GitHub Actions** run `28170007528` repeats the from-zero rebuild + smoke on a clean runner (green).
 
 Remaining (the reason this is 🟡 not ✅):
-- The baseline was **reconstructed**, not dumped from the live DB (no DB access in the authoring env). Diff against a real `supabase db dump` before treating it as byte-exact.
-- Reconcile remote migration history: `supabase migration repair --status applied 20260511000000`.
+- The baseline was **reconstructed**, not dumped from the live DB. Diff against a real `supabase db dump` before treating it as byte-exact. **Auth-blocked so far** — no Supabase access token / DB password in the dev env.
+- Reconcile remote migration history: `supabase migration repair --status applied 20260511000000` (mutates remote — run deliberately).
 - Confirm Postgres `major_version` (config.toml = 15) against the remote.
-- Run `bun run db:validate` on a Docker host / in CI to execute the from-zero rebuild + smoke checks.
 
 ## 2. Repository / Process Debt
 
