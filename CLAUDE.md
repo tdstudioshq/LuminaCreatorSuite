@@ -29,7 +29,7 @@ bun run db:reset       # supabase db reset (rebuild local DB from migrations + s
 bun run db:validate    # scripts/db-validate.sh — rebuilds a fresh Supabase from zero, runs smoke checks
 ```
 
-**Tests** use **vitest** (`vitest.config.ts`, separate from `vite.config.ts`). They cover only the *pure* business layer (no React/Supabase/browser): `cabana-money`, `cabana-entitlements`, `cabana-account`, `cabana-relationships`. Coverage thresholds are **95%** lines/functions/branches/statements over exactly those four files — keep new domain logic in a pure, repository-injected module (like `cabana-relationships.ts`) so it stays testable without a DB.
+**Tests** use **vitest** (`vitest.config.ts`, separate from `vite.config.ts`). They cover only the _pure_ business layer (no React/Supabase/browser): `cabana-money`, `cabana-entitlements`, `cabana-account`, `cabana-relationships`, `cabana-posts`. Coverage thresholds are **95%** lines/functions/branches/statements over exactly those files — keep new domain logic in a pure, repository-injected module (like `cabana-relationships.ts`) so it stays testable without a DB.
 
 Before any handoff, the required gate is: `bun run lint`, `bun run build`, `bunx tsc --noEmit`, and `bun run test` all pass. ESLint retains some pre-existing react-refresh Fast Refresh warnings in shadcn UI files; those are expected. `bun run db:validate` requires Docker and exits non-zero with a clear message on hosts without it (e.g. this sandbox) — CI runs it on a Docker-enabled runner.
 
@@ -63,7 +63,7 @@ Real, RLS-scoped server functions live in `src/lib/account-actions.ts` (Phase 2B
 So these handlers run under the caller's RLS, **never the service role**. Conventions:
 
 - **Handlers stay thin.** Validation + behavior live in pure, repository-injected modules (`cabana-account.ts`, `cabana-relationships.ts`) that are unit-tested without a browser or DB. The action file just wires a `*Repository` (real Supabase queries / RPC calls) into those functions.
-- **Do not put server-action files under any `**/server/**` path.** `createServerFn` compiles to a client-importable RPC bridge, and the `src/start.ts` import-protection plugin blocks `**/server/**` from client bundles. (`client.server.ts` / `supabaseAdmin` is the service-role exception and *is* server-only.)
+- **Do not put server-action files under any `**/server/**` path.** `createServerFn` compiles to a client-importable RPC bridge, and the `src/start.ts` import-protection plugin blocks `**/server/**` from client bundles. (`client.server.ts` / `supabaseAdmin` is the service-role exception and _is_ server-only.)
 - A global client `functionMiddleware` (`attachSupabaseAuth` in `auth-attacher.ts`) must be registered in `src/start.ts` or the browser never attaches the bearer token. Note `auth-attacher.ts` is auto-generated; `auth-client-middleware.ts` is the hand-editable companion.
 - Client consumers wrap these via React Query hooks in `use-account.ts` / `use-relationships.ts`.
 

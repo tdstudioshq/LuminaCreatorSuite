@@ -1,10 +1,30 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5";
+  graphql_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
   public: {
     Tables: {
@@ -39,6 +59,45 @@ export type Database = {
             columns: ["profile_id"];
             isOneToOne: false;
             referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      blocks: {
+        Row: {
+          blocked_user_id: string;
+          blocker_id: string;
+          created_at: string;
+          id: string;
+          reason: string | null;
+        };
+        Insert: {
+          blocked_user_id: string;
+          blocker_id: string;
+          created_at?: string;
+          id?: string;
+          reason?: string | null;
+        };
+        Update: {
+          blocked_user_id?: string;
+          blocker_id?: string;
+          created_at?: string;
+          id?: string;
+          reason?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "blocks_blocked_user_id_fkey";
+            columns: ["blocked_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "blocks_blocker_id_fkey";
+            columns: ["blocker_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -84,46 +143,6 @@ export type Database = {
           user_id?: string | null;
         };
         Relationships: [];
-      };
-      // Phase 2C: relationship tables hand-added pending Lovable regeneration.
-      blocks: {
-        Row: {
-          blocked_user_id: string;
-          blocker_id: string;
-          created_at: string;
-          id: string;
-          reason: string | null;
-        };
-        Insert: {
-          blocked_user_id: string;
-          blocker_id: string;
-          created_at?: string;
-          id?: string;
-          reason?: string | null;
-        };
-        Update: {
-          blocked_user_id?: string;
-          blocker_id?: string;
-          created_at?: string;
-          id?: string;
-          reason?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "blocks_blocked_user_id_fkey";
-            columns: ["blocked_user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "blocks_blocker_id_fkey";
-            columns: ["blocker_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
       };
       follows: {
         Row: {
@@ -208,6 +227,143 @@ export type Database = {
           },
         ];
       };
+      member_profiles: {
+        Row: {
+          avatar_url: string | null;
+          bio: string;
+          created_at: string;
+          display_name: string;
+          id: string;
+          updated_at: string;
+          user_id: string;
+          username: string;
+        };
+        Insert: {
+          avatar_url?: string | null;
+          bio?: string;
+          created_at?: string;
+          display_name?: string;
+          id?: string;
+          updated_at?: string;
+          user_id: string;
+          username?: string;
+        };
+        Update: {
+          avatar_url?: string | null;
+          bio?: string;
+          created_at?: string;
+          display_name?: string;
+          id?: string;
+          updated_at?: string;
+          user_id?: string;
+          username?: string;
+        };
+        Relationships: [];
+      };
+      post_media: {
+        Row: {
+          created_at: string;
+          height: number | null;
+          id: string;
+          kind: Database["public"]["Enums"]["post_media_kind"];
+          mime_type: string | null;
+          owner_user_id: string;
+          position: number;
+          post_id: string;
+          processing_status: string;
+          storage_bucket: string;
+          storage_path: string;
+          width: number | null;
+        };
+        Insert: {
+          created_at?: string;
+          height?: number | null;
+          id?: string;
+          kind: Database["public"]["Enums"]["post_media_kind"];
+          mime_type?: string | null;
+          owner_user_id: string;
+          position?: number;
+          post_id: string;
+          processing_status?: string;
+          storage_bucket?: string;
+          storage_path: string;
+          width?: number | null;
+        };
+        Update: {
+          created_at?: string;
+          height?: number | null;
+          id?: string;
+          kind?: Database["public"]["Enums"]["post_media_kind"];
+          mime_type?: string | null;
+          owner_user_id?: string;
+          position?: number;
+          post_id?: string;
+          processing_status?: string;
+          storage_bucket?: string;
+          storage_path?: string;
+          width?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "post_media_owner_user_id_fkey";
+            columns: ["owner_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "post_media_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "posts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      posts: {
+        Row: {
+          caption: string;
+          created_at: string;
+          creator_profile_id: string;
+          id: string;
+          published_at: string | null;
+          scheduled_at: string | null;
+          status: Database["public"]["Enums"]["post_status"];
+          updated_at: string;
+          visibility: Database["public"]["Enums"]["post_visibility"];
+        };
+        Insert: {
+          caption?: string;
+          created_at?: string;
+          creator_profile_id: string;
+          id?: string;
+          published_at?: string | null;
+          scheduled_at?: string | null;
+          status?: Database["public"]["Enums"]["post_status"];
+          updated_at?: string;
+          visibility?: Database["public"]["Enums"]["post_visibility"];
+        };
+        Update: {
+          caption?: string;
+          created_at?: string;
+          creator_profile_id?: string;
+          id?: string;
+          published_at?: string | null;
+          scheduled_at?: string | null;
+          status?: Database["public"]["Enums"]["post_status"];
+          updated_at?: string;
+          visibility?: Database["public"]["Enums"]["post_visibility"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "posts_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       products: {
         Row: {
           created_at: string;
@@ -251,40 +407,6 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
-      };
-      // Phase 2B: account_type hand-added pending Lovable Cloud regeneration.
-      member_profiles: {
-        Row: {
-          avatar_url: string | null;
-          bio: string;
-          created_at: string;
-          display_name: string;
-          id: string;
-          updated_at: string;
-          user_id: string;
-          username: string;
-        };
-        Insert: {
-          avatar_url?: string | null;
-          bio?: string;
-          created_at?: string;
-          display_name?: string;
-          id?: string;
-          updated_at?: string;
-          user_id: string;
-          username?: string;
-        };
-        Update: {
-          avatar_url?: string | null;
-          bio?: string;
-          created_at?: string;
-          display_name?: string;
-          id?: string;
-          updated_at?: string;
-          user_id?: string;
-          username?: string;
-        };
-        Relationships: [];
       };
       profiles: {
         Row: {
@@ -396,6 +518,28 @@ export type Database = {
           username: string | null;
           verified: boolean | null;
         };
+        Insert: {
+          avatar_url?: string | null;
+          banner_url?: string | null;
+          bio?: string | null;
+          display_name?: string | null;
+          follower_count?: never;
+          following_count?: never;
+          post_count?: never;
+          username?: string | null;
+          verified?: never;
+        };
+        Update: {
+          avatar_url?: string | null;
+          banner_url?: string | null;
+          bio?: string | null;
+          display_name?: string | null;
+          follower_count?: never;
+          following_count?: never;
+          post_count?: never;
+          username?: string | null;
+          verified?: never;
+        };
         Relationships: [];
       };
       public_member_profiles: {
@@ -410,10 +554,60 @@ export type Database = {
           username: string | null;
           verified: boolean | null;
         };
+        Insert: {
+          avatar_url?: string | null;
+          banner_url?: never;
+          bio?: string | null;
+          display_name?: string | null;
+          follower_count?: never;
+          following_count?: never;
+          post_count?: never;
+          username?: string | null;
+          verified?: never;
+        };
+        Update: {
+          avatar_url?: string | null;
+          banner_url?: never;
+          bio?: string | null;
+          display_name?: string | null;
+          follower_count?: never;
+          following_count?: never;
+          post_count?: never;
+          username?: string | null;
+          verified?: never;
+        };
         Relationships: [];
       };
     };
     Functions: {
+      can_view_post: { Args: { _post_id: string }; Returns: boolean };
+      feed_creator_posts: {
+        Args: { _cursor?: string; _limit?: number; _username: string };
+        Returns: {
+          avatar_url: string;
+          caption: string;
+          display_name: string;
+          locked: boolean;
+          media: Json;
+          post_id: string;
+          published_at: string;
+          username: string;
+          visibility: Database["public"]["Enums"]["post_visibility"];
+        }[];
+      };
+      feed_home_posts: {
+        Args: { _cursor?: string; _limit?: number };
+        Returns: {
+          avatar_url: string;
+          caption: string;
+          display_name: string;
+          media: Json;
+          post_id: string;
+          published_at: string;
+          username: string;
+          visibility: Database["public"]["Enums"]["post_visibility"];
+        }[];
+      };
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"];
@@ -422,21 +616,19 @@ export type Database = {
         Returns: boolean;
       };
       is_current_user_creator: {
-        Args: {
-          _creator_profile_id: string;
-        };
+        Args: { _creator_profile_id: string };
+        Returns: boolean;
+      };
+      is_following_creator: {
+        Args: { _creator_profile_id: string };
         Returns: boolean;
       };
       relationship_follow_creator: {
-        Args: {
-          _username: string;
-        };
+        Args: { _username: string };
         Returns: undefined;
       };
       relationship_state: {
-        Args: {
-          _username: string;
-        };
+        Args: { _username: string };
         Returns: {
           blocked_by_me: boolean;
           follower_count: number;
@@ -447,15 +639,16 @@ export type Database = {
         }[];
       };
       relationship_unfollow_creator: {
-        Args: {
-          _username: string;
-        };
+        Args: { _username: string };
         Returns: undefined;
       };
     };
     Enums: {
       account_type: "creator" | "member";
       app_role: "admin" | "moderator" | "user";
+      post_media_kind: "image" | "video" | "audio";
+      post_status: "draft" | "scheduled" | "published" | "archived";
+      post_visibility: "public" | "followers" | "subscribers" | "purchase";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -579,10 +772,16 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       account_type: ["creator", "member"],
       app_role: ["admin", "moderator", "user"],
+      post_media_kind: ["image", "video", "audio"],
+      post_status: ["draft", "scheduled", "published", "archived"],
+      post_visibility: ["public", "followers", "subscribers", "purchase"],
     },
   },
 } as const;

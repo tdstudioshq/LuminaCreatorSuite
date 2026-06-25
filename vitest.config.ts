@@ -16,12 +16,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "text-summary", "html"],
-      // Pure/testable business layer (money, entitlements, accounts, relationships).
+      // Pure/testable business layer (money, entitlements, accounts,
+      // relationships, posts).
       include: [
         "src/lib/cabana-money.ts",
         "src/lib/cabana-entitlements.ts",
         "src/lib/cabana-account.ts",
         "src/lib/cabana-relationships.ts",
+        "src/lib/cabana-posts.ts",
       ],
       thresholds: {
         lines: 95,

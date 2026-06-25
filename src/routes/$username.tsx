@@ -8,6 +8,8 @@ import { useCreatorByHandle, LINK_ICONS } from "@/lib/cabana-store";
 import { trackPageView, trackLinkClick, trackProductClick } from "@/lib/cabana-analytics";
 import { comingSoon } from "@/lib/coming-soon";
 import { useFollow } from "@/lib/use-relationships";
+import { useCreatorFeed } from "@/lib/use-posts";
+import { PostCard } from "@/components/cabana/posts/PostCard";
 
 export const Route = createFileRoute("/$username")({
   component: CreatorProfileRoute,
@@ -222,6 +224,13 @@ export function CreatorProfile({ username }: { username: string }) {
           </motion.div>
         </motion.section>
 
+        {/* POSTS */}
+        <CreatorPosts
+          username={username}
+          onUnlock={() => void handleFollow()}
+          unlockPending={relationship.pending}
+        />
+
         {/* LINKS */}
         {links.length > 0 && (
           <Section eyebrow="The hub" title="Links">
@@ -344,6 +353,34 @@ export function CreatorProfile({ username }: { username: string }) {
         </Link>
       </div>
     </div>
+  );
+}
+
+function CreatorPosts({
+  username,
+  onUnlock,
+  unlockPending,
+}: {
+  username: string;
+  onUnlock: () => void;
+  unlockPending: boolean;
+}) {
+  const { data: posts, isLoading } = useCreatorFeed(username);
+  if (isLoading || !posts || posts.length === 0) return null;
+  return (
+    <Section eyebrow="Latest" title="Posts">
+      <div className="space-y-4">
+        {posts.map((post, i) => (
+          <PostCard
+            key={post.postId}
+            post={post}
+            index={i}
+            onUnlock={onUnlock}
+            unlockPending={unlockPending}
+          />
+        ))}
+      </div>
+    </Section>
   );
 }
 

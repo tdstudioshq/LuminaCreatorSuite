@@ -1,7 +1,7 @@
 # CABANA — Project State (Engineering Checkpoint)
 
 > Canonical high-level engineering snapshot.
-> Branch at capture: `feat/phase-2c-social-relationships`.
+> Branch at capture: `feat/phase-3-posts-feed` (through Phase 3).
 > Demo clock / "today" in code: **June 25, 2026**.
 > Audience: a brand-new engineer who needs to understand CABANA end-to-end in under 15 minutes.
 >
@@ -46,21 +46,21 @@ moves real money or touches production Supabase without an explicit, gated appro
 
 ## Technology stack
 
-| Layer | Choice | Version (at capture) |
-| --- | --- | --- |
-| UI runtime | React / React DOM | 19.2 |
-| Meta-framework (SSR) | @tanstack/react-start | 1.167 |
-| Routing | @tanstack/react-router | 1.168 |
-| Server state | @tanstack/react-query | 5.83 |
-| Bundler / dev | Vite | 7.3 |
-| Styling | Tailwind CSS 4 (CSS-config, no `tailwind.config`) | 4.2 |
-| Animation | Framer Motion | 12.38 |
-| Backend SDK | @supabase/supabase-js | 2.105 |
-| Validation | zod (server-action input shaping is hand-rolled in pure modules) | 3.24 |
-| Deploy target | Cloudflare Workers (`@cloudflare/vite-plugin`) | 1.25 |
-| Language | TypeScript | 5.8 |
-| Tests | Vitest (v8 coverage) | 4.1 |
-| Package manager / runtime | **Bun** | — |
+| Layer                     | Choice                                                           | Version (at capture) |
+| ------------------------- | ---------------------------------------------------------------- | -------------------- |
+| UI runtime                | React / React DOM                                                | 19.2                 |
+| Meta-framework (SSR)      | @tanstack/react-start                                            | 1.167                |
+| Routing                   | @tanstack/react-router                                           | 1.168                |
+| Server state              | @tanstack/react-query                                            | 5.83                 |
+| Bundler / dev             | Vite                                                             | 7.3                  |
+| Styling                   | Tailwind CSS 4 (CSS-config, no `tailwind.config`)                | 4.2                  |
+| Animation                 | Framer Motion                                                    | 12.38                |
+| Backend SDK               | @supabase/supabase-js                                            | 2.105                |
+| Validation                | zod (server-action input shaping is hand-rolled in pure modules) | 3.24                 |
+| Deploy target             | Cloudflare Workers (`@cloudflare/vite-plugin`)                   | 1.25                 |
+| Language                  | TypeScript                                                       | 5.8                  |
+| Tests                     | Vitest (v8 coverage)                                             | 4.1                  |
+| Package manager / runtime | **Bun**                                                          | —                    |
 
 Vite config uses `@lovable.dev/vite-tanstack-config`, which **already bundles** tanstackStart, viteReact,
 tailwindcss, tsConfigPaths, the Cloudflare plugin, the `@` alias, and `VITE_*` env injection — do not
@@ -234,54 +234,93 @@ LuminaCreatorSuite/
 - **Validation status:** ✅ 83 unit tests pass at 100% configured coverage; migration applies from zero;
   smoke + member-account + social-relationship SQL suites pass on Docker and CI.
 
+## Phase 3 — Posts & Feed Foundation
+
+- **Objectives:** Add the **smallest real publishing slice** — creators compose text + image posts with
+  `public`/`followers` visibility; members/guests read an entitlement-correct feed; media stays private
+  behind authorization-gated signed URLs. No comments/likes/saves, no subscriptions/monetization.
+- **Completed work:**
+  - `posts` + `post_media` tables, `post_visibility`/`post_status`/`post_media_kind` enums, indexes, and
+    owner/public/follower RLS. A **private** `post-media` storage bucket with owner-scoped object policies.
+  - Helpers `is_following_creator(uuid)` and `can_view_post(uuid)`; ID-free RPCs `feed_creator_posts`
+    (returns followers-only posts to non-followers as **locked stubs** with caption/media blanked) and
+    `feed_home_posts`. `is_following_creator`/`is_current_user_creator` grants extended to `anon` because
+    the posts SELECT policies are OR-evaluated for anonymous readers.
+  - Pure module `cabana-posts.ts`; thin actions in `post-actions.ts`; hooks in `use-posts.ts`. New
+    `optionalSupabaseAuth` middleware makes the creator feed guest-callable while resolving a signed-in
+    viewer's `auth.uid()`. `getPostMediaUrls` is the only place the service role signs storage — gated by
+    `can_view_post`.
+  - UI under `src/components/cabana/posts/`; `/dashboard/posts` (real composer + manager, replaced
+    `DemoPosts`), `/feed` (real home feed), `/$username` (public posts + locked teases).
+- **Migrations:** `20260514000000_posts_feed.sql`.
+- **Server actions:** `createPost`, `updatePost`, `publishPost`, `archivePost`, `deletePost`,
+  `addPostMedia`, `deletePostMedia`, `getOwnPosts`, `getCreatorFeed`, `getHomeFeed`, `getPostMediaUrls`.
+- **React hooks:** `useCreatorFeed`, `useHomeFeed`, `useOwnPosts`, `usePostMediaUrls`, `useCreatePost`,
+  `useUpdatePost`, `usePublishPost`, `useArchivePost`, `useDeletePost`, `useUploadPostMedia`,
+  `useDeletePostMedia`.
+- **Routes:** `/dashboard/posts`, `/feed` rebuilt; `/$username` augmented with a Posts section.
+- **Tests:** `cabana-posts.test.ts` (33); `supabase/tests/posts_feed.sql` (owner CRUD, anon public read,
+  follower gating, locked stubs, no draft/subscriber leakage, `can_view_post` truth table, owner-only
+  `post_media`, private bucket); `smoke.sql` extended; CI `db-validate` runs `posts_feed.sql`.
+- **Documentation:** session handoff (Phase 3 — current "Latest Status"); this checkpoint.
+- **Validation status:** ✅ 116 unit tests pass (100% statements/functions/lines, 99.5% branches);
+  migration applies from zero; all four SQL suites pass through the DB container; lint/tsc/build green.
+
 ---
 
 # Current Database
 
-Schema is rebuilt from zero by three ordered migrations:
-`20260511000000_baseline.sql` → `20260512000000_member_accounts.sql` → `20260513000000_social_relationships.sql`.
+Schema is rebuilt from zero by four ordered migrations:
+`20260511000000_baseline.sql` → `20260512000000_member_accounts.sql` →
+`20260513000000_social_relationships.sql` → `20260514000000_posts_feed.sql`.
 
-## Tables (11)
+## Tables (13)
 
-| Table | Purpose | Read access | Write access |
-| --- | --- | --- | --- |
-| `profiles` | Shared identity, 1:1 with `auth.users`; holds `account_type`. | Owner only | Owner update (insert via trigger) |
-| `creator_profiles` | Public creator presence; drives `/$username`. `user_id` nullable (ownerless `aurora` seed). | **Public** (note: exposes `user_id`) | Owner insert/update |
-| `links` | Smart-link blocks on the public page. | Public | Owner (via parent profile) |
-| `products` | Storefront products. | Public | Owner (via parent profile) |
-| `analytics_events` | First-party page/link/product events. | Owner (creator) read | Anyone may insert for a real profile |
-| `subscriptions` | **CABANA SaaS plan** per account (NOT fan-to-creator). | Owner read | Trigger/service-side only |
-| `user_roles` | Authorization roles. | Owner read; admins read all | Admins manage |
-| `reserved_handles` | Handles that cannot be claimed. | Public read | — (seed/admin) |
-| `member_profiles` | Private member identity + public `username`. | Owner only | Owner insert/update (no delete) |
-| `follows` | account → creator follow edges. | Follower reads own; creator reads own followers | Follower insert/delete |
-| `blocks` | account → account blocks (private to blocker). | Blocker only | Blocker insert/delete |
+| Table              | Purpose                                                                                     | Read access                                                                                    | Write access                         |
+| ------------------ | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `profiles`         | Shared identity, 1:1 with `auth.users`; holds `account_type`.                               | Owner only                                                                                     | Owner update (insert via trigger)    |
+| `creator_profiles` | Public creator presence; drives `/$username`. `user_id` nullable (ownerless `aurora` seed). | **Public** (note: exposes `user_id`)                                                           | Owner insert/update                  |
+| `links`            | Smart-link blocks on the public page.                                                       | Public                                                                                         | Owner (via parent profile)           |
+| `products`         | Storefront products.                                                                        | Public                                                                                         | Owner (via parent profile)           |
+| `analytics_events` | First-party page/link/product events.                                                       | Owner (creator) read                                                                           | Anyone may insert for a real profile |
+| `subscriptions`    | **CABANA SaaS plan** per account (NOT fan-to-creator).                                      | Owner read                                                                                     | Trigger/service-side only            |
+| `user_roles`       | Authorization roles.                                                                        | Owner read; admins read all                                                                    | Admins manage                        |
+| `reserved_handles` | Handles that cannot be claimed.                                                             | Public read                                                                                    | — (seed/admin)                       |
+| `member_profiles`  | Private member identity + public `username`.                                                | Owner only                                                                                     | Owner insert/update (no delete)      |
+| `follows`          | account → creator follow edges.                                                             | Follower reads own; creator reads own followers                                                | Follower insert/delete               |
+| `blocks`           | account → account blocks (private to blocker).                                              | Blocker only                                                                                   | Blocker insert/delete                |
+| `posts`            | Creator posts (`public`/`followers`/subscribers/purchase visibility, draft→published).      | Public reads published-public; followers read published-followers they follow; owner reads all | Owner (creator) CRUD                 |
+| `post_media`       | Image metadata for a post; objects live in the private `post-media` bucket.                 | **Owner only** (viewers get signed URLs via `getPostMediaUrls`)                                | Owner CRUD                           |
 
 ## Public views (2)
 
-| View | Exposes | Notes |
-| --- | --- | --- |
+| View                      | Exposes                                                                                                                                            | Notes                                                                                                                                                                       |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `public_creator_profiles` | username, display_name, avatar_url, banner_url, bio, verified (placeholder `false`), follower_count, following_count, post_count (placeholder `0`) | `security_barrier`, `security_invoker = false` (runs with owner privileges to aggregate private `follows`); granted to `anon` + `authenticated`. No UUIDs/email/plan/theme. |
-| `public_member_profiles` | username, display_name, avatar_url, banner_url (null), bio, verified (`false`), follower_count (`0`), following_count, post_count (`0`) | Same safety model; the only public projection of otherwise-private member profiles. |
+| `public_member_profiles`  | username, display_name, avatar_url, banner_url (null), bio, verified (`false`), follower_count (`0`), following_count, post_count (`0`)            | Same safety model; the only public projection of otherwise-private member profiles.                                                                                         |
 
-## Enums (2)
+## Enums (5)
 
-| Enum | Values |
-| --- | --- |
-| `app_role` | `admin`, `moderator`, `user` |
-| `account_type` | `creator`, `member` |
+| Enum              | Values                                           |
+| ----------------- | ------------------------------------------------ |
+| `app_role`        | `admin`, `moderator`, `user`                     |
+| `account_type`    | `creator`, `member`                              |
+| `post_visibility` | `public`, `followers`, `subscribers`, `purchase` |
+| `post_status`     | `draft`, `scheduled`, `published`, `archived`    |
+| `post_media_kind` | `image`, `video`, `audio`                        |
 
 ## Triggers
 
-| Trigger | Table | Fires | Function |
-| --- | --- | --- | --- |
-| `on_auth_user_created` | `auth.users` | AFTER INSERT | `handle_new_user()` — provisions identity + branches creator/member |
-| `touch_profiles_updated_at` | `profiles` | BEFORE UPDATE | `touch_updated_at()` |
-| `touch_creator_profiles_updated_at` | `creator_profiles` | BEFORE UPDATE | `touch_updated_at()` |
-| `touch_subscriptions_updated_at` | `subscriptions` | BEFORE UPDATE | `touch_updated_at()` |
-| `touch_member_profiles_updated_at` | `member_profiles` | BEFORE UPDATE | `touch_updated_at()` |
-| `validate_creator_handle_trigger` | `creator_profiles` | BEFORE INSERT/UPDATE OF handle | `validate_creator_handle()` — blocks empty/reserved handles |
-| `validate_member_username_trigger` | `member_profiles` | BEFORE INSERT/UPDATE OF username | `validate_member_username()` — lowercases, pattern + reserved check |
+| Trigger                             | Table              | Fires                            | Function                                                            |
+| ----------------------------------- | ------------------ | -------------------------------- | ------------------------------------------------------------------- |
+| `on_auth_user_created`              | `auth.users`       | AFTER INSERT                     | `handle_new_user()` — provisions identity + branches creator/member |
+| `touch_profiles_updated_at`         | `profiles`         | BEFORE UPDATE                    | `touch_updated_at()`                                                |
+| `touch_creator_profiles_updated_at` | `creator_profiles` | BEFORE UPDATE                    | `touch_updated_at()`                                                |
+| `touch_subscriptions_updated_at`    | `subscriptions`    | BEFORE UPDATE                    | `touch_updated_at()`                                                |
+| `touch_member_profiles_updated_at`  | `member_profiles`  | BEFORE UPDATE                    | `touch_updated_at()`                                                |
+| `validate_creator_handle_trigger`   | `creator_profiles` | BEFORE INSERT/UPDATE OF handle   | `validate_creator_handle()` — blocks empty/reserved handles         |
+| `validate_member_username_trigger`  | `member_profiles`  | BEFORE INSERT/UPDATE OF username | `validate_member_username()` — lowercases, pattern + reserved check |
+| `touch_posts_updated_at`            | `posts`            | BEFORE UPDATE                    | `touch_updated_at()`                                                |
 
 ## Functions / RPCs
 
@@ -291,8 +330,13 @@ Schema is rebuilt from zero by three ordered migrations:
 - `has_role(uuid, app_role)` — role check used by RLS.
 - `validate_creator_handle()` / `validate_member_username()` — handle/username guards.
 - `touch_updated_at()` — generic `updated_at` stamp.
-- `is_current_user_creator(uuid)` — boolean creator-ownership check usable by `authenticated` and policies
-  (reveals no identifiers).
+- `is_current_user_creator(uuid)` — boolean creator-ownership check usable by `anon`/`authenticated` and
+  policies (reveals no identifiers; `anon` grant added in Phase 3 for OR-evaluated posts policies).
+- `is_following_creator(uuid)` — boolean follow check for the current user (Phase 3); usable by
+  `anon`/`authenticated` and policies, returns false for a null `auth.uid()`.
+- `can_view_post(uuid)` — authoritative post-access check (Phase 3); owner sees any status, others see
+  published public or followed-followers; subscribers/purchase denied to non-creators. Granted to
+  `anon`/`authenticated`; backs the signed-URL action.
 
 **Callable relationship RPCs** (`SECURITY DEFINER`, granted to `authenticated` only; actor derived from `auth.uid()`):
 
@@ -300,16 +344,26 @@ Schema is rebuilt from zero by three ordered migrations:
 - `relationship_follow_creator(text username)` → void (idempotent; rejects self-follow / blocked target).
 - `relationship_unfollow_creator(text username)` → void.
 
-## Storage buckets (3)
+**Callable feed RPCs** (`SECURITY DEFINER`, ID-free, actor derived from `auth.uid()`):
 
-| Bucket | Public | Object policy |
-| --- | --- | --- |
-| `avatars` | true (CDN-served) | Owner-scoped by first path segment `auth.uid()/<file>` for list/insert/update/delete |
-| `banners` | true | same owner-scoping |
-| `products` | true | same owner-scoping |
+- `feed_creator_posts(text username, timestamptz cursor, int limit)` → safe post rows for a creator page;
+  granted to `anon` + `authenticated`. Returns followers-only posts to non-followers as **locked stubs**
+  (caption/media blanked, `locked = true`); never returns subscribers/purchase posts to non-creators.
+- `feed_home_posts(timestamptz cursor, int limit)` → published posts from creators the **authenticated**
+  viewer follows; granted to `authenticated` only.
 
-> Public buckets serve files over the CDN regardless of object RLS — they are **unsuitable for private
-> media**. Private/premium media (future posts/messages) must use private buckets + signed URLs.
+## Storage buckets (4)
+
+| Bucket       | Public              | Object policy                                                                                                                                       |
+| ------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `avatars`    | true (CDN-served)   | Owner-scoped by first path segment `auth.uid()/<file>` for list/insert/update/delete                                                                |
+| `banners`    | true                | same owner-scoping                                                                                                                                  |
+| `products`   | true                | same owner-scoping                                                                                                                                  |
+| `post-media` | **false (PRIVATE)** | Owner-scoped writes (`<user_id>/<post_id>/<file>`); no public read. Viewers get expiring signed URLs from `getPostMediaUrls` after `can_view_post`. |
+
+> The three legacy buckets serve files over the CDN regardless of object RLS — **unsuitable for private
+> media**. Phase 3's `post-media` bucket is private: media is reachable only through the
+> authorization-gated signed-URL server action.
 
 ---
 
@@ -447,10 +501,10 @@ action executes under the caller's row-level permissions.
 
 - Config: `vitest.config.ts` (standalone — **not** the Lovable `vite.config.ts`; the modules under test
   are pure, needing only the `@` alias and `node` environment).
-- Coverage is restricted to the four pure business modules — `cabana-money`, `cabana-entitlements`,
-  `cabana-account`, `cabana-relationships` — with **95%** thresholds on lines/functions/branches/statements
-  (currently **100%** of configured coverage; **83 tests**: money 34, entitlements 25, account 14,
-  relationships 10).
+- Coverage is restricted to the five pure business modules — `cabana-money`, `cabana-entitlements`,
+  `cabana-account`, `cabana-relationships`, `cabana-posts` — with **95%** thresholds on
+  lines/functions/branches/statements (currently 100% statements/functions/lines, 99.5% branches;
+  **116 tests**: money 34, entitlements 25, account 14, relationships 10, posts 33).
 - Run: `bun run test` (one-shot), `bun run test:watch`, `bun run test:coverage`; a single file with
   `bunx vitest run src/lib/<file>.test.ts`, or by name with `bunx vitest run -t "<name>"`.
 - **Rule of thumb:** keep new domain logic in a pure, repository-injected module so it stays unit-testable
@@ -502,7 +556,7 @@ The **handoff gate** for any session is: `bun run lint`, `bun run build`, `bunx 
   `cabana-store.ts`) still depends on the direct creator-profile read. Migrate that bundle to the view
   before removing the old public table path.
 - **Route protection is client-side only.** `/dashboard` and `/account` guard via redirects; there is no
-  server route guard. Server *actions* are independently protected, so data is safe, but
+  server route guard. Server _actions_ are independently protected, so data is safe, but
   unauthenticated/role-wrong users can briefly render a guarded route shell.
 - **Public storage buckets are CDN-public.** `avatars`/`banners`/`products` are unsuitable for
   private/premium media; private buckets + signed URLs are required before locked posts/messages.
@@ -510,7 +564,7 @@ The **handoff gate** for any session is: `bun run lint`, `bun run build`, `bunx 
   not fan subscriptions. It should be renamed `platform_subscriptions` (gated) before
   `creator_subscriptions` becomes production data.
 - **`moderator` role unused.** Present in `app_role` but not yet wired to any surface.
-- **No server tests for the T1 hooks / React components.** Only the four pure modules are unit-tested;
+- **No server tests for the T1 hooks / React components.** Only the five pure modules are unit-tested;
   hooks, actions, and UI are covered only indirectly (and by the SQL suites at the DB layer).
 - **Placeholder public routes carry no real data.** `/feed`, `/discover`, `/messages`, `/notifications`
   are FoundationPage placeholders and must not receive private member/message data while public.
@@ -524,13 +578,16 @@ The **handoff gate** for any session is: `bun run lint`, `bun run build`, `bunx 
 > migration, an RLS design, and behavioral SQL tests — the same bar Phases 2B/2C met. Do not start any
 > of these automatically.
 
-## Phase 3 — Posts & Feed Foundation (next; gated)
+## Phase 3 — Posts & Feed Foundation ✅ DONE
 
-- Tables: `posts`, `media`/`post_media`, `comments`, `likes`, `saves` (roadmap Group B), creator-owner writes.
-- Public/follower read rules built on the Phase 2C relationship graph; keep post media **private** and
-  issue signed URLs only after authorization.
-- Per-table behavioral RLS tests; build the smallest real feed + composer — **no** messaging,
-  notifications, or monetization in this phase.
+Delivered: `posts` + `post_media`, public/follower visibility, private `post-media` bucket + signed URLs,
+feed RPCs with locked teases, composer + feed UI. See the completed-phases section above.
+
+## Phase 3.2 — Engagement (next; gated)
+
+- Tables: `comments`, `likes`, `saves` (remainder of roadmap Group B) with per-table behavioral RLS tests.
+- Likes/saves are owner-scoped, aggregate-safe counts; comments add light moderation (author edits,
+  creator hide). Wire counts into the feed RPCs/views (currently placeholder `0`/`post_count`).
 
 ## Phase 4 — Creator subscriptions & entitlements (gated)
 

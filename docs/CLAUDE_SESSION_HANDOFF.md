@@ -16,7 +16,49 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
-## Latest Status — Phase 2C COMPLETE (Social Relationship Foundation)
+## Latest Status — Phase 3 COMPLETE (Posts & Feed Foundation)
+
+Built on the verified Phase 2C social graph. Local Docker only — no production Supabase, migration
+repair, link, push, or deployment was touched (a config deny-list now blocks those commands).
+
+**Scope delivered (posts + feed + composer only):** real creator publishing with `public` /
+`followers` visibility and private image media. Comments / likes / saves are deferred to Phase 3.2;
+`subscribers` / `purchase` visibility is rejected at write-time and never shown to non-creators
+(no fan subscriptions until Phase 4).
+
+- **Migration** `20260514000000_posts_feed.sql`: `post_visibility` / `post_status` / `post_media_kind`
+  enums; `posts` + `post_media` tables with indexes and RLS; `is_following_creator` + `can_view_post`
+  authorization helpers; ID-free `feed_creator_posts` (returns followers-only posts to non-followers as
+  **locked stubs**) and `feed_home_posts` RPCs; a **private** `post-media` storage bucket with
+  owner-scoped object policies. Extended `is_following_creator`/`is_current_user_creator` grants to
+  `anon` (the posts SELECT policies are OR-evaluated for anonymous readers).
+- **Pure module** `cabana-posts.ts` (+ `cabana-posts.test.ts`, in the 95% coverage set): caption /
+  visibility / status-transition / media validation and row→domain mappers.
+- **Protected actions** `post-actions.ts`: `createPost`, `updatePost`, `publishPost`, `archivePost`,
+  `deletePost`, `addPostMedia`, `deletePostMedia`, `getOwnPosts`, `getCreatorFeed`, `getHomeFeed`, and
+  `getPostMediaUrls`. The last is the only place the service role touches storage — gated by
+  `can_view_post`. New `optionalSupabaseAuth` middleware makes the creator feed guest-callable while
+  still resolving a signed-in viewer's `auth.uid()`.
+- **Hooks** `use-posts.ts`: `useCreatorFeed`, `useHomeFeed`, `useOwnPosts`, `usePostMediaUrls`, and
+  composer mutations (uploads to the private bucket via the authed client, then records the row).
+- **UI**: `src/components/cabana/posts/` (`PostComposer`, `PostsDashboard`, `PostCard`,
+  `PostMediaGallery`, `PostVisibilityBadge`, `LockedContentGate`, `HomeFeed`). `/dashboard/posts` is now
+  a real composer + post manager (replaced `DemoPosts`), `/feed` is the real authenticated home feed, and
+  `/$username` shows public posts inline with locked follower-post teases.
+- **Tests**: `supabase/tests/posts_feed.sql` (owner CRUD, anon public read, follower gating, locked
+  stubs, no draft/subscriber leakage, `can_view_post` truth table, owner-only `post_media`, private
+  bucket); `smoke.sql` extended; a `posts_feed.sql` step added to the CI `db-validate` job.
+
+**Local verification:** migration applies from zero; all four SQL suites (smoke, member_accounts,
+social_relationships, posts_feed) pass through the DB container; 116 unit tests pass at 100% statements
+/ 100% functions / 100% lines / 99.5% branches; lint / tsc / build green.
+
+**Next:** Phase 3.2 (comments / likes / saves) or Phase 4 (creator subscriptions & entitlements) —
+both gated on explicit approval. Remote schema reconciliation remains deferred.
+
+---
+
+## Phase 2C COMPLETE (Social Relationship Foundation)
 
 Built on the verified Phase 2B account/auth layer. No production Supabase, migration repair, or
 deployment was touched.
