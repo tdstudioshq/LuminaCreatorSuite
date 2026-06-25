@@ -53,9 +53,17 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 **Goal:** Make the backend reproducible and real. Capture a validated baseline migration, audit RLS, add the **member role/account**, persistent follows, and public social publishing (posts/comments/likes/saves). Stand up the T2 server-action plumbing. This is the largest enabling phase.
 
-**Files affected:** `supabase/migrations/*` (baseline + Group A/B); `integrations/supabase/types.ts` (regenerate); `start.ts` (register `auth-attacher`); new `lib/cabana-posts.ts`, `lib/cabana-social.ts`, `lib/cabana-members.ts`; `feed.tsx`, `discover.tsx`, `dashboard.posts.tsx`; signup role branch in `cabana-auth.ts`; new `MemberLayout`.
+**Files affected:** Part 1 completed `20260512000000_member_accounts.sql`,
+`integrations/supabase/types.ts`, `auth-client-middleware.ts`, `account-actions.ts`,
+`cabana-account.ts`, `use-account.ts`, `cabana-auth.ts`, `signup.tsx`, `dashboard.tsx`, and the new
+`account.tsx`. Part 2 plans `cabana-posts.ts`, `cabana-social.ts`, `feed.tsx`, `discover.tsx`,
+`dashboard.posts.tsx`, and a member layout.
 
-**Database changes:** Baseline migration of current schema (rebuildable from zero). Add `users` projection, `member_profiles`, `settings`; extend `profiles`/`creator_profiles` (paths, verified, monetization_status). **Group A:** `follows`, `blocks`. **Group B:** `posts`, `media`, `post_media`, `comments`, `likes`, `saves`. Public-safe `creator`/`member` views (omit `user_id`). RLS + policy tests on every new table. Private `post-media` bucket.
+**Database changes:** Completed: rebuildable baseline, `account_type`, `profiles.account_type`, and
+private owner-scoped `member_profiles`. Pending: `users` projection, `settings`, profile extensions,
+**Group A** (`follows`, `blocks`), **Group B** (`posts`, `media`, `post_media`, `comments`, `likes`,
+`saves`), public-safe views, and the private `post-media` bucket. Every new table requires RLS and
+behavioral policy tests.
 
 **Components:** `MemberLayout` + member nav; `PostComposer`, `PostMediaGallery`, `PostVisibilityBadge`, `CommentList`, `CommentComposer`, `EngagementActions`, `FollowButton` (persistent), `MemberAvatar`.
 
@@ -63,16 +71,19 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 **Estimated complexity:** **Very High** (schema, RLS, role model, server plumbing, private storage — the keystone phase).
 
-**Dependencies:** Phase 1. **Hard gate:** baseline migration validated on a fresh instance before any new table. Server-action auth plumbing (`requireSupabaseAuth` + `auth-attacher`) wired.
+**Dependencies:** Phase 1. The fresh-instance baseline gate is satisfied. Server-action auth
+plumbing is wired through `attachSupabaseToken` + `requireSupabaseAuth`; later Phase 2 work must use
+the same RLS-scoped boundary where a T2 action is required.
 
 **Acceptance criteria:**
 
 - ✅ Fresh local/staging Supabase rebuilds from zero via migrations (baseline + member-accounts; verified on Docker + CI).
 - ✅ A user can sign up as a **member** and never see a creator dashboard; existing creator signups unaffected (trigger branching + guard redirects, behavioral-tested).
 - Follows persist across refresh; creators publish `public`/`followers` posts; members like/comment/save. _(2B part 2)_
-- RLS policy tests pass for guest/member/creator fixtures; public views omit `user_id`.
+- ✅ Member-profile RLS tests pass for owner isolation and anonymous denial. Part 2 must add
+  guest/member/creator fixtures for each social table; public views must omit `user_id`.
 - Post media stored in a private bucket; reads via signed URLs.
-- CI runs lint/typecheck/test/migration-validation/build.
+- ✅ CI runs lint/typecheck/test/migration-validation/build.
 
 ---
 

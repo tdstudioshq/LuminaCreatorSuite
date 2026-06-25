@@ -2,20 +2,25 @@
 
 > Target production schema for the full creator-subscription platform, plus the documented current state.
 >
-> **This document is a plan. It authorizes no new product tables.** Gate (a) — a complete rebuildable baseline migration of the _current_ schema — is now **substantially met** by Phase 2A (see [§"Baseline migration"](#baseline-migration-phase-2a) below): `supabase/migrations/20260511000000_baseline.sql` rebuilds the existing schema from zero. Gate (b) — an approved RLS strategy for _new_ tables — remains open. No `member_profiles`, posts, messaging, payments, or `creator_subscriptions` may be added until 2B is explicitly approved.
+> This document records the implemented schema through Phase 2B part 1 and plans later additions.
+> The Phase 2A baseline and Phase 2B member-account migration rebuild cleanly from zero. No further
+> product tables—including posts, messaging, payments, or `creator_subscriptions`—are authorized
+> without explicit approval and an RLS/test plan.
 >
 > Conventions: UUID (prefer time-ordered, e.g. UUIDv7, for high-volume event/message tables) primary keys · `timestamptz` everywhere · money as **integer minor units (cents) + explicit `currency`** · index every foreign key · RLS predicates use `(select auth.uid())`.
 
 ---
 
-## 1. Current Implemented Schema (as generated)
+## 1. Current Implemented Schema
 
-Source: `src/integrations/supabase/types.ts`. Eight tables, one enum, one function.
+Source: checked-in migrations plus `src/integrations/supabase/types.ts`. Nine tables, two enums, and
+four database functions. Phase 2B type additions are hand-maintained pending Lovable regeneration.
 
 | Table              | Columns (current)                                                                                                                   | Notes                                                                                   |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `profiles`         | `id` (=auth.users.id), `email`, `name`, `created_at`, `updated_at`                                                                  | Shared identity row created by signup trigger                                           |
+| `profiles`         | `id` (=auth.users.id), `email`, `name`, `account_type`, `created_at`, `updated_at`                                                  | Shared identity row; `account_type` defaults to `creator`                               |
 | `creator_profiles` | `id`, `user_id` (nullable!), `handle`, `name`, `bio`, `avatar_url`, `banner_url`, `theme`, `plan`, `created_at`, `updated_at`       | Public creator surface. `user_id` nullable allows ownerless seeds (`aurora`, `oliviac`) |
+| `member_profiles`  | `id`, `user_id`, `display_name`, `bio`, `avatar_url`, `created_at`, `updated_at`                                                    | Private owner-only member profile; no anonymous access                                  |
 | `links`            | `id`, `profile_id` → creator_profiles, `title`, `url`, `icon`, `featured`, `scheduled` (text!), `position`, `clicks`, `created_at`  | `scheduled` is a label, not a timestamp                                                 |
 | `products`         | `id`, `profile_id` → creator_profiles, `title`, `price` (text!), `type` (text), `image_url`, `sales`, `position`, `created_at`      | `price` is a display string; no checkout linkage                                        |
 | `analytics_events` | `id`, `profile_id` (nullable) → creator_profiles, `event_type`, `target_id` (nullable), `metadata` (json), `created_at`             | Anonymous inserts allowed for any real profile                                          |
@@ -23,9 +28,13 @@ Source: `src/integrations/supabase/types.ts`. Eight tables, one enum, one functi
 | `user_roles`       | `id`, `user_id`, `role` (enum `app_role`), `created_at`                                                                             | Authorization                                                                           |
 | `reserved_handles` | `handle` (PK)                                                                                                                       | Blocked usernames                                                                       |
 
-**Enum** `app_role`: `admin` | `moderator` | `user`. **Function** `has_role(_role, _user_id) → boolean` (security-definer role check).
+**Enums:** `app_role` (`admin` | `moderator` | `user`) and `account_type` (`creator` |
+`member`). **Functions:** `handle_new_user`, `has_role`, `validate_creator_handle`, and
+`touch_updated_at`.
 
-**Known current-schema weaknesses** (carried into tech debt): prices/scheduling stored as strings; no post/publish model; `creator_profiles.user_id` nullable and exposed by public `select("*")`; ~~no `member_profiles`~~ (added in Phase 2B); `subscriptions` name collides with future fan subscriptions.
+**Known current-schema weaknesses** (carried into tech debt): prices/scheduling stored as strings;
+no post/publish model; `creator_profiles.user_id` nullable and exposed by public `select("*")`;
+`subscriptions` name collides with future fan subscriptions.
 
 <a id="baseline-migration-phase-2a"></a>
 
@@ -67,7 +76,8 @@ New tables grouped by dependency. Group letters match the build roadmap (`CABANA
 - **`users`** — application projection over `auth.users`: `id` PK (=auth.users.id), `email`, `status` (`active|restricted|suspended|deleted`), `created_at`, `updated_at`, `deleted_at`.
 - **`profiles`** (extend current) — `user_id` PK, `display_name`, `username` (unique, ci), `avatar_path`, `bio`.
 - **`creator_profiles`** (extend current) — add `verified bool`, `monetization_status` (`disabled|pending|active|restricted`), `subscription_price_cents int`, `default_currency`, `subscriber_count int`; migrate `avatar_url/banner_url` → `*_path`; make `user_id` NOT NULL for real accounts.
-- **`member_profiles`** — `id`, `user_id` (unique), `display_name`, `username` (unique, ci), `avatar_path`, `bio`, `is_private bool`, timestamps.
+- **`member_profiles`** (extend current) — add `username` (unique, ci), migrate `avatar_url` →
+  `avatar_path`, and add `is_private bool`.
 - **`admin_users`** — `user_id`, `role`, `permissions jsonb`, `active`, `created_at` (extends/replaces `user_roles` with capability scopes: moderator/support/finance/admin/super-admin).
 - **`settings`** — `user_id` PK, `email_notifications`, `push_notifications`, `message_permissions` (`everyone|followers|subscribers|nobody`), `comment_permissions` (same enum), `marketing_opt_in`, `locale`, `timezone`, `updated_at`.
 
@@ -196,7 +206,7 @@ erDiagram
 | Table                                              | Read                                                                                                                | Write                                                                                    |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | `creator_profiles` (public-safe view)              | Everyone reads published, **owner-id-omitting** view                                                                | Owner updates own                                                                        |
-| `member_profiles`                                  | Public-safe fields discoverable; full row owner-only                                                                | Owner updates own                                                                        |
+| `member_profiles`                                  | **Current:** full row owner-only. **Target:** public-safe discovery view plus owner-only full row                   | Owner inserts/updates own; no direct anonymous table access                              |
 | `posts`                                            | `public` rows: everyone. `followers`/`subscribers`/`purchase`: only via `content_entitlements`. Owner reads all own | Creator CRUD own                                                                         |
 | `post_media`                                       | Same access as parent post                                                                                          | Owner writes                                                                             |
 | `comments`                                         | Readable if post readable                                                                                           | Author creates/edits own; post creator can hide                                          |

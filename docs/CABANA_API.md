@@ -2,7 +2,9 @@
 
 > The data-access contract for CABANA: what runs as direct (RLS-safe) Supabase client calls vs. trusted server actions, with input/output shapes, auth requirements, error handling, and webhook architecture.
 >
-> **Plan only — authorizes no implementation.** Companion: [`CABANA_DATABASE.md`](./CABANA_DATABASE.md), [`CABANA_PRODUCT_SPEC.md`](./CABANA_PRODUCT_SPEC.md).
+> Documents both implemented contracts and planned interfaces. Planned sections do not authorize
+> implementation. Companion: [`CABANA_DATABASE.md`](./CABANA_DATABASE.md),
+> [`CABANA_PRODUCT_SPEC.md`](./CABANA_PRODUCT_SPEC.md).
 
 ---
 
