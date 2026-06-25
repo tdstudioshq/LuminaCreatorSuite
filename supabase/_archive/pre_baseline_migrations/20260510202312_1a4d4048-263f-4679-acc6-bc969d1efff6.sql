@@ -1,0 +1,1 @@
+alter table public.creator_profiles alter column user_id drop not null;

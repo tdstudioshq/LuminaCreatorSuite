@@ -1,0 +1,41 @@
+# CABANA — local Supabase configuration.
+# Supports `supabase start` / `supabase db reset` on a Docker-enabled host.
+# project_id links this workspace to the remote project for `supabase link`.
+project_id = "dwnricswfskypqqfknnh"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+# Match the production Postgres major version when known; 15 is broadly
+# compatible with the baseline SQL (PG13+ features only).
+major_version = 15
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[studio]
+enabled = true
+port = 54323
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["http://127.0.0.1:3000"]
+jwt_expiry = 3600
+enable_signup = true
+
+# Local only: skip email confirmation so signup provisioning (the
+# handle_new_user trigger) can be smoke-tested end to end.
+[auth.email]
+enable_confirmations = false

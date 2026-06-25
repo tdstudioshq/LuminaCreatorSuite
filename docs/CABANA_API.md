@@ -1,0 +1,150 @@
+# CABANA API & Server Actions Specification
+
+> The data-access contract for CABANA: what runs as direct (RLS-safe) Supabase client calls vs. trusted server actions, with input/output shapes, auth requirements, error handling, and webhook architecture.
+>
+> **Plan only — authorizes no implementation.** Companion: [`CABANA_DATABASE.md`](./CABANA_DATABASE.md), [`CABANA_PRODUCT_SPEC.md`](./CABANA_PRODUCT_SPEC.md).
+
+---
+
+## 1. Access Tiers (the core rule)
+
+CABANA has two ways to reach the database. Choosing the wrong tier is a security bug.
+
+| Tier | Mechanism | Use for | Auth |
+|------|-----------|---------|------|
+| **T1 — Direct client** | `supabase` (anon key, `src/integrations/supabase/client.ts`), RLS-enforced | Low-risk, RLS-safe CRUD: own profile/links/products, public reads, likes/saves/follows, mark-notification-read | Browser session (JWT) + RLS |
+| **T2 — Server action** | TanStack Start server function guarded by `requireSupabaseAuth` (`auth-middleware.ts`), or Supabase Edge Function | Money, entitlements, signed URLs, admin, provider integrations, anything that must not trust client input | Bearer token validated server-side → scoped client + `userId` |
+| **T3 — Service role** | `supabaseAdmin` (`client.server.ts`, bypasses RLS) | Inside T2 only, for trusted writes (ledger, audit, webhooks). **Never imported into client code.** | Server process only |
+
+> Today the app is **entirely T1** (see `cabana-store.ts`, `cabana-auth.ts`, `cabana-analytics.ts`, `cabana-roles.ts`). `auth-middleware.ts` and `client.server.ts` exist but **no feature uses them yet**, and `auth-attacher.ts` is not registered in `src/start.ts`. Standing up the T2 plumbing is a Phase-2 prerequisite for everything monetized.
+
+**Every state-changing T2/T3 action must:** validate input (shared Zod schema), authorize on the server, use an idempotency key where money or duplicates are possible, and append an `audit_logs` row for privileged actions.
+
+## 2. Currently Implemented (T1)
+
+These exist today in `src/lib/`:
+
+| Function | File | Contract |
+|----------|------|----------|
+| `cabanaAuth.signup({name,email,password})` | cabana-auth.ts | → `{ok:true,user}` \| `{ok:false,error}`; validates name/email/≥6-char pw; sets `emailRedirectTo=/dashboard` |
+| `cabanaAuth.login({email,password})` | cabana-auth.ts | → `{ok,user}` \| `{ok:false,error}` |
+| `cabanaAuth.logout()` | cabana-auth.ts | `signOut()` |
+| `cabanaAuth.requestPasswordReset(email)` | cabana-auth.ts | sends recovery email → `/reset-password` |
+| `cabanaAuth.updatePassword(pw)` | cabana-auth.ts | ≥6 chars; updates user |
+| `useAuthSession()` / `useCabanaUser()` | cabana-auth.ts | `{user, loading}` from `onAuthStateChange` |
+| `useHasRole(role)` | cabana-roles.ts | `{loading, hasRole, signedIn}` from `user_roles` |
+| `useCreatorByHandle(handle)` | cabana-store.ts | public read of `creator_profiles`+`links`+`products` bundle |
+| `useCabana()` | cabana-store.ts | owner's creator bundle |
+| `useCabanaMutations()` | cabana-store.ts | `setProfile`, `addLink/updateLink/removeLink/setLinks`, `addProduct/updateProduct/removeProduct`, `uploadAvatar`, `uploadProductImage` — toast-wrapped, invalidate `my-creator`/`creator-by-handle` |
+| `trackPageView/trackLinkClick/trackProductClick` | cabana-analytics.ts | fire-and-forget insert into `analytics_events` |
+
+## 3. Planned Server Actions (T2)
+
+Grouped by domain. Each entry: **name** — input → output [auth]. "Owner" = authenticated owner of the resource; "Server" = service-role inside a guarded action.
+
+### Auth & account
+- `signUpMember(input)` → `{user}` [public] — creates member-role account (the missing role branch).
+- `signUpCreator(input)` → `{user, creatorProfile}` [public] — or `upgradeToCreator()` [member] for member→creator.
+- `signIn` / `signOut` / `requestPasswordReset` / `updatePassword` — wrap existing T1.
+- `deleteAccount()` [owner] · `listSessions()` / `revokeSession(id)` [owner].
+
+### Profiles
+- `getPublicCreator(handle)` → public-safe creator view (**omits `user_id`**) [public].
+- `getMyProfile()` [owner] · `updateMyProfile(patch)` [owner].
+- `claimHandle(handle)` → `{ok}` [owner] — checks `reserved_handles` + ci-unique.
+- `submitCreatorVerification(payload)` [creator] · `setCreatorTheme(theme)` [creator].
+
+### Posts
+- `createPost(input)` · `updatePost(id,patch)` · `publishPost(id)` · `schedulePost(id,at)` · `archivePost(id)` [creator, owner].
+- `getCreatorFeed(creatorId,cursor)` [public/entitled] · `getMemberFeed(cursor)` [member].
+- `getPostWithEntitlement(postId)` → post + `{entitled:boolean, reason}` [auth] — **server resolves `content_entitlements`, never client flags**.
+
+### Comments / likes / saves / follows (mostly T1, server where moderation matters)
+- `toggleLike(postId)` · `toggleSave(postId)` [auth, T1] · `listSavedPosts(cursor)` [owner].
+- `followCreator(creatorId)` · `unfollowCreator(creatorId)` [auth, T1] · `listFollowers`/`listFollowing(cursor)` · `blockUser(userId)` [auth].
+- `createComment` · `updateOwnComment` · `deleteOwnComment` [author] · `hideCommentAsCreator(id)` [creator] · `listCommentsCursor(postId,cursor)`.
+
+### Subscriptions & entitlements (T2 — server writes status)
+- `createCreatorSubscriptionCheckout(creatorId,tierId)` → checkout session (mock first) [member].
+- `createPlatformPlanCheckout(plan)` → CABANA SaaS checkout [creator].
+- `openBillingPortal()` · `cancelSubscription(id)` · `resumeSubscription(id)` [owner].
+- `getEntitlement(userId,postId|creatorId)` → `{entitled, source}` [server/auth].
+
+### Tips & purchases (T2)
+- `createTipPayment(creatorId,amountCents,message)` [member].
+- `createProductCheckout(productId,qty)` → order [member].
+- `unlockPost(postId)` · `unlockPaidMessage(messageId)` → entitlement + transaction [member].
+- `requestRefund(transactionId,reason)` [owner].
+
+### Messages (T2 + Realtime)
+- `createConversation(participantUserIds)` [auth] · `listConversationsCursor(cursor)` [participant].
+- `listMessagesCursor(conversationId,cursor)` [participant] · `sendMessage(conversationId,body|mediaId)` [participant].
+- `sendPaidMessage(conversationId, body, priceCents)` [creator] · `markConversationRead(conversationId,messageId)` [participant].
+- `getAttachmentSignedUrl(messageId)` → short-lived signed URL after participant + unlock check [participant].
+
+### Notifications (mostly T1 reads)
+- `listNotificationsCursor(cursor)` · `getUnreadNotificationCount()` [recipient].
+- `markNotificationRead(id)` · `markAllNotificationsRead()` [recipient].
+- Generation is **server-side** from event handlers, not a client action.
+
+### Uploads / media (T2)
+- `createUploadIntent({kind,mime,bytes})` → signed upload URL + media row (`uploaded`) [owner].
+- `completeUpload(mediaId)` → enqueue processing [owner].
+- `deleteMedia(mediaId)` [owner] · `getPublicVariant(mediaId)` [public] · `getEntitledSignedUrl(mediaId)` [entitled].
+- `processMediaWebhook(payload)` [webhook] — see §6.
+
+### Reports & moderation (T2)
+- `createReport(subjectType,subjectId,reason,details)` [auth] · `listMyReports()` [owner].
+- `adminListReports(filter,cursor)` · `adminResolveReport(id,resolution)` [moderator].
+- `adminSuspendUser(userId)` · `adminRestoreUser(userId)` · `adminRemoveContent(type,id)` [moderator/admin].
+
+### Admin (T2, capability-scoped)
+- `adminSearchUsers(query)` · `adminSetRole(userId,role)` [admin].
+- `adminReviewVerification(id,decision)` [admin] · `adminReviewTransaction(id)` [finance].
+- `adminRetryPayout(id)` [finance] · `adminFeatureCreator(creatorId)` [admin] · `adminGetMetrics()` [admin].
+
+## 4. Input / Output Contracts
+
+- **Validation:** one shared Zod schema per action, used by both client form and server handler. Normalize/validate handles, URLs, currency (3-char), money (non-negative integer cents), text length, MIME type, enum values. Validate file **signatures**, not extensions.
+- **Success shape:** prefer the existing `{ ok: true, ... } | { ok: false, error: string }` discriminated union already used in `cabana-auth.ts`. Server actions may additionally throw typed `Response` errors (the middleware pattern) for auth failures.
+- **Money:** every money field is `*_cents: number` (integer) + `currency: string`. Outputs never return floats for money.
+- **Pagination:** cursor-based on `(created_at, id)` — return `{ items, nextCursor }`. No deep offsets.
+- **Idempotency:** money-moving actions accept an `idempotencyKey`; server dedupes via unique constraint (`transactions` provider ref, `webhook_events`).
+
+## 5. Error Handling
+
+| Layer | Pattern |
+|-------|---------|
+| T1 mutations | `useCabanaMutations` already wraps each op in try/catch → `toast.error("<label>: <msg>")` and returns `null`; keep this convention |
+| Analytics | **Swallow silently** — analytics must never break UX (`cabana-analytics.ts` already does this) |
+| T2 auth failures | Throw `Response(msg, {status:401/403})` from middleware (see `requireSupabaseAuth`) |
+| T2 validation | Return `{ok:false,error}` with field-level detail; 400-class |
+| T2 money/webhooks | Never partial-commit; wrap ledger writes in a DB transaction; keep external API calls **outside** the DB transaction (don't hold locks across network) |
+| SSR catastrophic | `src/server.ts` already catches thrown + h3-swallowed 500s and renders a branded error page — preserve |
+| Route-level | `__root.tsx` `errorComponent` / `notFoundComponent` |
+
+**Standard error envelope (T2):** `{ ok:false, error:{ code, message, field? } }`. Codes: `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION`, `CONFLICT`, `RATE_LIMITED`, `ENTITLEMENT_REQUIRED`, `PAYMENT_FAILED`, `INTERNAL`.
+
+## 6. Webhook Architecture
+
+Webhooks are the **source of truth** for money. CABANA never trusts a client to report a payment succeeded.
+
+```
+Provider (Stripe/payout/media)  ──signed event──▶  /api/webhooks/$provider  (T2/Edge)
+   1. Verify signature (reject if invalid)
+   2. Idempotency: upsert into `webhook_events` by provider_event_id
+        ↳ already processed?  → 200 OK, no-op
+   3. Persist raw payload, mark received
+   4. Enqueue handler in `outbox_jobs` (do NOT do slow work inline)  → 200 OK fast
+   5. Worker drains outbox:
+        - payment.succeeded → write immutable `transactions` row, update `content_entitlements`,
+          recompute `creator_balances`, create `notifications`, append `audit_logs`
+        - subscription.updated → transition `creator_subscriptions.status`
+        - payout.paid/failed → update `payouts`, recompute balance
+        - media.processed → update `media.processing_status` / variants
+   6. Retries with backoff; dead-letter after N attempts; alert finance on reconciliation gaps
+```
+
+**Rules:** verify every signature; dedupe by provider event id (unique index); keep the webhook handler fast (ack then process via outbox); reconcile provider balances/transactions/refunds/disputes/payouts on a schedule; never log full signed URLs or card data (use provider-hosted card collection — CABANA never stores raw card data).
+
+**Demo phase:** there is no provider. "Webhooks" are simulated by deterministic client/server actions that create `mock_`-prefixed records and follow the same immutability rules (a succeeded mock transaction is never edited in place). The outbox/idempotency structure should still be modeled so the real provider drops in without reshaping the ledger.
