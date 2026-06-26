@@ -677,9 +677,45 @@ function Payouts() {
   };
   return (
     <div className="space-y-6">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Link
+          to="/admin/finance"
+          className="group glass rounded-2xl p-5 flex items-center justify-between gap-3 hover:border-foreground/20 border border-transparent transition"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-iridescent flex items-center justify-center shadow-glow-sm">
+              <DollarSign className="w-4 h-4 text-background" />
+            </div>
+            <div>
+              <div className="font-semibold">Finance overview</div>
+              <div className="text-xs text-muted-foreground">
+                Real revenue, earnings & payout status (admin)
+              </div>
+            </div>
+          </div>
+          <ArrowUpRight className="w-4 h-4 text-muted-foreground transition group-hover:translate-x-0.5" />
+        </Link>
+        <Link
+          to="/admin/ledger"
+          className="group glass rounded-2xl p-5 flex items-center justify-between gap-3 hover:border-foreground/20 border border-transparent transition"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl glass flex items-center justify-center">
+              <CreditCard className="w-4 h-4 text-foreground" />
+            </div>
+            <div>
+              <div className="font-semibold">Ledger explorer</div>
+              <div className="text-xs text-muted-foreground">
+                Read-only transactions · search · CSV
+              </div>
+            </div>
+          </div>
+          <ArrowUpRight className="w-4 h-4 text-muted-foreground transition group-hover:translate-x-0.5" />
+        </Link>
+      </div>
       <PanelTitle
         title="Payouts"
-        sub="Approve, monitor and reconcile creator earnings."
+        sub="Demo preview — live revenue & ledger are under Finance overview above."
         right={<button className="btn-luxury !py-2 text-xs">Run batch payout</button>}
       />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
