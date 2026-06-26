@@ -188,6 +188,33 @@ approval flow, paid messages, notifications/push.
 
 **Validation:** `monetization_ledger.sql` behavioral suite + smoke extensions; in `db:validate` and CI.
 
+## Phase 7 — Notifications & activity ✅ DONE (foundation, internal only)
+
+**Delivered:** migration `20260519000000_notifications_activity.sql` — enums `notification_type`,
+`activity_type`, `notification_channel`, `outbox_status`; tables `notifications` (system-written; `dedupe_key`
+NOT NULL UNIQUE for idempotency), `activity_events` (append-only canonical log), `notification_preferences`
+(in-app on; email/push placeholders), `notification_outbox` (inert, admin-only). Helper `emit_notification`
+(SECURITY DEFINER) + `notif_display_name` / `notif_is_blocked`; AFTER INSERT triggers on `follows`,
+`post_likes`, `post_comments`, `post_saves`, `creator_subscriptions`, `tips`, `purchases`, `messages`,
+`payout_requests` generate events uniformly (atomic, idempotent, no edits to existing action files).
+`notifications` added to the Realtime publication. `cabana-notifications.ts` (+ tests) — formatting,
+grouping, unread, preference/outbox evaluation, dedupe keys, mappers; `notification-actions.ts`
+(getNotifications, getUnreadNotificationCount, getActivityFeed, getNotificationPreferences,
+markNotificationRead, markAllNotificationsRead, updateNotificationPreferences); `use-notifications.ts`
+(realtime list + unread); `components/cabana/notifications/` (NotificationsCenter, NotificationBadge,
+ActivityFeed, NotificationSettings, NotificationsDashboard, MemberNotificationsPage); real
+`/dashboard/notifications` + auth-gated `/notifications`; live sidebar badge. Users read only their own
+notifications/activity, manage only their own preferences (updates column-scoped to `read_at`); outbox is
+admin-only; anon revoked.
+
+**Hard constraint:** internal only — no email/push provider (no Resend, Firebase, Expo, web push). The
+outbox is an inert future-delivery queue.
+
+**Deferred (gated):** outbox processor + a real email/push provider, digests/batching, deep-link routing
+from notifications, admin moderation/finance subroutes, reports/audit logs.
+
+**Validation:** `notifications.sql` behavioral suite + smoke extensions; in `db:validate` and CI.
+
 ### Original Phase 5 plan (full scope, for reference)
 
 **Goal:** Real conversations and messages with participant-scoped RLS, Realtime delivery, read state, cursor pagination, and private attachments (with paid-message scaffolding, demo unlock).

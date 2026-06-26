@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useCabana } from "@/lib/cabana-store";
 import { cabanaAuth, useCabanaUser } from "@/lib/cabana-auth";
+import { NotificationBadge } from "@/components/cabana/notifications/NotificationBadge";
 
 const items = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
@@ -159,6 +160,7 @@ function NavItem({
       >
         {label}
       </span>
+      {to === "/dashboard/notifications" && <NotificationBadge className="relative z-10 ml-auto" />}
     </Link>
   );
 }

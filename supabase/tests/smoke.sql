@@ -17,7 +17,8 @@ declare
     'creator_subscription_tiers','creator_subscriptions',
     'conversations','conversation_participants','messages','message_read_receipts',
     'transactions','creator_balances','payouts','payout_requests',
-    'tips','purchases','content_entitlements'
+    'tips','purchases','content_entitlements',
+    'notifications','activity_events','notification_preferences','notification_outbox'
   ];
   t text;
 begin
@@ -69,6 +70,19 @@ begin
   end if;
   if not exists (select 1 from pg_type where typname = 'payout_request_status') then
     raise exception 'MISSING ENUM: payout_request_status';
+  end if;
+  -- Phase 7 enums
+  if not exists (select 1 from pg_type where typname = 'notification_type') then
+    raise exception 'MISSING ENUM: notification_type';
+  end if;
+  if not exists (select 1 from pg_type where typname = 'activity_type') then
+    raise exception 'MISSING ENUM: activity_type';
+  end if;
+  if not exists (select 1 from pg_type where typname = 'notification_channel') then
+    raise exception 'MISSING ENUM: notification_channel';
+  end if;
+  if not exists (select 1 from pg_type where typname = 'outbox_status') then
+    raise exception 'MISSING ENUM: outbox_status';
   end if;
 
   -- Phase 2B: profiles.account_type column (NOT NULL, default creator)
@@ -177,6 +191,26 @@ begin
   if to_regprocedure('public.recalc_creator_balance(uuid, text)') is null then
     raise exception 'MISSING FUNCTION: recalc_creator_balance';
   end if;
+  -- Phase 7 notification helpers + trigger functions
+  if to_regprocedure('public.emit_notification(uuid, uuid, public.notification_type, text, text, text, uuid, jsonb, text, boolean)') is null then
+    raise exception 'MISSING FUNCTION: emit_notification';
+  end if;
+  if to_regprocedure('public.notif_display_name(uuid)') is null then
+    raise exception 'MISSING FUNCTION: notif_display_name';
+  end if;
+  if to_regprocedure('public.on_follow_notify()') is null then
+    raise exception 'MISSING FUNCTION: on_follow_notify';
+  end if;
+  if not exists (
+    select 1 from pg_trigger where tgname = 'notify_on_follow' and not tgisinternal
+  ) then
+    raise exception 'MISSING TRIGGER: notify_on_follow';
+  end if;
+  if not exists (
+    select 1 from pg_trigger where tgname = 'notify_on_tip' and not tgisinternal
+  ) then
+    raise exception 'MISSING TRIGGER: notify_on_tip';
+  end if;
 
   -- Phase 6: posts gains a nullable purchase price.
   if not exists (
@@ -255,6 +289,19 @@ begin
   if not (select relrowsecurity from pg_class where oid = 'public.tips'::regclass) then
     raise exception 'RLS NOT ENABLED: tips';
   end if;
+  -- Phase 7 notification tables must have RLS enabled
+  if not (select relrowsecurity from pg_class where oid = 'public.notifications'::regclass) then
+    raise exception 'RLS NOT ENABLED: notifications';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.activity_events'::regclass) then
+    raise exception 'RLS NOT ENABLED: activity_events';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.notification_preferences'::regclass) then
+    raise exception 'RLS NOT ENABLED: notification_preferences';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.notification_outbox'::regclass) then
+    raise exception 'RLS NOT ENABLED: notification_outbox';
+  end if;
   -- messages must NOT be readable by anon (no grant)
   if exists (
     select 1 from information_schema.role_table_grants
@@ -280,6 +327,23 @@ begin
       and grantee = 'anon'
   ) then
     raise exception 'SECURITY: anon has privileges on a Phase 6 financial table';
+  end if;
+  -- Phase 7 notification tables must NOT be accessible by anon (no grant)
+  if exists (
+    select 1 from information_schema.role_table_grants
+    where table_schema = 'public'
+      and table_name in ('notifications','activity_events','notification_preferences','notification_outbox')
+      and grantee = 'anon'
+  ) then
+    raise exception 'SECURITY: anon has privileges on a Phase 7 notification table';
+  end if;
+  -- notification_outbox must NOT be readable by ordinary users (admin-only policy)
+  if exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'notification_outbox'
+      and cmd = 'SELECT' and qual = 'true'
+  ) then
+    raise exception 'SECURITY: notification_outbox has a public SELECT policy';
   end if;
 
   -- member_profiles must NOT be publicly readable (no USING(true) select policy)

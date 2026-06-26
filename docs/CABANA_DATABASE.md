@@ -201,7 +201,7 @@ reference.
   (`prevent_ledger_mutation`) blocks any change to monetary/identity fields and all deletes, permitting only
   FK columns being nulled by `ON DELETE SET NULL` (so accounts can be deleted while the ledger row is
   retained). A CHECK enforces `creator_net_cents = gross_cents − platform_fee_cents − processor_fee_cents`;
-  all cent columns are non-negative (the `refund` *type* carries reversal semantics, not a negative amount).
+  all cent columns are non-negative (the `refund` _type_ carries reversal semantics, not a negative amount).
 - **`creator_balances`** — cached projection (pending / available / lifetime gross·fees·net / paid-out),
   unique per `(creator_profile_id, currency)`. Never the source of truth: `recalc_creator_balance`
   recomputes it from the immutable ledger (mirrors the pure `deriveCreatorBalance`).
@@ -222,6 +222,41 @@ reference.
 **Validation:** `supabase/tests/monetization_ledger.sql` covers purchase unlock (+ idempotency), tips,
 balance derivation, payout request/reservation + eligibility guards, ledger immutability, self-action
 rejection, buyer/creator/stranger RLS isolation, and anon denial. Runs in `db:validate` and CI.
+
+### Notifications & activity migration (Phase 7, internal only)
+
+`supabase/migrations/20260519000000_notifications_activity.sql` adds the in-app notifications/activity
+foundation and an inert future-delivery outbox. **No external delivery** — no Resend, Firebase, Expo, or
+web push. Event generation lives at the DATABASE layer (AFTER INSERT triggers on the existing source
+tables), so events fire uniformly for both direct-insert and SECURITY DEFINER RPC write paths, atomically.
+
+- **Enums** — `notification_type` / `activity_type` (`new_follower`, `post_liked`, `post_commented`,
+  `post_saved`, `new_subscriber`, `tip_received`, `purchase_made`, `message_received`, `payout_requested`,
+  `system`), `notification_channel` (`in_app`/`email`/`push`), `outbox_status`
+  (`pending`/`sent`/`failed`/`skipped`/`canceled`).
+- **`notifications`** — in-app, system-written (no client INSERT). `dedupe_key` is `NOT NULL UNIQUE` so
+  re-firing an event is a no-op (idempotency). Clients may update only `read_at` (column-scoped grant).
+- **`activity_events`** — append-only canonical log with a `metadata` jsonb; every generated event is
+  logged here regardless of whether it surfaces as a user notification.
+- **`notification_preferences`** — per-user `in_app_enabled` (default true) + `email_enabled` /
+  `push_enabled` placeholders (default false). Self-manageable (insert/update own row).
+- **`notification_outbox`** — future email/push queue (inert this phase): `channel`, `status`, `attempts`,
+  `scheduled_for`, unique `(notification_id, channel)`. **Admin-only**, never user-readable.
+- **Helpers / triggers** — `emit_notification` (SECURITY DEFINER): logs the activity event, then — when the
+  recipient is eligible (exists, not self, not blocked via `notif_is_blocked`, in-app enabled) — inserts an
+  idempotent notification (`ON CONFLICT (dedupe_key) DO NOTHING`) and one outbox row per enabled future
+  channel. AFTER INSERT triggers wire `follows`, `post_likes`, `post_comments` (visible only), `post_saves`,
+  `creator_subscriptions`, `tips`, `purchases`, `messages` (one per recipient participant; skips
+  system/deleted), and `payout_requests` (activity + creator self-notification).
+- **Realtime** — `notifications` is added to the `supabase_realtime` publication; delivery is RLS-filtered
+  to the recipient.
+- **RLS** — users read only their own notifications/activity and manage only their own preferences; the
+  outbox is admin-only; anon has no access; notifications are trigger-written (no client INSERT/DELETE).
+
+**Validation:** `supabase/tests/notifications.sql` covers event generation (follow/like/comment/message/
+payout), unread counts, mark-read + mark-all-read under RLS, preferences, outbox row creation,
+idempotency (no duplicate on re-fire), self-notification suppression, recipient isolation, outbox
+admin-only, and anonymous denial. Runs in `db:validate` and CI.
 
 ## 2. Target Production Schema
 
