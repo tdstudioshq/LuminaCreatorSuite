@@ -28,12 +28,17 @@ export const REPORT_SUBJECT_TYPES: readonly ReportSubjectType[] = [
   "comment",
   "message",
 ];
+// Ordered for the member-facing report reason selector (Phase 8B). Validation
+// uses membership only, so this order is purely presentational; the DB enum keeps
+// the original physical order with `hate` / `sexual_content` appended.
 export const REPORT_REASONS: readonly ReportReason[] = [
   "spam",
   "harassment",
+  "hate",
+  "sexual_content",
   "impersonation",
-  "copyright",
   "scam",
+  "copyright",
   "other",
 ];
 export const REPORT_STATUSES: readonly ReportStatus[] = [
@@ -222,9 +227,11 @@ const STATUS_LABELS: Record<ReportStatus, string> = {
 const REASON_LABELS: Record<ReportReason, string> = {
   spam: "Spam",
   harassment: "Harassment",
+  hate: "Hate",
+  sexual_content: "Sexual Content",
   impersonation: "Impersonation",
   copyright: "Copyright",
-  scam: "Scam",
+  scam: "Scam/Fraud",
   other: "Other",
 };
 const SUBJECT_LABELS: Record<ReportSubjectType, string> = {

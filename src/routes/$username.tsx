@@ -10,6 +10,7 @@ import { comingSoon } from "@/lib/coming-soon";
 import { useFollow } from "@/lib/use-relationships";
 import { useCreatorFeed } from "@/lib/use-posts";
 import { PostCard } from "@/components/cabana/posts/PostCard";
+import { ReportButton } from "@/components/cabana/reporting/ReportButton";
 import { CreatorSubscribePanel } from "@/components/cabana/subscriptions/CreatorSubscribePanel";
 import { useStartConversationWithUsername } from "@/lib/use-messaging";
 
@@ -238,6 +239,17 @@ export function CreatorProfile({ username }: { username: string }) {
               <Mail className="w-4 h-4" />
             </button>
           </motion.div>
+
+          {profileId && !relationship.data?.isSelf && (
+            <div className="mt-2 flex justify-center">
+              <ReportButton
+                subjectType="creator"
+                subjectId={profileId}
+                subjectLabel="creator profile"
+                className="text-[11px] text-muted-foreground/70 hover:bg-transparent hover:text-foreground"
+              />
+            </div>
+          )}
         </motion.section>
 
         {/* POSTS */}
@@ -245,6 +257,7 @@ export function CreatorProfile({ username }: { username: string }) {
           username={username}
           onUnlock={() => void handleFollow()}
           unlockPending={relationship.pending}
+          isOwner={!!relationship.data?.isSelf}
         />
 
         {/* SUBSCRIBE (demo) */}
@@ -379,10 +392,12 @@ function CreatorPosts({
   username,
   onUnlock,
   unlockPending,
+  isOwner,
 }: {
   username: string;
   onUnlock: () => void;
   unlockPending: boolean;
+  isOwner: boolean;
 }) {
   const { data: posts, isLoading } = useCreatorFeed(username);
   if (isLoading || !posts || posts.length === 0) return null;
@@ -396,6 +411,7 @@ function CreatorPosts({
             index={i}
             onUnlock={onUnlock}
             unlockPending={unlockPending}
+            isOwner={isOwner}
           />
         ))}
       </div>

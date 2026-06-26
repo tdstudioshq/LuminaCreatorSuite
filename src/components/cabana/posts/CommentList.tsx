@@ -1,6 +1,7 @@
 import { formatDistanceToNow } from "date-fns";
 import { EyeOff, Loader2, MessageCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { ReportButton } from "@/components/cabana/reporting/ReportButton";
 import { usePostComments, useDeleteComment, useHideComment } from "@/lib/use-engagement";
 
 export function CommentList({ postId, isOwner = false }: { postId: string; isOwner?: boolean }) {
@@ -68,26 +69,32 @@ export function CommentList({ postId, isOwner = false }: { postId: string; isOwn
               <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground/90">
                 {c.body}
               </p>
-              {(c.mine || isOwner) && (
-                <div className="mt-1.5 flex gap-2">
-                  {c.mine && (
-                    <button
-                      onClick={() => void run(deleteComment.mutateAsync(c.id), "Comment deleted.")}
-                      className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-red-300/80"
-                    >
-                      <Trash2 className="h-3 w-3" /> Delete
-                    </button>
-                  )}
-                  {isOwner && !c.mine && (
-                    <button
-                      onClick={() => void run(hideComment.mutateAsync(c.id), "Comment hidden.")}
-                      className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-amber-300/80"
-                    >
-                      <EyeOff className="h-3 w-3" /> Hide
-                    </button>
-                  )}
-                </div>
-              )}
+              <div className="mt-1.5 flex items-center gap-2">
+                {c.mine && (
+                  <button
+                    onClick={() => void run(deleteComment.mutateAsync(c.id), "Comment deleted.")}
+                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-red-300/80"
+                  >
+                    <Trash2 className="h-3 w-3" /> Delete
+                  </button>
+                )}
+                {isOwner && !c.mine && (
+                  <button
+                    onClick={() => void run(hideComment.mutateAsync(c.id), "Comment hidden.")}
+                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-amber-300/80"
+                  >
+                    <EyeOff className="h-3 w-3" /> Hide
+                  </button>
+                )}
+                {!c.mine && (
+                  <ReportButton
+                    subjectType="comment"
+                    subjectId={c.id}
+                    subjectLabel="comment"
+                    className="h-auto gap-1 px-0 py-0 text-[11px] font-normal hover:bg-transparent hover:text-amber-300/80"
+                  />
+                )}
+              </div>
             </div>
           </li>
         );

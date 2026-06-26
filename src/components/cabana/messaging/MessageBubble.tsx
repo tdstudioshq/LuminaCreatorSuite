@@ -1,5 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
 import { Trash2 } from "lucide-react";
+import { ReportButton } from "@/components/cabana/reporting/ReportButton";
 import type { Message } from "@/lib/cabana-messaging";
 import { canDeleteMessage } from "@/lib/cabana-messaging";
 
@@ -34,6 +35,15 @@ export function MessageBubble({
             >
               <Trash2 className="h-3 w-3" />
             </button>
+          )}
+          {!mine && !message.isDeleted && (
+            <ReportButton
+              subjectType="message"
+              subjectId={message.id}
+              subjectLabel="message"
+              iconOnly
+              className="h-auto w-auto p-0 opacity-0 transition-opacity hover:bg-transparent hover:text-amber-300/80 group-hover:opacity-100"
+            />
           )}
         </div>
       </div>
