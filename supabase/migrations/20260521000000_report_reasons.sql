@@ -1,0 +1,23 @@
+-- ============================================================================
+-- CABANA — Phase 8B: extend report_reason for member-facing reporting
+-- ============================================================================
+-- Purely additive + backward-compatible. Phase 8B surfaces member-facing
+-- "Report" controls across the app (posts, comments, creator/member profiles,
+-- direct messages) on top of the existing Phase 8 moderation backend (the
+-- `reports` table, its INSERT RLS, and the `createReport` path are unchanged).
+--
+-- The original Phase 8 `report_reason` enum had six categories; member-facing
+-- reporting needs two more first-class safety categories so reports are typed,
+-- not collapsed into `other`:
+--   * hate            — hate speech / discriminatory attacks
+--   * sexual_content  — unwanted/non-consensual sexual content (a SAFETY report
+--                       category; this is NOT adult-content functionality)
+--
+-- This migration ONLY appends two enum values. No table, RLS, policy, trigger,
+-- grant, or report semantics change. `ADD VALUE IF NOT EXISTS` keeps it
+-- idempotent and safe to rebuild from zero. The new values are not referenced
+-- elsewhere in this migration, so this runs cleanly inside the migration's
+-- transaction on PostgreSQL 12+.
+-- ----------------------------------------------------------------------------
+alter type public.report_reason add value if not exists 'hate';
+alter type public.report_reason add value if not exists 'sexual_content';

@@ -1922,7 +1922,15 @@ export type Database = {
       post_media_kind: "image" | "video" | "audio";
       post_status: "draft" | "scheduled" | "published" | "archived";
       post_visibility: "public" | "followers" | "subscribers" | "purchase";
-      report_reason: "spam" | "harassment" | "impersonation" | "copyright" | "scam" | "other";
+      report_reason:
+        | "spam"
+        | "harassment"
+        | "impersonation"
+        | "copyright"
+        | "scam"
+        | "other"
+        | "hate"
+        | "sexual_content";
       report_status: "open" | "reviewing" | "resolved" | "dismissed";
       report_subject_type: "user" | "creator" | "post" | "comment" | "message";
       transaction_status: "pending" | "succeeded" | "failed" | "refunded" | "disputed";
@@ -2099,7 +2107,16 @@ export const Constants = {
       post_media_kind: ["image", "video", "audio"],
       post_status: ["draft", "scheduled", "published", "archived"],
       post_visibility: ["public", "followers", "subscribers", "purchase"],
-      report_reason: ["spam", "harassment", "impersonation", "copyright", "scam", "other"],
+      report_reason: [
+        "spam",
+        "harassment",
+        "impersonation",
+        "copyright",
+        "scam",
+        "other",
+        "hate",
+        "sexual_content",
+      ],
       report_status: ["open", "reviewing", "resolved", "dismissed"],
       report_subject_type: ["user", "creator", "post", "comment", "message"],
       transaction_status: ["pending", "succeeded", "failed", "refunded", "disputed"],

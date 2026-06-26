@@ -92,6 +92,19 @@ begin
   if not exists (select 1 from pg_type where typname = 'report_reason') then
     raise exception 'MISSING ENUM: report_reason';
   end if;
+  -- Phase 8B: report_reason extended with hate + sexual_content (member reporting)
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'report_reason' and e.enumlabel = 'hate'
+  ) then
+    raise exception 'MISSING ENUM VALUE: report_reason.hate';
+  end if;
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'report_reason' and e.enumlabel = 'sexual_content'
+  ) then
+    raise exception 'MISSING ENUM VALUE: report_reason.sexual_content';
+  end if;
   if not exists (select 1 from pg_type where typname = 'report_status') then
     raise exception 'MISSING ENUM: report_status';
   end if;

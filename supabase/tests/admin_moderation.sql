@@ -126,6 +126,21 @@ begin
   select count(*) into cnt from public.audit_logs where target_id = v_report_id;
   if cnt <> 3 then raise exception 'non-staff update wrote an audit row (count=%)', cnt; end if;
 
+  -- 5b. Phase 8B: a member can file reports with the new safety reasons (hate,
+  --     sexual_content) under their own INSERT RLS — proves the extended enum is
+  --     usable end-to-end, not just present.
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_reporter_id::text, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  insert into public.reports (reporter_user_id, subject_type, subject_id, reason)
+  values (v_reporter_id, 'creator', gen_random_uuid(), 'hate'),
+         (v_reporter_id, 'message', gen_random_uuid(), 'sexual_content');
+  select count(*) into cnt from public.reports
+    where reporter_user_id = v_reporter_id and reason in ('hate', 'sexual_content');
+  if cnt <> 2 then
+    raise exception 'expected 2 new-reason reports, got %', cnt; end if;
+  reset role;
+
   -- 6. audit_logs are append-only: UPDATE and DELETE are both blocked (tested as
   --    the table owner to exercise the immutability trigger, not RLS).
   select id into v_audit_id from public.audit_logs where target_id = v_report_id limit 1;

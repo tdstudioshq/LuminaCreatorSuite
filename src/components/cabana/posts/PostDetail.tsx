@@ -49,7 +49,12 @@ export function PostDetail({ postId }: { postId: string }) {
           </div>
         ) : (
           <div className="space-y-5">
-            <PostCard post={post} onUnlock={onUnlock} unlockPending={purchaseUnlock.isPending} />
+            <PostCard
+              post={post}
+              onUnlock={onUnlock}
+              unlockPending={purchaseUnlock.isPending}
+              isOwner={isOwner}
+            />
             {!post.locked && (
               <section className="space-y-3">
                 <h2 className="text-sm font-medium text-muted-foreground">Comments</h2>

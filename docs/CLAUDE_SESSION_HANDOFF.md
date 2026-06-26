@@ -16,7 +16,47 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
-## Latest Status — Phase 8 (Slice 1) COMPLETE (Admin Moderation & Audit Foundation)
+## Latest Status — Phase 8B COMPLETE (Member Reporting UI)
+
+Built on Phase 8 (Slice 1). Local Docker only; remote/push/deploy untouched. Member-facing
+reporting wired across the app **on top of the existing moderation backend** — the `reports`
+table, its INSERT RLS, `validateReportInput`, the `createReport` server action, and the staff
+queue/audit trail are all unchanged and reused. No new business logic; no table/RLS/policy/trigger
+change. The only schema change is an **additive, backward-compatible enum extension**.
+
+- **Migration** `20260521000000_report_reasons.sql`: appends `hate` + `sexual_content` to the
+  `report_reason` enum via `ALTER TYPE … ADD VALUE IF NOT EXISTS` (idempotent; rebuilds from zero).
+  `sexual_content` is a **safety report category**, not adult-content functionality. Mirrored in the
+  generated types, `cabana-moderation.ts` (`REPORT_REASONS` now 8, selector-ordered; `REASON_LABELS`
+  adds Hate/Sexual Content and relabels `scam` → "Scam/Fraud"), and unit tests. Validation is
+  membership-only, so DB enum order (appended) and TS selector order differ harmlessly.
+- **Reusable UI** `src/components/cabana/reporting/`: `ReportButton` (drop-in trigger; hidden for
+  signed-out viewers since reporting needs an authenticated reporter, and for the viewer's own
+  content), `ReportDialog` (polymorphic over subject type; idle/submitting/success/error states via
+  `useCreateReport`), `ReportReasonSelect` (radio list from `REPORT_REASONS`). No duplicated rules.
+- **Surfaces wired** (subject type → id): posts (`post` → `postId`, on `PostCard`/`PostDetail`, hidden
+  when locked or own), comments (`comment` → comment id, non-own only in `CommentList`), creator
+  profiles (`creator` → creator_profile id on `/$username`, hidden when self), direct messages
+  (`message` → message id, non-own/non-deleted in `MessageBubble`).
+- **Tests**: `cabana-moderation.test.ts` extended (new reasons accepted, labels, full reason-set
+  coverage). `supabase/tests/smoke.sql` asserts the two new enum values exist; `admin_moderation.sql`
+  asserts a member can file `hate`/`sexual_content` reports under INSERT RLS.
+
+**Local verification:** lint clean (only the pre-existing shadcn react-refresh warnings), `tsc`
+clean, production build green, **221 unit tests pass** at 100% lines / 98.55% branch (≥95% gate).
+`bun run db:validate` requires Docker (not available in this sandbox) — CI runs the from-zero rebuild
++ all SQL suites (incl. the new enum assertions) on a Docker-enabled runner.
+
+**Next:** member-profile reporting (the reusable `ReportButton` already supports `subjectType="user"`;
+deferred only because no current surface exposes another member's profile id — the DM header and the
+`public_member_profiles` projection are intentionally ID-free); Phase 8C+ remaining slices (admin
+finance subroutes, notification outbox processor + real email/push provider, full `admin.tsx`
+migration). Remote schema reconciliation + the `subscriptions`→`platform_subscriptions` rename remain
+deferred. Do not start without approval.
+
+---
+
+## Previous Status — Phase 8 (Slice 1) COMPLETE (Admin Moderation & Audit Foundation)
 
 Built on Phase 7. Local Docker only; remote/push/deploy untouched. **Staff (admin/moderator)
 only.** This is the trust & operations foundation: a real, RLS-enforced moderation queue and an

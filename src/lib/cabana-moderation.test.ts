@@ -13,6 +13,7 @@ import {
   mapAuditLog,
   mapReport,
   normalizeResolution,
+  REPORT_REASONS,
   reportReasonLabel,
   reportStatusLabel,
   reportSubjectLabel,
@@ -128,6 +129,15 @@ describe("validateReportInput", () => {
         .details,
     ).toBeNull();
   });
+  it("accepts the Phase 8B safety reasons (hate, sexual_content)", () => {
+    expect(
+      validateReportInput({ subjectType: "creator", subjectId: "c1", reason: "hate" }).reason,
+    ).toBe("hate");
+    expect(
+      validateReportInput({ subjectType: "message", subjectId: "m1", reason: "sexual_content" })
+        .reason,
+    ).toBe("sexual_content");
+  });
   it("rejects invalid subject type / reason / subject id / details length", () => {
     expect(() =>
       validateReportInput({ subjectType: "nope", subjectId: "x", reason: "spam" }),
@@ -186,8 +196,19 @@ describe("labels", () => {
   it("maps status/reason/subject labels", () => {
     expect(reportStatusLabel("reviewing")).toBe("Reviewing");
     expect(reportReasonLabel("impersonation")).toBe("Impersonation");
+    expect(reportReasonLabel("hate")).toBe("Hate");
+    expect(reportReasonLabel("sexual_content")).toBe("Sexual Content");
+    expect(reportReasonLabel("scam")).toBe("Scam/Fraud");
     expect(reportSubjectLabel("user")).toBe("Member");
     expect(reportSubjectLabel("creator")).toBe("Creator");
+  });
+  it("every reason in REPORT_REASONS has a non-fallback label", () => {
+    expect(REPORT_REASONS).toContain("hate");
+    expect(REPORT_REASONS).toContain("sexual_content");
+    expect(REPORT_REASONS).toHaveLength(8);
+    for (const reason of REPORT_REASONS) {
+      expect(reportReasonLabel(reason)).not.toBe(reason);
+    }
   });
   it("maps known audit actions and title-cases unknown", () => {
     expect(auditActionLabel("report.resolved")).toBe("Report resolved");

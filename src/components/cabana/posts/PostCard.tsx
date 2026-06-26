@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import type { FeedPost } from "@/lib/cabana-posts";
+import { ReportButton } from "@/components/cabana/reporting/ReportButton";
 import { PostVisibilityBadge } from "./PostVisibilityBadge";
 import { PostMediaGallery } from "./PostMediaGallery";
 import { LockedContentGate } from "./LockedContentGate";
@@ -11,11 +12,14 @@ export function PostCard({
   index = 0,
   onUnlock,
   unlockPending = false,
+  isOwner = false,
 }: {
   post: FeedPost;
   index?: number;
   onUnlock?: () => void;
   unlockPending?: boolean;
+  /** Hide the report control on the viewer's own post. */
+  isOwner?: boolean;
 }) {
   const initial = (post.displayName || post.username || "?").charAt(0).toUpperCase();
   return (
@@ -46,6 +50,9 @@ export function PostCard({
             </time>
           )}
         </div>
+        {!isOwner && !post.locked && (
+          <ReportButton subjectType="post" subjectId={post.postId} subjectLabel="post" iconOnly />
+        )}
       </header>
 
       {post.locked ? (
