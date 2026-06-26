@@ -101,7 +101,26 @@ cannot write. Likes/saves are unique per user/post and private.
 
 ---
 
-## Phase 4 — Creator Profiles, Subscriptions & Mock Entitlements
+## Phase 4 — Creator Subscriptions & Mock Entitlements ✅ DONE (subscriptions slice)
+
+**Goal:** Fan-to-creator subscriptions with **mock checkout** and server-resolved entitlements. Subscriber-only content actually gates on entitlement. No real money.
+
+**Delivered (subscriptions + entitlement):** migration `20260516000000_creator_subscriptions.sql`
+(`creator_subscription_status` enum, `creator_subscription_tiers`, `creator_subscriptions` with a unique
+live pair, `is_active_subscriber`, and write/read RPCs); `subscribers` visibility wired into
+`can_view_post` / `feed_creator_posts` / `post_card` (locked stubs for non-subscribers). `cabana-subscriptions.ts`
+(+ tests), `subscription-actions.ts`, `use-subscriptions.ts`; `SubscriptionTierCard`,
+`CreatorSubscribePanel` (mock-checkout dialog, "Demo" banner, no card fields), `SubscribersDashboard`;
+real `/dashboard/subscribers`, subscribe panel on `/$username`, Subscribers option in the composer,
+Subscribe CTA in `LockedContentGate`. The existing `subscriptions` table was **not** renamed.
+
+**Validation:** `creator_subscriptions.sql` behavioral suite + smoke extensions + `posts_feed.sql` update;
+in `db:validate` and CI.
+
+**Deferred to Phase 6 (monetization ledger):** `transactions` / `tips` / `creator_balances` / `payouts`,
+the `purchase` post-unlock visibility, and the `subscriptions`→`platform_subscriptions` rename.
+
+### Original Phase 4 plan (full scope, for reference)
 
 **Goal:** Fan-to-creator subscriptions with **mock checkout** and server-resolved entitlements. Subscriber-only content actually gates on entitlement. Demo tips and derived balances. No real money.
 

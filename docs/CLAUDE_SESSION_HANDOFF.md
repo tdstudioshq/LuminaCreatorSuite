@@ -16,7 +16,49 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
-## Latest Status — Phase 3.2 COMPLETE (Engagement Foundation)
+## Latest Status — Phase 4 COMPLETE (Creator Subscriptions & Mock Entitlements)
+
+Built on Phase 3.2 engagement. **DEMO-ONLY** — no real money, payment provider, payouts, or KYC. Local
+Docker only; remote/push/deploy untouched (config deny-list enforces this).
+
+**Scope delivered:** fan-to-creator subscriptions and the `subscribers` post-visibility tier wired to a
+real entitlement. The existing `subscriptions` table (CABANA SaaS plans) was **not** renamed — fan subs
+live in a new `creator_subscriptions` table (the `subscriptions`→`platform_subscriptions` rename remains
+deferred debt). `purchase` visibility stays unsupported (needs the Phase 6 ledger).
+
+- **Migration** `20260516000000_creator_subscriptions.sql`: `creator_subscription_status` enum;
+  `creator_subscription_tiers` (creator-defined, integer-cent demo prices) and `creator_subscriptions`
+  (member↔creator, unique live pair); `is_active_subscriber` helper; SECURITY DEFINER write RPCs
+  `subscribe_to_creator` (copies tier price, stamps a `mock_*` ref — no charge), `cancel_creator_subscription`,
+  and read RPCs `creator_subscription_state`, `creator_subscribers_list`. Extended `can_view_post`,
+  `feed_creator_posts`, and `post_card` so `subscribers` posts unlock for active subscribers and surface as
+  **locked stubs** (Subscribe CTA) for everyone else; added a posts SELECT policy for subscribers.
+- **RLS:** tiers — public reads active, owner manages. Subscriptions — member reads own, creator reads subs
+  to own profile; **writes only through the RPCs** (no direct insert/update grant); anon revoked.
+- **Pure module** `cabana-subscriptions.ts` (+ tests): tier/price/currency validation, state mapping, and
+  `isStateEntitled` reusing `isSubscriptionActive` from `cabana-entitlements`. `cabana-posts` now permits
+  `subscribers` visibility (still rejects `purchase`).
+- **Server actions** `subscription-actions.ts`: `upsertTier`, `setTierActive`, `getMyTiers`,
+  `getCreatorTiers`, `subscribeToCreator`, `cancelSubscription`, `getSubscriptionState`,
+  `getCreatorSubscribers`. **Hooks** `use-subscriptions.ts`.
+- **UI**: `SubscriptionTierCard`, `CreatorSubscribePanel` (mock-checkout dialog with a visible "Demo — no
+  real charge / no card collected" banner), `SubscribersDashboard` (tier manager + subscriber list).
+  `/dashboard/subscribers` is now real (replaced `DemoSubscribers`); `/$username` shows a Subscribe panel;
+  the composer offers a Subscribers visibility; `LockedContentGate` shows a Subscribe CTA for subscriber locks.
+- **Tests**: `supabase/tests/creator_subscriptions.sql` (tier RLS, demo subscribe/cancel, unique live pair,
+  subscriber entitlement on posts + feed locking, self-subscribe rejection, direct-write denial, creator
+  subscriber visibility, anon denial). `smoke.sql` extended; `posts_feed.sql` updated for the new
+  subscriber-locked feed rows; `db-validate.sh` + CI run the new suite.
+
+**Local verification:** from-zero rebuild applies; all **six** SQL suites pass via the DB container; unit
+tests pass at ≥95% (subscriptions module 100%); lint / tsc / build green.
+
+**Next:** Phase 5 (messaging) or Phase 6 (monetization ledger: real `transactions`/`tips`/`payouts`,
+`purchase` post unlock) — gated. Remote schema reconciliation + the `subscriptions` rename remain deferred.
+
+---
+
+## Phase 3.2 COMPLETE (Engagement Foundation)
 
 Built on Phase 3 posts. Local Docker only — no production Supabase, link, push, or deploy (a config
 deny-list blocks those).

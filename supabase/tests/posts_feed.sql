@@ -2,7 +2,7 @@
 -- CABANA — Phase 3 behavioral checks: posts, feed RPCs, media privacy
 -- ============================================================================
 -- Proves creator-owned post RLS, anonymous public reads, follower-gated reads,
--- locked followers stubs, that subscribers/draft posts never leak to
+-- locked followers/subscribers stubs, that draft posts never leak to
 -- non-creators, can_view_post authorization, owner-only post_media, and that
 -- the post-media bucket is private. Self-cleaning; any failed assertion exits
 -- non-zero.
@@ -86,11 +86,14 @@ begin
     raise exception 'anon sees % posts on base table (expected 1 public)', cnt;
   end if;
 
-  -- Feed RPC: public (unlocked) + followers (locked stub); draft/subs excluded.
+  -- Feed RPC: public (unlocked) + followers (locked) + subscribers (locked);
+  -- draft excluded. (Subscriber posts surface as locked stubs since Phase 4.)
   select count(*) into cnt from public.feed_creator_posts(v_handle);
-  if cnt <> 2 then
-    raise exception 'anon feed returned % rows (expected 2)', cnt;
+  if cnt <> 3 then
+    raise exception 'anon feed returned % rows (expected 3)', cnt;
   end if;
+  select locked into denied from public.feed_creator_posts(v_handle) where visibility = 'subscribers';
+  if not denied then raise exception 'subscriber post not locked for anon'; end if;
   select locked, caption = '', coalesce(jsonb_array_length(media), 0) = 0
     into b, denied, is_public
   from public.feed_creator_posts(v_handle) where visibility = 'followers';
@@ -133,11 +136,13 @@ begin
   set local role authenticated;
 
   select count(*) into cnt from public.feed_creator_posts(v_handle);
-  if cnt <> 2 then
-    raise exception 'stranger feed returned % rows (expected 2)', cnt;
+  if cnt <> 3 then
+    raise exception 'stranger feed returned % rows (expected 3)', cnt;
   end if;
   select locked into b from public.feed_creator_posts(v_handle) where visibility = 'followers';
   if not b then raise exception 'stranger sees followers post unlocked'; end if;
+  select locked into b from public.feed_creator_posts(v_handle) where visibility = 'subscribers';
+  if not b then raise exception 'stranger sees subscribers post unlocked'; end if;
 
   if public.can_view_post(v_fol_post) then
     raise exception 'stranger can_view_post granted followers post';

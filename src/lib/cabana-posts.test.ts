@@ -38,19 +38,19 @@ describe("normalizeCaption", () => {
 });
 
 describe("normalizePostVisibility", () => {
-  it("accepts public and followers", () => {
+  it("accepts public, followers, and subscribers", () => {
     expect(normalizePostVisibility("public")).toBe("public");
     expect(normalizePostVisibility("followers")).toBe("followers");
+    expect(normalizePostVisibility("subscribers")).toBe("subscribers");
   });
 
-  it("rejects subscribers/purchase with a not-available message", () => {
-    expect(() => normalizePostVisibility("subscribers")).toThrow(/not available yet/i);
+  it("rejects purchase with a not-available message", () => {
     expect(() => normalizePostVisibility("purchase")).toThrow(/not available yet/i);
   });
 
   it("rejects unknown values", () => {
-    expect(() => normalizePostVisibility("everyone")).toThrow(/public.*followers/i);
-    expect(() => normalizePostVisibility(undefined)).toThrow(/public.*followers/i);
+    expect(() => normalizePostVisibility("everyone")).toThrow(/public.*followers.*subscribers/i);
+    expect(() => normalizePostVisibility(undefined)).toThrow(/public.*followers.*subscribers/i);
   });
 });
 

@@ -144,6 +144,120 @@ export type Database = {
         };
         Relationships: [];
       };
+      creator_subscription_tiers: {
+        Row: {
+          created_at: string;
+          creator_profile_id: string;
+          currency: string;
+          id: string;
+          is_active: boolean;
+          name: string;
+          price_cents: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          creator_profile_id: string;
+          currency?: string;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          price_cents?: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          creator_profile_id?: string;
+          currency?: string;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          price_cents?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "creator_subscription_tiers_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      creator_subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean;
+          canceled_at: string | null;
+          created_at: string;
+          creator_profile_id: string;
+          currency: string;
+          current_period_end: string | null;
+          id: string;
+          member_user_id: string;
+          mock_provider_reference: string | null;
+          price_cents: number;
+          started_at: string;
+          status: Database["public"]["Enums"]["creator_subscription_status"];
+          tier_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          cancel_at_period_end?: boolean;
+          canceled_at?: string | null;
+          created_at?: string;
+          creator_profile_id: string;
+          currency?: string;
+          current_period_end?: string | null;
+          id?: string;
+          member_user_id: string;
+          mock_provider_reference?: string | null;
+          price_cents?: number;
+          started_at?: string;
+          status?: Database["public"]["Enums"]["creator_subscription_status"];
+          tier_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          cancel_at_period_end?: boolean;
+          canceled_at?: string | null;
+          created_at?: string;
+          creator_profile_id?: string;
+          currency?: string;
+          current_period_end?: string | null;
+          id?: string;
+          member_user_id?: string;
+          mock_provider_reference?: string | null;
+          price_cents?: number;
+          started_at?: string;
+          status?: Database["public"]["Enums"]["creator_subscription_status"];
+          tier_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "creator_subscriptions_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "creator_subscriptions_member_user_id_fkey";
+            columns: ["member_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "creator_subscriptions_tier_id_fkey";
+            columns: ["tier_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_subscription_tiers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       follows: {
         Row: {
           created_at: string;
@@ -698,6 +812,35 @@ export type Database = {
     };
     Functions: {
       can_view_post: { Args: { _post_id: string }; Returns: boolean };
+      cancel_creator_subscription: {
+        Args: { _username: string };
+        Returns: undefined;
+      };
+      creator_subscribers_list: {
+        Args: { _cursor?: string; _limit?: number };
+        Returns: {
+          currency: string;
+          member_avatar_url: string;
+          member_display_name: string;
+          member_username: string;
+          price_cents: number;
+          since: string;
+          tier_name: string;
+        }[];
+      };
+      creator_subscription_state: {
+        Args: { _username: string };
+        Returns: {
+          currency: string;
+          current_period_end: string;
+          is_self: boolean;
+          price_cents: number;
+          status: Database["public"]["Enums"]["creator_subscription_status"];
+          subscribed: boolean;
+          tier_name: string;
+          username: string;
+        }[];
+      };
       feed_creator_posts: {
         Args: { _cursor?: string; _limit?: number; _username: string };
         Returns: {
@@ -730,6 +873,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"];
           _user_id: string;
         };
+        Returns: boolean;
+      };
+      is_active_subscriber: {
+        Args: { _creator_profile_id: string };
         Returns: boolean;
       };
       is_current_user_creator: {
@@ -800,11 +947,16 @@ export type Database = {
         Args: { _username: string };
         Returns: undefined;
       };
+      subscribe_to_creator: {
+        Args: { _tier_id: string; _username: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       account_type: "creator" | "member";
       app_role: "admin" | "moderator" | "user";
       comment_status: "visible" | "hidden" | "deleted";
+      creator_subscription_status: "trialing" | "active" | "past_due" | "canceled" | "expired";
       post_media_kind: "image" | "video" | "audio";
       post_status: "draft" | "scheduled" | "published" | "archived";
       post_visibility: "public" | "followers" | "subscribers" | "purchase";
@@ -939,6 +1091,7 @@ export const Constants = {
       account_type: ["creator", "member"],
       app_role: ["admin", "moderator", "user"],
       comment_status: ["visible", "hidden", "deleted"],
+      creator_subscription_status: ["trialing", "active", "past_due", "canceled", "expired"],
       post_media_kind: ["image", "video", "audio"],
       post_status: ["draft", "scheduled", "published", "archived"],
       post_visibility: ["public", "followers", "subscribers", "purchase"],

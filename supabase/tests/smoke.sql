@@ -13,7 +13,8 @@ declare
     'analytics_events','subscriptions','user_roles','reserved_handles',
     'member_profiles','follows','blocks',
     'posts','post_media',
-    'post_comments','post_likes','post_saves'
+    'post_comments','post_likes','post_saves',
+    'creator_subscription_tiers','creator_subscriptions'
   ];
   t text;
 begin
@@ -44,6 +45,10 @@ begin
   -- Phase 3.2 enum
   if not exists (select 1 from pg_type where typname = 'comment_status') then
     raise exception 'MISSING ENUM: comment_status';
+  end if;
+  -- Phase 4 enum
+  if not exists (select 1 from pg_type where typname = 'creator_subscription_status') then
+    raise exception 'MISSING ENUM: creator_subscription_status';
   end if;
 
   -- Phase 2B: profiles.account_type column (NOT NULL, default creator)
@@ -107,6 +112,16 @@ begin
   if to_regprocedure('public.is_engagement_blocked(uuid)') is null then
     raise exception 'MISSING FUNCTION: is_engagement_blocked';
   end if;
+  -- Phase 4 subscription RPCs + helper
+  if to_regprocedure('public.is_active_subscriber(uuid)') is null then
+    raise exception 'MISSING FUNCTION: is_active_subscriber';
+  end if;
+  if to_regprocedure('public.subscribe_to_creator(text, uuid)') is null then
+    raise exception 'MISSING FUNCTION: subscribe_to_creator';
+  end if;
+  if to_regprocedure('public.creator_subscription_state(text)') is null then
+    raise exception 'MISSING FUNCTION: creator_subscription_state';
+  end if;
 
   -- Signup trigger on auth.users
   if not exists (
@@ -145,6 +160,17 @@ begin
   end if;
   if not (select relrowsecurity from pg_class where oid = 'public.post_saves'::regclass) then
     raise exception 'RLS NOT ENABLED: post_saves';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.creator_subscriptions'::regclass) then
+    raise exception 'RLS NOT ENABLED: creator_subscriptions';
+  end if;
+  -- creator_subscriptions must NOT be readable by anon (no grant)
+  if exists (
+    select 1 from information_schema.role_table_grants
+    where table_schema = 'public' and table_name = 'creator_subscriptions'
+      and grantee = 'anon' and privilege_type = 'SELECT'
+  ) then
+    raise exception 'SECURITY: anon has SELECT on creator_subscriptions';
   end if;
 
   -- member_profiles must NOT be publicly readable (no USING(true) select policy)

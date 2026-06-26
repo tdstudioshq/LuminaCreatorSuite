@@ -49,7 +49,12 @@ export function PostCard({
       </header>
 
       {post.locked ? (
-        <LockedContentGate onUnlock={onUnlock} pending={unlockPending} />
+        <LockedContentGate
+          visibility={post.visibility}
+          username={post.username}
+          onUnlock={onUnlock}
+          pending={unlockPending}
+        />
       ) : (
         <>
           {post.caption && (

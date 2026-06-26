@@ -129,6 +129,26 @@ service role.
 Hooks in `use-engagement.ts`: `usePostEngagementState`, `usePostComments`, `usePost`, `usePostLike`,
 `usePostSave`, and comment mutations (`useAddComment`/`useEditComment`/`useDeleteComment`/`useHideComment`).
 
+## 2f. Implemented Subscription Actions (T2 — Phase 4, DEMO-ONLY)
+
+`src/lib/subscription-actions.ts`. **No real money** — `subscribeToCreator` calls a SECURITY DEFINER RPC
+that copies the price from a creator tier and stamps a `mock_*` reference; there is no payment provider,
+charge, or payout. Writes use `requireSupabaseAuth`; public reads use `optionalSupabaseAuth`.
+
+| Action                                            | Contract                                                                      |
+| ------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `upsertTier({tierId?,name,priceCents,currency?})` | [auth, creator] create/update a demo tier (integer cents)                     |
+| `setTierActive({tierId,isActive})`                | [auth, creator] activate/deactivate a tier                                    |
+| `getMyTiers()`                                    | [auth, creator] → the caller's tiers (all)                                    |
+| `getCreatorTiers({username})`                     | [public] → a creator's ACTIVE tiers                                           |
+| `subscribeToCreator({username,tierId})`           | [auth] demo subscribe (mock ref, no charge); idempotent → `SubscriptionState` |
+| `cancelSubscription({username})`                  | [auth] cancel the caller's live subscription → `SubscriptionState`            |
+| `getSubscriptionState({username})`                | [public] → subscribed/status/tier/price/period/self (anon → not subscribed)   |
+| `getCreatorSubscribers()`                         | [auth, creator] → the caller's active subscribers (safe identity)             |
+
+Hooks in `use-subscriptions.ts`: `useCreatorTiers`, `useMyTiers`, `useSubscriptionState`,
+`useCreatorSubscribers`, `useSubscribe`, `useUpsertTier`, `useSetTierActive`.
+
 ## 3. Planned Server Actions (T2)
 
 Grouped by domain. Each entry: **name** — input → output [auth]. "Owner" = authenticated owner of the resource; "Server" = service-role inside a guarded action.
