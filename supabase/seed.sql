@@ -49,3 +49,31 @@ values (
   'USD'
 )
 on conflict (id) do nothing;
+
+-- A demo member (auth user → profile via handle_new_user) so the Phase 8 admin
+-- moderation queue has reports to triage on a fresh instance. Local/staging only.
+insert into auth.users (id, email, raw_user_meta_data)
+values (
+  '00000000-0000-4000-e000-000000000001',
+  'demo.reporter@cabana.local',
+  '{"name":"Demo Reporter","account_type":"member"}'::jsonb
+)
+on conflict (id) do nothing;
+
+-- Two seeded reports against the aurora demo content (open + reviewing) so a
+-- signed-in admin/moderator sees a populated queue at /admin/reports.
+insert into public.reports (id, reporter_user_id, subject_type, subject_id, reason, details, status)
+values
+  (
+    '00000000-0000-4000-f000-000000000001',
+    '00000000-0000-4000-e000-000000000001',
+    'post', '00000000-0000-4000-d000-000000000001',
+    'spam', 'This unlock post reads like a scam.', 'open'
+  ),
+  (
+    '00000000-0000-4000-f000-000000000002',
+    '00000000-0000-4000-e000-000000000001',
+    'creator', '00000000-0000-4000-a000-000000000001',
+    'impersonation', 'Suspected impersonation of a verified artist.', 'reviewing'
+  )
+on conflict (id) do nothing;
