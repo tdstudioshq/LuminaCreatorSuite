@@ -77,3 +77,34 @@ values
     'impersonation', 'Suspected impersonation of a verified artist.', 'reviewing'
   )
 on conflict (id) do nothing;
+
+-- Two demo payout requests (pending + on hold) against the aurora demo creator,
+-- each with a reserved (processing) disbursement, so a signed-in admin sees a
+-- populated queue at /admin/payouts. Local/staging only; no real funds.
+insert into public.payout_requests (id, creator_profile_id, amount_cents, currency, status, note)
+values
+  (
+    '00000000-0000-4000-c000-000000000001',
+    '00000000-0000-4000-a000-000000000001', 5000, 'USD', 'requested', 'First withdrawal'
+  ),
+  (
+    '00000000-0000-4000-c000-000000000002',
+    '00000000-0000-4000-a000-000000000001', 12000, 'USD', 'on_hold', 'Awaiting verification'
+  )
+on conflict (id) do nothing;
+
+insert into public.payouts (
+  id, creator_profile_id, payout_request_id, amount_cents, currency, status, requested_at
+)
+values
+  (
+    '00000000-0000-4000-c100-000000000001',
+    '00000000-0000-4000-a000-000000000001',
+    '00000000-0000-4000-c000-000000000001', 5000, 'USD', 'processing', now()
+  ),
+  (
+    '00000000-0000-4000-c100-000000000002',
+    '00000000-0000-4000-a000-000000000001',
+    '00000000-0000-4000-c000-000000000002', 12000, 'USD', 'processing', now()
+  )
+on conflict (id) do nothing;

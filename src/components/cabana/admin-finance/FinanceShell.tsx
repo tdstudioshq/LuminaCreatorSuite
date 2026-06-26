@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, BookOpen, LayoutDashboard, Sparkles } from "lucide-react";
+import { ArrowLeft, Banknote, BookOpen, LayoutDashboard, Sparkles } from "lucide-react";
 
 /**
  * Shared luxury layout for the admin finance subroutes (`/admin/finance`,
@@ -13,7 +13,7 @@ export function FinanceShell({
   description,
   children,
 }: {
-  active: "finance" | "ledger";
+  active: "finance" | "ledger" | "payouts";
   eyebrow: string;
   title: string;
   description: string;
@@ -57,6 +57,9 @@ export function FinanceShell({
           </ShellTab>
           <ShellTab to="/admin/ledger" active={active === "ledger"} Icon={BookOpen}>
             Ledger
+          </ShellTab>
+          <ShellTab to="/admin/payouts" active={active === "payouts"} Icon={Banknote}>
+            Payouts
           </ShellTab>
         </nav>
 

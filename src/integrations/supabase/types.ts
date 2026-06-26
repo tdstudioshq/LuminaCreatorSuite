@@ -1872,6 +1872,10 @@ export type Database = {
         Args: { _username: string };
         Returns: undefined;
       };
+      admin_review_payout: {
+        Args: { _payout_request_id: string; _action: string; _note?: string };
+        Returns: undefined;
+      };
       request_payout: {
         Args: { _amount_cents: number; _note?: string };
         Returns: undefined;
@@ -1917,7 +1921,7 @@ export type Database = {
         | "payout_requested"
         | "system";
       outbox_status: "pending" | "sent" | "failed" | "skipped" | "canceled";
-      payout_request_status: "requested" | "approved" | "rejected" | "paid";
+      payout_request_status: "requested" | "approved" | "rejected" | "paid" | "on_hold";
       payout_status: "queued" | "processing" | "paid" | "failed" | "canceled";
       post_media_kind: "image" | "video" | "audio";
       post_status: "draft" | "scheduled" | "published" | "archived";
@@ -2102,7 +2106,7 @@ export const Constants = {
         "system",
       ],
       outbox_status: ["pending", "sent", "failed", "skipped", "canceled"],
-      payout_request_status: ["requested", "approved", "rejected", "paid"],
+      payout_request_status: ["requested", "approved", "rejected", "paid", "on_hold"],
       payout_status: ["queued", "processing", "paid", "failed", "canceled"],
       post_media_kind: ["image", "video", "audio"],
       post_status: ["draft", "scheduled", "published", "archived"],

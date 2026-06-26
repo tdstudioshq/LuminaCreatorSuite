@@ -16,7 +16,47 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
-## Latest Status — Phase 8B COMPLETE (Member Reporting UI)
+## Latest Status — Phase 8C COMPLETE (Admin Finance & Operations)
+
+Built on Phase 8B over the Phase 6 ledger. Local Docker only; remote/push/deploy untouched.
+Admin-only finance back office, delivered as two reviewable slices.
+
+- **8C.1 (read-only, no schema change):** finance overview (platform revenue, creator earnings,
+  payout-status rollups), a filterable/searchable ledger explorer with CSV export, and a
+  transaction detail page. Reuses the existing Phase 6 admin RLS (`is_current_user_admin`) on
+  `transactions`/`payouts`/`creator_balances` — server actions just drop the creator filter.
+  Pure `cabana-finance.ts` (aggregation/CSV/labels, in the 95% gate), plus
+  `admin-finance-actions.ts` and `use-admin-finance.ts`; UI under
+  `components/cabana/admin-finance/` behind an admin-only `AdminGate`; routes `/admin/finance`,
+  `/admin/ledger`, `/admin/ledger/$transactionId`.
+- **8C.2 (payout workflow):** the admin payout queue at `/admin/payouts`. Additive migration
+  `20260522000000_admin_payouts.sql`: one enum value `payout_request_status.on_hold`, an AFTER
+  UPDATE trigger `on_payout_request_change_audit` writing to the **existing** `audit_logs`
+  (target_type `payout_request` — no second audit system), and the SECURITY DEFINER admin-gated,
+  transition-validated `admin_review_payout(_payout_request_id, _action, _note)` RPC. Pure state
+  machine `cabana-payouts.ts` (in the 95% gate) is mirrored verbatim by the RPC.
+- **Payout actions:** `approve` (→approved), `reject` (→rejected), `hold` (→on_hold),
+  `release` (→requested), `mark_paid` (→paid). **`approve` and `mark_paid` are intentionally
+  distinct steps: `approve` AUTHORIZES (the linked disbursement stays `processing`/reserved);
+  `mark_paid` SETTLES (disbursement → `paid`, books paid-out). Future work must not collapse the
+  two into a single action.** A hold keeps the payout reserved, so no `payout_status` or
+  `recalc_creator_balance` change was needed. Every decision recomputes the balance + writes audit.
+- **Tests:** `cabana-finance` + `cabana-payouts` unit tests (248 total, ≥95%); behavioral
+  `supabase/tests/admin_payouts.sql` (state machine, invalid-transition rejection, disbursement
+  follow, balance reserve→paid-out / release-on-reject, audit rows, non-admin + anon denial);
+  `smoke.sql` asserts the new enum value / RPC / trigger; `db-validate.sh` + CI run the suite; seed
+  gains two demo payout requests.
+
+**Verification:** lint clean (pre-existing shadcn warnings only), `tsc` clean, build green, **248
+unit tests pass** at ≥95%. `bun run db:validate` requires Docker (not in this sandbox) — CI runs the
+from-zero rebuild + all SQL suites (incl. `admin_payouts.sql`).
+
+**Next:** Phase 9 — Notification System (outbox processor + retry/delivery logging + provider
+abstractions over the inert Phase 7 `notification_outbox`). Gated; do not start without approval.
+
+---
+
+## Previous Status — Phase 8B COMPLETE (Member Reporting UI)
 
 Built on Phase 8 (Slice 1). Local Docker only; remote/push/deploy untouched. Member-facing
 reporting wired across the app **on top of the existing moderation backend** — the `reports`
@@ -45,7 +85,8 @@ change. The only schema change is an **additive, backward-compatible enum extens
 **Local verification:** lint clean (only the pre-existing shadcn react-refresh warnings), `tsc`
 clean, production build green, **221 unit tests pass** at 100% lines / 98.55% branch (≥95% gate).
 `bun run db:validate` requires Docker (not available in this sandbox) — CI runs the from-zero rebuild
-+ all SQL suites (incl. the new enum assertions) on a Docker-enabled runner.
+
+- all SQL suites (incl. the new enum assertions) on a Docker-enabled runner.
 
 **Next:** member-profile reporting (the reusable `ReportButton` already supports `subjectType="user"`;
 deferred only because no current surface exposes another member's profile id — the DM header and the
