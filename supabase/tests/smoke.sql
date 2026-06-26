@@ -11,7 +11,8 @@ declare
   expected_tables text[] := array[
     'profiles','creator_profiles','links','products',
     'analytics_events','subscriptions','user_roles','reserved_handles',
-    'member_profiles'
+    'member_profiles','follows','blocks',
+    'posts','post_media'
   ];
   t text;
 begin
@@ -29,6 +30,16 @@ begin
   if not exists (select 1 from pg_type where typname = 'account_type') then
     raise exception 'MISSING ENUM: account_type';
   end if;
+  -- Phase 3 enums
+  if not exists (select 1 from pg_type where typname = 'post_visibility') then
+    raise exception 'MISSING ENUM: post_visibility';
+  end if;
+  if not exists (select 1 from pg_type where typname = 'post_status') then
+    raise exception 'MISSING ENUM: post_status';
+  end if;
+  if not exists (select 1 from pg_type where typname = 'post_media_kind') then
+    raise exception 'MISSING ENUM: post_media_kind';
+  end if;
 
   -- Phase 2B: profiles.account_type column (NOT NULL, default creator)
   if not exists (
@@ -36,6 +47,20 @@ begin
     where table_schema = 'public' and table_name = 'profiles' and column_name = 'account_type'
   ) then
     raise exception 'MISSING COLUMN: public.profiles.account_type';
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'member_profiles' and column_name = 'username'
+  ) then
+    raise exception 'MISSING COLUMN: public.member_profiles.username';
+  end if;
+
+  -- Phase 2C safe public views
+  if to_regclass('public.public_creator_profiles') is null then
+    raise exception 'MISSING VIEW: public_creator_profiles';
+  end if;
+  if to_regclass('public.public_member_profiles') is null then
+    raise exception 'MISSING VIEW: public_member_profiles';
   end if;
 
   -- Functions
@@ -50,6 +75,19 @@ begin
   end if;
   if to_regprocedure('public.touch_updated_at()') is null then
     raise exception 'MISSING FUNCTION: touch_updated_at';
+  end if;
+  -- Phase 3 feed RPCs + authorization helpers
+  if to_regprocedure('public.feed_creator_posts(text, timestamptz, integer)') is null then
+    raise exception 'MISSING FUNCTION: feed_creator_posts';
+  end if;
+  if to_regprocedure('public.feed_home_posts(timestamptz, integer)') is null then
+    raise exception 'MISSING FUNCTION: feed_home_posts';
+  end if;
+  if to_regprocedure('public.can_view_post(uuid)') is null then
+    raise exception 'MISSING FUNCTION: can_view_post';
+  end if;
+  if to_regprocedure('public.is_following_creator(uuid)') is null then
+    raise exception 'MISSING FUNCTION: is_following_creator';
   end if;
 
   -- Signup trigger on auth.users
@@ -69,6 +107,18 @@ begin
   if not (select relrowsecurity from pg_class where oid = 'public.member_profiles'::regclass) then
     raise exception 'RLS NOT ENABLED: member_profiles';
   end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.follows'::regclass) then
+    raise exception 'RLS NOT ENABLED: follows';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.blocks'::regclass) then
+    raise exception 'RLS NOT ENABLED: blocks';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.posts'::regclass) then
+    raise exception 'RLS NOT ENABLED: posts';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.post_media'::regclass) then
+    raise exception 'RLS NOT ENABLED: post_media';
+  end if;
 
   -- member_profiles must NOT be publicly readable (no USING(true) select policy)
   if exists (
@@ -82,6 +132,21 @@ begin
   -- Storage buckets
   if (select count(*) from storage.buckets where id in ('avatars','banners','products')) <> 3 then
     raise exception 'MISSING STORAGE BUCKETS (expected avatars, banners, products)';
+  end if;
+  -- Phase 3 post-media bucket must exist and be PRIVATE
+  if not exists (select 1 from storage.buckets where id = 'post-media') then
+    raise exception 'MISSING STORAGE BUCKET: post-media';
+  end if;
+  if (select public from storage.buckets where id = 'post-media') is distinct from false then
+    raise exception 'SECURITY: post-media bucket is not private';
+  end if;
+  -- post_media must NOT be publicly readable (no USING(true) select policy)
+  if exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'post_media'
+      and cmd = 'SELECT' and qual = 'true'
+  ) then
+    raise exception 'SECURITY: post_media has a public SELECT policy';
   end if;
 
   -- Seed: aurora demo creator present and wired up

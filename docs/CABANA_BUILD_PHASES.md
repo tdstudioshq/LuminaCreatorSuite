@@ -41,42 +41,58 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 ---
 
-## Phase 2 — Database Foundation, Member Accounts & Social Feed
+## Phase 2 — Database Foundation, Member Accounts & Social Relationships
 
-> **Split into 2A (infra) and 2B (features).**
+> **Split into 2A (infra), 2B (accounts), and 2C (relationships).**
 >
 > **Phase 2A — Supabase Baseline + CI — ✅ DONE.** Squashed rebuildable-from-zero baseline (`supabase/migrations/20260511000000_baseline.sql`) covering all existing tables/enums/functions/triggers/RLS/storage; demo `seed.sql`; `bun run db:validate` (reset-from-zero + `tests/smoke.sql`); CI (`.github/workflows/ci.yml`) running lint/typecheck/test/build + a Docker-based `db-validate` job. No new product tables, no `subscriptions` rename. See `supabase/README.md` and [`CABANA_DATABASE.md` §"Baseline migration"](./CABANA_DATABASE.md#baseline-migration-phase-2a). Open follow-ups: diff the reconstructed baseline against a live `supabase db dump`; confirm `major_version`; `migration repair` remote history.
 >
-> **Phase 2B (part 1) — Member Accounts & Auth Infrastructure — ✅ DONE.** Migration `20260512000000_member_accounts.sql` adds the `account_type` enum ('creator'|'member', default creator), stamps `profiles.account_type`, adds a private owner-scoped `member_profiles` table (RLS + explicit `authenticated`-only grants, `anon` revoked), and branches `handle_new_user` (creator → creator_profile + free subscription; member → member_profile; both get the `user` role). The **T2 server-action tier is wired**: `attachSupabaseToken` (client) + `requireSupabaseAuth` (server) guard `getAccountContext` / `getMemberProfile` / `updateMemberProfile` (`src/lib/account-actions.ts`). Client: signup creator/member toggle, account-aware `/dashboard` + new `/account` route, `useAccountType`. Pure logic in `cabana-account.ts` (100% covered); DB behavioral tests (`tests/member_accounts.sql`: trigger branching + member RLS) run in `db:validate` + CI. Existing creator signup/dashboard/public pages unchanged. **NOT** done here: `subscriptions` rename, `creator_subscriptions`, follows, posts, public-safe views, private media.
+> **Phase 2B — Member Accounts & Auth Infrastructure — ✅ DONE.** Migration `20260512000000_member_accounts.sql` adds account types and private member profiles; creator/member signup provisioning branches safely; `/account`, account-aware dashboard guards, protected account actions, and member RLS tests are live.
 >
-> **Phase 2B (part 2) — Social Feed — gated, not started.** Follows, posts/comments/likes/saves, public-safe views, private media buckets — requires explicit go-ahead.
+> **Phase 2C — Social Relationship Foundation — ✅ DONE.** Migration `20260513000000_social_relationships.sql` adds member usernames, `follows`, `blocks`, indexed FKs/uniqueness, complete owner/creator RLS, anonymous denial, and ID-free `public_creator_profiles` / `public_member_profiles`. Protected actions (`followCreator`, `unfollowCreator`, `blockUser`, `unblockUser`, relationship/count reads), hooks (`useRelationship`, `useFollow`), persistent creator-page follow state, unit tests, and `social_relationships.sql` are included.
 
-**Goal:** Make the backend reproducible and real. Capture a validated baseline migration, audit RLS, add the **member role/account**, persistent follows, and public social publishing (posts/comments/likes/saves). Stand up the T2 server-action plumbing. This is the largest enabling phase.
+**Goal:** Establish the reproducible database, account model, protected server-action tier, and
+relationship graph required by every later social feature.
 
-**Files affected:** `supabase/migrations/*` (baseline + Group A/B); `integrations/supabase/types.ts` (regenerate); `start.ts` (register `auth-attacher`); new `lib/cabana-posts.ts`, `lib/cabana-social.ts`, `lib/cabana-members.ts`; `feed.tsx`, `discover.tsx`, `dashboard.posts.tsx`; signup role branch in `cabana-auth.ts`; new `MemberLayout`.
+**Database changes:** Rebuildable baseline; `account_type`; private member profiles; member
+usernames; `follows`; `blocks`; safe public profile views; RLS and behavioral SQL tests.
 
-**Database changes:** Baseline migration of current schema (rebuildable from zero). Add `users` projection, `member_profiles`, `settings`; extend `profiles`/`creator_profiles` (paths, verified, monetization_status). **Group A:** `follows`, `blocks`. **Group B:** `posts`, `media`, `post_media`, `comments`, `likes`, `saves`. Public-safe `creator`/`member` views (omit `user_id`). RLS + policy tests on every new table. Private `post-media` bucket.
+**Routes/components:** `/account` member foundation and persistent Follow/Following proof on
+`/$username`. No feed or publishing UI.
 
-**Components:** `MemberLayout` + member nav; `PostComposer`, `PostMediaGallery`, `PostVisibilityBadge`, `CommentList`, `CommentComposer`, `EngagementActions`, `FollowButton` (persistent), `MemberAvatar`.
-
-**Routes:** `/post/$postId`, `/dashboard/posts/new`, `/dashboard/posts/$postId/edit`; member layout adopts `/feed`, `/discover` (now auth-aware).
-
-**Estimated complexity:** **Very High** (schema, RLS, role model, server plumbing, private storage — the keystone phase).
-
-**Dependencies:** Phase 1. **Hard gate:** baseline migration validated on a fresh instance before any new table. Server-action auth plumbing (`requireSupabaseAuth` + `auth-attacher`) wired.
-
-**Acceptance criteria:**
-
-- ✅ Fresh local/staging Supabase rebuilds from zero via migrations (baseline + member-accounts; verified on Docker + CI).
-- ✅ A user can sign up as a **member** and never see a creator dashboard; existing creator signups unaffected (trigger branching + guard redirects, behavioral-tested).
-- Follows persist across refresh; creators publish `public`/`followers` posts; members like/comment/save. _(2B part 2)_
-- RLS policy tests pass for guest/member/creator fixtures; public views omit `user_id`.
-- Post media stored in a private bucket; reads via signed URLs.
-- CI runs lint/typecheck/test/migration-validation/build.
+**Acceptance criteria:** ✅ from-zero rebuild; ✅ creator/member branching; ✅ protected account and
+relationship actions; ✅ persistent follows; ✅ private blocks; ✅ ID-free public views; ✅ policy
+tests; ✅ CI validation.
 
 ---
 
-## Phase 3 — Creator Profiles, Subscriptions & Mock Entitlements
+## Phase 3 — Posts & Feed Foundation
+
+**Goal:** Add public/follower publishing and the first real feed on top of Phase 2C relationships.
+No subscriptions, payments, messaging, or notifications.
+
+**Files affected:** new post/media/social data modules; `feed.tsx`, `discover.tsx`,
+`dashboard.posts.tsx`; new post detail/composer routes and a member layout.
+
+**Database changes:** `posts`, `media`, `post_media`, `comments`, `likes`, `saves`; private
+`post-media` bucket; public/follower read rules; creator-owner writes; behavioral RLS tests for every
+table.
+
+**Components:** `MemberLayout`, `PostComposer`, `PostMediaGallery`, `PostVisibilityBadge`,
+`CommentList`, `CommentComposer`, `EngagementActions`.
+
+**Routes:** `/post/$postId`, `/dashboard/posts/new`, `/dashboard/posts/$postId/edit`; `/feed` and
+`/discover` become auth-aware.
+
+**Dependencies:** Phase 2C relationship graph and protected action tier. Requires explicit approval.
+
+**Acceptance criteria:** creators publish public/follower posts; followed creators appear in member
+feed; likes/comments/saves persist; private media uses signed URLs; guest/member/creator RLS tests
+pass; no auth/internal IDs appear in public payloads.
+
+---
+
+## Phase 4 — Creator Profiles, Subscriptions & Mock Entitlements
 
 **Goal:** Fan-to-creator subscriptions with **mock checkout** and server-resolved entitlements. Subscriber-only content actually gates on entitlement. Demo tips and derived balances. No real money.
 
@@ -90,7 +106,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 **Estimated complexity:** High (entitlement correctness + ledger immutability).
 
-**Dependencies:** Phase 2 (members, posts, RLS, server actions). Mock-money rules from spec §7 / API §6.
+**Dependencies:** Phase 3 (members, posts, relationships, RLS, server actions). Mock-money rules from spec §7 / API §6.
 
 **Acceptance criteria:**
 
@@ -102,7 +118,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 ---
 
-## Phase 4 — Messaging
+## Phase 5 — Messaging
 
 **Goal:** Real conversations and messages with participant-scoped RLS, Realtime delivery, read state, cursor pagination, and private attachments (with paid-message scaffolding, demo unlock).
 
@@ -116,7 +132,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 **Estimated complexity:** High (Realtime + RLS + pagination + attachment authorization).
 
-**Dependencies:** Phase 2 (members, server actions, private storage), Phase 3 (entitlement for paid messages; message permissions in `settings`).
+**Dependencies:** Phase 3 (members, relationships, posts, private storage), Phase 4 (entitlement for paid messages; message permissions in `settings`).
 
 **Acceptance criteria:**
 
@@ -127,9 +143,9 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 ---
 
-## Phase 5 — Monetization Depth (Paid Content, Products → Orders)
+## Phase 6 — Monetization Depth (Paid Content, Products → Orders)
 
-**Goal:** Extend mock monetization to paid posts/unlocks and product orders with digital delivery; complete the ledger surface; introduce `media` moderation status. Still mock-money (real processor is Phase 6).
+**Goal:** Extend mock monetization to paid posts/unlocks and product orders with digital delivery; complete the ledger surface; introduce `media` moderation status. Still mock-money (real processor is Phase 7).
 
 **Files affected:** `lib/cabana-orders.ts`, `lib/cabana-money.ts`, `StoreManager.tsx`, `$username.tsx`, `dashboard.earnings.tsx`.
 
@@ -141,7 +157,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 **Estimated complexity:** Medium–High.
 
-**Dependencies:** Phase 3 (transactions, entitlements), Phase 2 (private media for downloads).
+**Dependencies:** Phase 4 (transactions, entitlements), Phase 3 (private media for downloads).
 
 **Acceptance criteria:**
 
@@ -151,7 +167,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 ---
 
-## Phase 6 — Payments & Payouts (Real Money)
+## Phase 7 — Payments & Payouts (Real Money)
 
 **Goal:** Replace mock money with a real processor (hosted checkout), connected creator accounts + KYC, immutable webhook-sourced ledger, payouts, refunds, disputes, reconciliation. **Requires explicit authorization to begin.**
 
@@ -165,7 +181,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 **Estimated complexity:** **Very High** (financial correctness, compliance, idempotency, reconciliation).
 
-**Dependencies:** Phases 3 & 5 accepted (mock ledger/entitlement/refund behavior proven); legal/KYC groundwork (Phase 10 items may interleave). Explicit go-ahead per guardrails.
+**Dependencies:** Phases 4 & 6 accepted (mock ledger/entitlement/refund behavior proven); legal/KYC groundwork (Phase 11 items may interleave). Explicit go-ahead per guardrails.
 
 **Acceptance criteria:**
 
@@ -177,7 +193,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 ---
 
-## Phase 7 — Admin & Operations
+## Phase 8 — Admin & Operations
 
 **Goal:** Replace the hardcoded `/admin` with server-gated, URL-backed admin on real data: user/role management, verification review, metrics, audit-log viewer, with capability-scoped permissions and MFA for admins.
 
@@ -191,7 +207,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 **Estimated complexity:** High.
 
-**Dependencies:** Phase 2 (server actions, roles), Phase 6 (finance data) for finance tools.
+**Dependencies:** Phase 2 (server actions, roles), Phase 7 (finance data) for finance tools.
 
 **Acceptance criteria:**
 
@@ -202,7 +218,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 ---
 
-## Phase 8 — Moderation & Trust
+## Phase 9 — Moderation & Trust
 
 **Goal:** Reports, blocks, suspensions, takedowns, appeals, and moderation queues on real data; media moderation workflow.
 
@@ -216,7 +232,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 **Estimated complexity:** Medium–High.
 
-**Dependencies:** Phase 7 (admin shell, audit logs, capability scopes), Phase 2 (content), Phase 4 (message reports).
+**Dependencies:** Phase 8 (admin shell, audit logs, capability scopes), Phase 3 (content), Phase 5 (message reports).
 
 **Acceptance criteria:**
 
@@ -226,7 +242,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 ---
 
-## Phase 9 — Notifications & Delivery
+## Phase 10 — Notifications & Delivery
 
 **Goal:** Durable notifications generated from server events, unread counts, notification center, and email/push via an outbox (independent of source transactions), with user preferences.
 
@@ -240,7 +256,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 **Estimated complexity:** Medium.
 
-**Dependencies:** Phases 2–8 (the events that generate notifications: follows, comments, subs, messages, tips, payouts, moderation). Outbox pattern from Phase 6.
+**Dependencies:** Phases 2–9 (the events that generate notifications: follows, comments, subs, messages, tips, payouts, moderation). Outbox pattern from Phase 7.
 
 **Acceptance criteria:**
 
@@ -250,7 +266,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 ---
 
-## Phase 10 — Compliance, Hardening & Launch
+## Phase 11 — Compliance, Hardening & Launch
 
 **Goal:** Launch-ready posture: legal/policy pages + acceptance records, creator KYC/tax, security/RLS review + pen-test, CSP and headers, advanced analytics, accessibility/perf passes, backups/DR, monitoring, controlled beta.
 
@@ -264,7 +280,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 **Estimated complexity:** High (breadth + non-engineering coordination).
 
-**Dependencies:** All prior phases (esp. 6 for tax/KYC, 8 for DMCA/takedown).
+**Dependencies:** All prior phases (esp. 7 for tax/KYC, 9 for DMCA/takedown).
 
 **Acceptance criteria:**
 
@@ -278,12 +294,13 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 ## Dependency Graph (summary)
 
 ```
-P1 ─▶ P2 ─┬─▶ P3 ─┬─▶ P5 ─▶ P6 ─▶ P7 ─▶ P8
-          │       └─▶ P4 ──────────┘        ╲
-          └─────────────────────────────────▶ P9 ─▶ P10
+P1 ─▶ P2 ─▶ P3 ─┬─▶ P4 ─▶ P6 ─▶ P7 ─▶ P8 ─▶ P9
+                └─▶ P5 ────────────────┘       ╲
+                └──────────────────────────────▶ P10 ─▶ P11
 ```
 
-P2 is the keystone (everything social/financial depends on real DB + members + server actions). P6 (real money) must not precede acceptance of P3/P5 mock behavior. P9 trails the event-producing phases. P10 closes out.
+P2 is the account/relationship keystone; P3 adds publishable content. P7 (real money) must not
+precede acceptance of P4/P6 mock behavior. P10 trails the event-producing phases. P11 closes out.
 
 ## Cross-Phase Definition of Done (every phase)
 

@@ -47,6 +47,7 @@ export function accountHomePath(type: AccountType): "/dashboard" | "/account" {
 export type MemberProfile = {
   id: string;
   userId: string;
+  username: string;
   displayName: string;
   bio: string;
   avatarUrl: string | null;
@@ -61,6 +62,7 @@ export function mapMemberProfile(row: MemberProfileRow): MemberProfile {
   return {
     id: row.id,
     userId: row.user_id,
+    username: row.username,
     displayName: row.display_name,
     bio: row.bio,
     avatarUrl: row.avatar_url,
