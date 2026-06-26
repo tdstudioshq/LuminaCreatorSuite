@@ -1,7 +1,7 @@
 # CABANA — Project State (Engineering Checkpoint)
 
 > Canonical high-level engineering snapshot.
-> Branch at capture: `feat/phase-3-posts-feed` (through Phase 3).
+> Branch at capture: `feat/phase-3-2-engagement` (through Phase 3.2).
 > Demo clock / "today" in code: **June 25, 2026**.
 > Audience: a brand-new engineer who needs to understand CABANA end-to-end in under 15 minutes.
 >
@@ -262,35 +262,62 @@ LuminaCreatorSuite/
 - **Tests:** `cabana-posts.test.ts` (33); `supabase/tests/posts_feed.sql` (owner CRUD, anon public read,
   follower gating, locked stubs, no draft/subscriber leakage, `can_view_post` truth table, owner-only
   `post_media`, private bucket); `smoke.sql` extended; CI `db-validate` runs `posts_feed.sql`.
-- **Documentation:** session handoff (Phase 3 — current "Latest Status"); this checkpoint.
-- **Validation status:** ✅ 116 unit tests pass (100% statements/functions/lines, 99.5% branches);
-  migration applies from zero; all four SQL suites pass through the DB container; lint/tsc/build green.
+- **Documentation:** session handoff (Phase 3); this checkpoint.
+- **Validation status:** ✅ migration applies from zero; `posts_feed.sql` passes; lint/tsc/test/build green.
+
+## Phase 3.2 — Engagement Foundation
+
+- **Objectives:** Add low-risk engagement primitives (comments, likes, saves) on top of the post system.
+  No monetization, messaging, notifications, or real-time.
+- **Completed work:**
+  - `post_comments` (1–2000 chars, `comment_status` soft-delete), `post_likes`, `post_saves`
+    (unique per user/post, private). Block-aware RLS gated by `can_view_post` + `is_engagement_blocked`;
+    `is_current_user_post_owner` helper; ID-free RPCs `post_engagement_state`, `post_comments_list`,
+    `post_card`.
+  - Pure `cabana-engagement.ts` (+ tests); `engagement-actions.ts`; `use-engagement.ts`.
+  - UI: `EngagementBar`, `CommentComposer`, `CommentList`, `PostDetail`; `/post/$postId` route;
+    `PostCard` shows like/comment/save.
+- **Migrations:** `20260515000000_engagement.sql`.
+- **Server actions:** `addComment`, `editComment`, `deleteComment`, `hideComment`, `likePost`,
+  `unlikePost`, `savePost`, `unsavePost`, `getPostEngagementState`, `getPostComments`, `getPost`.
+- **React hooks:** `usePostEngagementState`, `usePostComments`, `usePost`, `usePostLike`, `usePostSave`,
+  `useAddComment`, `useEditComment`, `useDeleteComment`, `useHideComment`.
+- **Routes:** `/post/$postId` (post detail); `PostCard` engagement bar across feed/creator/detail.
+- **Tests:** `cabana-engagement.test.ts`; `supabase/tests/engagement.sql` (comment/like/save RLS,
+  uniqueness, viewability gating, block enforcement, creator hide, author soft-delete, anon public-comment
+  read, anon write denial). `smoke.sql` extended; `db-validate.sh` + CI run it.
+- **Validation status:** ✅ unit tests pass (engagement module 100%); migration applies from zero; all
+  five SQL suites pass through the DB container; lint/tsc/build green.
 
 ---
 
 # Current Database
 
-Schema is rebuilt from zero by four ordered migrations:
+Schema is rebuilt from zero by five ordered migrations:
 `20260511000000_baseline.sql` → `20260512000000_member_accounts.sql` →
-`20260513000000_social_relationships.sql` → `20260514000000_posts_feed.sql`.
+`20260513000000_social_relationships.sql` → `20260514000000_posts_feed.sql` →
+`20260515000000_engagement.sql`.
 
-## Tables (13)
+## Tables (16)
 
-| Table              | Purpose                                                                                     | Read access                                                                                    | Write access                         |
-| ------------------ | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------ |
-| `profiles`         | Shared identity, 1:1 with `auth.users`; holds `account_type`.                               | Owner only                                                                                     | Owner update (insert via trigger)    |
-| `creator_profiles` | Public creator presence; drives `/$username`. `user_id` nullable (ownerless `aurora` seed). | **Public** (note: exposes `user_id`)                                                           | Owner insert/update                  |
-| `links`            | Smart-link blocks on the public page.                                                       | Public                                                                                         | Owner (via parent profile)           |
-| `products`         | Storefront products.                                                                        | Public                                                                                         | Owner (via parent profile)           |
-| `analytics_events` | First-party page/link/product events.                                                       | Owner (creator) read                                                                           | Anyone may insert for a real profile |
-| `subscriptions`    | **CABANA SaaS plan** per account (NOT fan-to-creator).                                      | Owner read                                                                                     | Trigger/service-side only            |
-| `user_roles`       | Authorization roles.                                                                        | Owner read; admins read all                                                                    | Admins manage                        |
-| `reserved_handles` | Handles that cannot be claimed.                                                             | Public read                                                                                    | — (seed/admin)                       |
-| `member_profiles`  | Private member identity + public `username`.                                                | Owner only                                                                                     | Owner insert/update (no delete)      |
-| `follows`          | account → creator follow edges.                                                             | Follower reads own; creator reads own followers                                                | Follower insert/delete               |
-| `blocks`           | account → account blocks (private to blocker).                                              | Blocker only                                                                                   | Blocker insert/delete                |
-| `posts`            | Creator posts (`public`/`followers`/subscribers/purchase visibility, draft→published).      | Public reads published-public; followers read published-followers they follow; owner reads all | Owner (creator) CRUD                 |
-| `post_media`       | Image metadata for a post; objects live in the private `post-media` bucket.                 | **Owner only** (viewers get signed URLs via `getPostMediaUrls`)                                | Owner CRUD                           |
+| Table              | Purpose                                                                                     | Read access                                                                                             | Write access                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `profiles`         | Shared identity, 1:1 with `auth.users`; holds `account_type`.                               | Owner only                                                                                              | Owner update (insert via trigger)                                               |
+| `creator_profiles` | Public creator presence; drives `/$username`. `user_id` nullable (ownerless `aurora` seed). | **Public** (note: exposes `user_id`)                                                                    | Owner insert/update                                                             |
+| `links`            | Smart-link blocks on the public page.                                                       | Public                                                                                                  | Owner (via parent profile)                                                      |
+| `products`         | Storefront products.                                                                        | Public                                                                                                  | Owner (via parent profile)                                                      |
+| `analytics_events` | First-party page/link/product events.                                                       | Owner (creator) read                                                                                    | Anyone may insert for a real profile                                            |
+| `subscriptions`    | **CABANA SaaS plan** per account (NOT fan-to-creator).                                      | Owner read                                                                                              | Trigger/service-side only                                                       |
+| `user_roles`       | Authorization roles.                                                                        | Owner read; admins read all                                                                             | Admins manage                                                                   |
+| `reserved_handles` | Handles that cannot be claimed.                                                             | Public read                                                                                             | — (seed/admin)                                                                  |
+| `member_profiles`  | Private member identity + public `username`.                                                | Owner only                                                                                              | Owner insert/update (no delete)                                                 |
+| `follows`          | account → creator follow edges.                                                             | Follower reads own; creator reads own followers                                                         | Follower insert/delete                                                          |
+| `blocks`           | account → account blocks (private to blocker).                                              | Blocker only                                                                                            | Blocker insert/delete                                                           |
+| `posts`            | Creator posts (`public`/`followers`/subscribers/purchase visibility, draft→published).      | Public reads published-public; followers read published-followers they follow; owner reads all          | Owner (creator) CRUD                                                            |
+| `post_media`       | Image metadata for a post; objects live in the private `post-media` bucket.                 | **Owner only** (viewers get signed URLs via `getPostMediaUrls`)                                         | Owner CRUD                                                                      |
+| `post_comments`    | Comments on posts (`visible`/`hidden`/`deleted`; soft-delete).                              | Visible comments on viewable posts (anon → public only); authors read own; owners read all on own posts | Author edit/soft-delete own; owner hide; insert requires viewability + no block |
+| `post_likes`       | Likes (unique per user/post; private to actor).                                             | Owner only (counts via RPC)                                                                             | Insert/delete own; requires viewability + no block                              |
+| `post_saves`       | Saves (unique per user/post; private to actor).                                             | Owner only                                                                                              | Insert/delete own; requires viewability + no block                              |
 
 ## Public views (2)
 
@@ -299,7 +326,7 @@ Schema is rebuilt from zero by four ordered migrations:
 | `public_creator_profiles` | username, display_name, avatar_url, banner_url, bio, verified (placeholder `false`), follower_count, following_count, post_count (placeholder `0`) | `security_barrier`, `security_invoker = false` (runs with owner privileges to aggregate private `follows`); granted to `anon` + `authenticated`. No UUIDs/email/plan/theme. |
 | `public_member_profiles`  | username, display_name, avatar_url, banner_url (null), bio, verified (`false`), follower_count (`0`), following_count, post_count (`0`)            | Same safety model; the only public projection of otherwise-private member profiles.                                                                                         |
 
-## Enums (5)
+## Enums (6)
 
 | Enum              | Values                                           |
 | ----------------- | ------------------------------------------------ |
@@ -308,6 +335,7 @@ Schema is rebuilt from zero by four ordered migrations:
 | `post_visibility` | `public`, `followers`, `subscribers`, `purchase` |
 | `post_status`     | `draft`, `scheduled`, `published`, `archived`    |
 | `post_media_kind` | `image`, `video`, `audio`                        |
+| `comment_status`  | `visible`, `hidden`, `deleted`                   |
 
 ## Triggers
 
@@ -321,6 +349,7 @@ Schema is rebuilt from zero by four ordered migrations:
 | `validate_creator_handle_trigger`   | `creator_profiles` | BEFORE INSERT/UPDATE OF handle   | `validate_creator_handle()` — blocks empty/reserved handles         |
 | `validate_member_username_trigger`  | `member_profiles`  | BEFORE INSERT/UPDATE OF username | `validate_member_username()` — lowercases, pattern + reserved check |
 | `touch_posts_updated_at`            | `posts`            | BEFORE UPDATE                    | `touch_updated_at()`                                                |
+| `touch_post_comments_updated_at`    | `post_comments`    | BEFORE UPDATE                    | `touch_updated_at()`                                                |
 
 ## Functions / RPCs
 
@@ -351,6 +380,17 @@ Schema is rebuilt from zero by four ordered migrations:
   (caption/media blanked, `locked = true`); never returns subscribers/purchase posts to non-creators.
 - `feed_home_posts(timestamptz cursor, int limit)` → published posts from creators the **authenticated**
   viewer follows; granted to `authenticated` only.
+
+**Engagement helpers + RPCs (Phase 3.2, `SECURITY DEFINER`):**
+
+- `is_current_user_post_owner(uuid)` — boolean post-ownership check; `anon`/`authenticated`.
+- `is_engagement_blocked(uuid)` — true if a block exists in either direction between the caller and the
+  post's creator; used to deny comment/like/save. `authenticated` only.
+- `post_engagement_state(uuid)` → `(like_count, comment_count, liked_by_me, saved_by_me, can_engage)`;
+  `anon` + `authenticated`, gated by `can_view_post`.
+- `post_comments_list(uuid, timestamptz cursor, int limit)` → visible comments with safe author identity
+  (no UUIDs beyond the comment id); `anon` + `authenticated`.
+- `post_card(uuid)` → a single locked-aware post row for the detail page; `anon` + `authenticated`.
 
 ## Storage buckets (4)
 
@@ -583,11 +623,12 @@ The **handoff gate** for any session is: `bun run lint`, `bun run build`, `bunx 
 Delivered: `posts` + `post_media`, public/follower visibility, private `post-media` bucket + signed URLs,
 feed RPCs with locked teases, composer + feed UI. See the completed-phases section above.
 
-## Phase 3.2 — Engagement (next; gated)
+## Phase 3.2 — Engagement ✅ DONE
 
-- Tables: `comments`, `likes`, `saves` (remainder of roadmap Group B) with per-table behavioral RLS tests.
-- Likes/saves are owner-scoped, aggregate-safe counts; comments add light moderation (author edits,
-  creator hide). Wire counts into the feed RPCs/views (currently placeholder `0`/`post_count`).
+Delivered: `post_comments` / `post_likes` / `post_saves` with block-aware RLS, soft-deletable comments,
+`post_engagement_state` / `post_comments_list` / `post_card` RPCs, `/post/$postId` detail, and like/
+comment/save on `PostCard`. See the completed-phases section above. Remaining follow-up: wire engagement
+counts into the feed safe-views/`post_count` placeholders (still `0`).
 
 ## Phase 4 — Creator subscriptions & entitlements (gated)
 

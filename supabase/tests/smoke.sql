@@ -12,7 +12,8 @@ declare
     'profiles','creator_profiles','links','products',
     'analytics_events','subscriptions','user_roles','reserved_handles',
     'member_profiles','follows','blocks',
-    'posts','post_media'
+    'posts','post_media',
+    'post_comments','post_likes','post_saves'
   ];
   t text;
 begin
@@ -39,6 +40,10 @@ begin
   end if;
   if not exists (select 1 from pg_type where typname = 'post_media_kind') then
     raise exception 'MISSING ENUM: post_media_kind';
+  end if;
+  -- Phase 3.2 enum
+  if not exists (select 1 from pg_type where typname = 'comment_status') then
+    raise exception 'MISSING ENUM: comment_status';
   end if;
 
   -- Phase 2B: profiles.account_type column (NOT NULL, default creator)
@@ -89,6 +94,19 @@ begin
   if to_regprocedure('public.is_following_creator(uuid)') is null then
     raise exception 'MISSING FUNCTION: is_following_creator';
   end if;
+  -- Phase 3.2 engagement RPCs + helpers
+  if to_regprocedure('public.post_engagement_state(uuid)') is null then
+    raise exception 'MISSING FUNCTION: post_engagement_state';
+  end if;
+  if to_regprocedure('public.post_comments_list(uuid, timestamptz, integer)') is null then
+    raise exception 'MISSING FUNCTION: post_comments_list';
+  end if;
+  if to_regprocedure('public.post_card(uuid)') is null then
+    raise exception 'MISSING FUNCTION: post_card';
+  end if;
+  if to_regprocedure('public.is_engagement_blocked(uuid)') is null then
+    raise exception 'MISSING FUNCTION: is_engagement_blocked';
+  end if;
 
   -- Signup trigger on auth.users
   if not exists (
@@ -118,6 +136,15 @@ begin
   end if;
   if not (select relrowsecurity from pg_class where oid = 'public.post_media'::regclass) then
     raise exception 'RLS NOT ENABLED: post_media';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.post_comments'::regclass) then
+    raise exception 'RLS NOT ENABLED: post_comments';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.post_likes'::regclass) then
+    raise exception 'RLS NOT ENABLED: post_likes';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.post_saves'::regclass) then
+    raise exception 'RLS NOT ENABLED: post_saves';
   end if;
 
   -- member_profiles must NOT be publicly readable (no USING(true) select policy)

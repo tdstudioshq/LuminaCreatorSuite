@@ -16,7 +16,43 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
-## Latest Status — Phase 3 COMPLETE (Posts & Feed Foundation)
+## Latest Status — Phase 3.2 COMPLETE (Engagement Foundation)
+
+Built on Phase 3 posts. Local Docker only — no production Supabase, link, push, or deploy (a config
+deny-list blocks those).
+
+**Scope delivered (comments + likes + saves only):** no monetization, messaging, notifications, or
+real-time.
+
+- **Migration** `20260515000000_engagement.sql`: `comment_status` enum; `post_comments` (1–2000 chars,
+  soft-deletable via status), `post_likes`, `post_saves` (unique per user/post, private); block-aware
+  RLS gated by `can_view_post` + new `is_engagement_blocked`; `is_current_user_post_owner` helper;
+  ID-free RPCs `post_engagement_state`, `post_comments_list`, `post_card`.
+- **RLS guarantees:** comment/like/save only on viewable posts; denied across a block (either
+  direction); authors edit/soft-delete own visible comments; post owners hide comments on own posts;
+  anon reads visible comments on public posts only and cannot write; likes/saves unique + private.
+- **Pure module** `cabana-engagement.ts` (+ tests, in coverage set): comment validation, count
+  normalization, like/save toggle math, status handling, display-safe mapping.
+- **Server actions** `engagement-actions.ts`: addComment, editComment, deleteComment, hideComment,
+  likePost, unlikePost, savePost, unsavePost, getPostEngagementState, getPostComments, getPost. Writes
+  use `requireSupabaseAuth`; reads use `optionalSupabaseAuth`. No service-role shortcuts.
+- **Hooks** `use-engagement.ts`: usePostEngagementState, usePostComments, usePost, usePostLike,
+  usePostSave, and comment mutations (optimistic like/save).
+- **UI**: `EngagementBar`, `CommentComposer`, `CommentList`, `PostDetail`; new `/post/$postId` route;
+  `PostCard` now shows like/comment/save.
+- **Tests**: `supabase/tests/engagement.sql` (comment/like/save RLS, like & save uniqueness, viewability
+  gating, block enforcement, creator hide, author soft-delete, anon public-comment read, anon write
+  denial). `smoke.sql` extended; `db-validate.sh` + CI run it (CI also gained the Phase 3 `posts_feed`
+  step, previously only in CI).
+
+**Local verification:** from-zero rebuild applies; all five SQL suites pass via the DB container;
+unit tests pass at ≥95% (100% on the engagement module); lint / tsc / build green.
+
+**Next:** Phase 4 (creator subscriptions & entitlements) — gated. Remote schema reconciliation deferred.
+
+---
+
+## Phase 3 COMPLETE (Posts & Feed Foundation)
 
 Built on the verified Phase 2C social graph. Local Docker only — no production Supabase, migration
 repair, link, push, or deployment was touched (a config deny-list now blocks those commands).

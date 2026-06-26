@@ -29,7 +29,7 @@ bun run db:reset       # supabase db reset (rebuild local DB from migrations + s
 bun run db:validate    # scripts/db-validate.sh — rebuilds a fresh Supabase from zero, runs smoke checks
 ```
 
-**Tests** use **vitest** (`vitest.config.ts`, separate from `vite.config.ts`). They cover only the _pure_ business layer (no React/Supabase/browser): `cabana-money`, `cabana-entitlements`, `cabana-account`, `cabana-relationships`, `cabana-posts`. Coverage thresholds are **95%** lines/functions/branches/statements over exactly those files — keep new domain logic in a pure, repository-injected module (like `cabana-relationships.ts`) so it stays testable without a DB.
+**Tests** use **vitest** (`vitest.config.ts`, separate from `vite.config.ts`). They cover only the _pure_ business layer (no React/Supabase/browser): `cabana-money`, `cabana-entitlements`, `cabana-account`, `cabana-relationships`, `cabana-posts`, `cabana-engagement`. Coverage thresholds are **95%** lines/functions/branches/statements over exactly those files — keep new domain logic in a pure, repository-injected module (like `cabana-relationships.ts`) so it stays testable without a DB.
 
 Before any handoff, the required gate is: `bun run lint`, `bun run build`, `bunx tsc --noEmit`, and `bun run test` all pass. ESLint retains some pre-existing react-refresh Fast Refresh warnings in shadcn UI files; those are expected. `bun run db:validate` requires Docker and exits non-zero with a clear message on hosts without it (e.g. this sandbox) — CI runs it on a Docker-enabled runner.
 
@@ -103,15 +103,17 @@ Most of the platform-evolution feature set (posts, fan subscriptions, messages, 
 
 - **Member accounts (Phase 2B):** an `account_type` enum (`'creator' | 'member'`) stamped on `public.profiles`, plus `member_profiles`. The `handle_new_user` trigger reads `raw_user_meta_data.account_type` (defaults to `creator`) and provisions a `creator_profiles` row only for creators. Logic in `cabana-account.ts` + `account-actions.ts`.
 - **Social graph (Phase 2C):** `follows` and `blocks` tables with behavioral RLS, the `public_creator_profiles` / `public_member_profiles` views (safe public projections incl. `follower_count`), and `SECURITY DEFINER` RPCs `relationship_state`, `relationship_follow_creator`, `relationship_unfollow_creator` (granted to `authenticated` only). Logic in `cabana-relationships.ts` + `relationship-actions.ts`.
+- **Posts & feed (Phase 3):** `posts` + `post_media` with public/followers visibility, a **private** `post-media` bucket (signed URLs via `getPostMediaUrls` after `can_view_post`), and ID-free `feed_creator_posts` (locked stubs for non-followers) / `feed_home_posts` RPCs. Logic in `cabana-posts.ts` + `post-actions.ts`; the guest-callable reads use `optionalSupabaseAuth`.
+- **Engagement (Phase 3.2):** `post_comments` / `post_likes` / `post_saves` with block-aware RLS (`can_view_post` + `is_engagement_blocked`), soft-deletable comments, and `post_engagement_state` / `post_comments_list` / `post_card` RPCs. Logic in `cabana-engagement.ts` + `engagement-actions.ts`. Post detail at `/post/$postId`.
 
-Migrations are ordered and rebuild from zero: `20260511000000_baseline.sql` (profiles, creator_profiles, links, products, analytics_events, subscriptions, user_roles, reserved_handles) → `20260512000000_member_accounts.sql` → `20260513000000_social_relationships.sql`. pgTAP-style behavioral tests live in `supabase/tests/` (`member_accounts.sql`, `social_relationships.sql`, `smoke.sql`); `supabase/seed.sql` seeds local data.
+Migrations are ordered and rebuild from zero: `20260511000000_baseline.sql` (profiles, creator_profiles, links, products, analytics_events, subscriptions, user_roles, reserved_handles) → `20260512000000_member_accounts.sql` → `20260513000000_social_relationships.sql` → `20260514000000_posts_feed.sql` → `20260515000000_engagement.sql`. Behavioral tests live in `supabase/tests/` (`smoke.sql`, `member_accounts.sql`, `social_relationships.sql`, `posts_feed.sql`, `engagement.sql`); `supabase/seed.sql` seeds local data.
 
 Hard constraints when working here:
 
 - Do **not** treat mock transactions as real money; label all monetization as demo-only. Use **integer cents** for mock money.
 - Do **not** add Stripe/payments, real payouts, KYC, or adult-content functionality.
-- Do **not** put private member/message data on public routes (`/feed`, `/discover`, `/messages`, `/notifications` are currently public placeholders).
-- Do **not** add new tables, write new migrations, or rename existing tables without an approved migration + RLS design + behavioral tests (the Phase 2B/2C tables landed under exactly that gate; the next one — Phase 3 posts/feed — is gated and must not start automatically). Note: existing `subscriptions` = CABANA SaaS plans; fan-to-creator subscriptions must use `creator_subscriptions`.
+- Do **not** put private member/message data on public routes (`/discover`, `/messages`, `/notifications` remain public placeholders; `/feed` and `/post/$postId` are real and must keep enforcing visibility server-side via the feed RPCs / `can_view_post`).
+- Do **not** add new tables, write new migrations, or rename existing tables without an approved migration + RLS design + behavioral tests (the Phase 2B/2C/3/3.2 tables landed under exactly that gate; the next phases — 4 (creator subscriptions) onward — are gated and must not start automatically). Note: existing `subscriptions` = CABANA SaaS plans; fan-to-creator subscriptions must use `creator_subscriptions`.
 - Keep domain logic Supabase-ready with RLS-ready ownership models; keep changes small and reviewable.
 
 ## Environment

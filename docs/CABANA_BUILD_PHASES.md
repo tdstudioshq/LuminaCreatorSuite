@@ -66,29 +66,38 @@ tests; ✅ CI validation.
 
 ---
 
-## Phase 3 — Posts & Feed Foundation
+## Phase 3 — Posts & Feed Foundation ✅ DONE
 
 **Goal:** Add public/follower publishing and the first real feed on top of Phase 2C relationships.
 No subscriptions, payments, messaging, or notifications.
 
-**Files affected:** new post/media/social data modules; `feed.tsx`, `discover.tsx`,
-`dashboard.posts.tsx`; new post detail/composer routes and a member layout.
+**Delivered:** migration `20260514000000_posts_feed.sql` (`posts`, `post_media`, 3 enums, RLS,
+`is_following_creator`/`can_view_post`, `feed_creator_posts`/`feed_home_posts`, private `post-media`
+bucket); `cabana-posts.ts` (+ tests), `post-actions.ts`, `use-posts.ts`; `PostComposer`, `PostsDashboard`,
+`PostCard`, `PostMediaGallery`, `PostVisibilityBadge`, `LockedContentGate`, `HomeFeed`; real
+`/dashboard/posts`, `/feed`, and a posts section on `/$username`. Followers-only posts surface to
+non-followers as locked stubs. Private media via authorization-gated signed URLs.
 
-**Database changes:** `posts`, `media`, `post_media`, `comments`, `likes`, `saves`; private
-`post-media` bucket; public/follower read rules; creator-owner writes; behavioral RLS tests for every
-table.
+**Validation:** `posts_feed.sql` behavioral suite + smoke extensions; in `db:validate` and CI.
 
-**Components:** `MemberLayout`, `PostComposer`, `PostMediaGallery`, `PostVisibilityBadge`,
-`CommentList`, `CommentComposer`, `EngagementActions`.
+## Phase 3.2 — Engagement Foundation ✅ DONE
 
-**Routes:** `/post/$postId`, `/dashboard/posts/new`, `/dashboard/posts/$postId/edit`; `/feed` and
-`/discover` become auth-aware.
+**Goal:** Add low-risk engagement primitives (comments, likes, saves) on top of the post system.
+No monetization, messaging, notifications, or real-time.
 
-**Dependencies:** Phase 2C relationship graph and protected action tier. Requires explicit approval.
+**Delivered:** migration `20260515000000_engagement.sql` (`post_comments`, `post_likes`, `post_saves`,
+`comment_status` enum, block-aware RLS, `is_engagement_blocked`/`is_current_user_post_owner`,
+`post_engagement_state`/`post_comments_list`/`post_card` RPCs); `cabana-engagement.ts` (+ tests),
+`engagement-actions.ts`, `use-engagement.ts`; `EngagementBar`, `CommentComposer`, `CommentList`,
+`PostDetail`; new `/post/$postId` route; `PostCard` now shows like/comment/save.
 
-**Acceptance criteria:** creators publish public/follower posts; followed creators appear in member
-feed; likes/comments/saves persist; private media uses signed URLs; guest/member/creator RLS tests
-pass; no auth/internal IDs appear in public payloads.
+**RLS guarantees:** engagement requires `can_view_post`; denied across a block; authors edit/soft-delete
+own comments; creators hide comments on own posts; anon reads visible comments on public posts only and
+cannot write. Likes/saves are unique per user/post and private.
+
+**Validation:** `engagement.sql` behavioral suite + smoke extensions; in `db:validate` and CI.
+
+**Next (gated):** Phase 4.
 
 ---
 

@@ -87,6 +87,48 @@ authenticated/private contexts.
 Hooks in `use-relationships.ts`: `useRelationship(username)` and `useFollow(username)`. The public
 creator page uses `useFollow` for the minimal persistent Follow/Following proof.
 
+## 2d. Implemented Post Actions (T2 — Phase 3)
+
+`src/lib/post-actions.ts`. Creator writes use `attachSupabaseToken` + `requireSupabaseAuth`; feed/detail
+reads use `attachSupabaseToken` + **`optionalSupabaseAuth`** (guest-callable, resolves `auth.uid()` when
+present). `getPostMediaUrls` is the only service-role storage touch, gated by `can_view_post`.
+
+| Action                                                      | Contract                                                            |
+| ----------------------------------------------------------- | ------------------------------------------------------------------- |
+| `createPost({caption,visibility})`                          | [auth, creator] creates a draft post (`public`/`followers` only)    |
+| `updatePost({postId,caption?,visibility?})`                 | [auth, owner] edits caption/visibility                              |
+| `publishPost({postId})`                                     | [auth, owner] draft/scheduled → published (stamps `published_at`)   |
+| `archivePost({postId})` / `deletePost({postId})`            | [auth, owner] archive or delete (+ best-effort media cleanup)       |
+| `addPostMedia({postId,...})` / `deletePostMedia({mediaId})` | [auth, owner] record/remove image media                             |
+| `getOwnPosts()`                                             | [auth, creator] → the caller's posts (all statuses)                 |
+| `getCreatorFeed({username,cursor?})`                        | [public] → safe feed rows; followers posts locked for non-followers |
+| `getHomeFeed({cursor?})`                                    | [auth] → published posts from followed creators                     |
+| `getPostMediaUrls({postId})`                                | [public] → expiring signed URLs, only after `can_view_post`         |
+
+Hooks in `use-posts.ts`: `useCreatorFeed`, `useHomeFeed`, `useOwnPosts`, `usePostMediaUrls`, and composer
+mutations.
+
+## 2e. Implemented Engagement Actions (T2 — Phase 3.2)
+
+`src/lib/engagement-actions.ts`. Writes use `requireSupabaseAuth`; reads use `optionalSupabaseAuth`.
+Viewability and block enforcement live entirely in RLS (`can_view_post`, `is_engagement_blocked`) — no
+service role.
+
+| Action                              | Contract                                                                 |
+| ----------------------------------- | ------------------------------------------------------------------------ |
+| `addComment({postId,body})`         | [auth] comments on a viewable post (1–2000 chars); denied across a block |
+| `editComment({commentId,body})`     | [auth, author] edits own visible comment                                 |
+| `deleteComment({commentId})`        | [auth, author] soft-deletes own comment (status → `deleted`)             |
+| `hideComment({commentId})`          | [auth, post owner] hides a comment on own post (status → `hidden`)       |
+| `likePost` / `unlikePost({postId})` | [auth] toggle like → returns fresh `EngagementState`                     |
+| `savePost` / `unsavePost({postId})` | [auth] toggle private save → returns fresh `EngagementState`             |
+| `getPostEngagementState({postId})`  | [public] → like/comment counts + caller's liked/saved/can-engage flags   |
+| `getPostComments({postId,cursor?})` | [public] → visible comments with safe author identity                    |
+| `getPost({postId})`                 | [public] → single locked-aware post card for the detail page             |
+
+Hooks in `use-engagement.ts`: `usePostEngagementState`, `usePostComments`, `usePost`, `usePostLike`,
+`usePostSave`, and comment mutations (`useAddComment`/`useEditComment`/`useDeleteComment`/`useHideComment`).
+
 ## 3. Planned Server Actions (T2)
 
 Grouped by domain. Each entry: **name** — input → output [auth]. "Owner" = authenticated owner of the resource; "Server" = service-role inside a guarded action.
