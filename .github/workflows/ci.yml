@@ -108,6 +108,11 @@ jobs:
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
             -v ON_ERROR_STOP=1 -f supabase/tests/admin_moderation.sql
 
+      - name: Behavioral checks (admin payout management + audit + RLS)
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 -f supabase/tests/admin_payouts.sql
+
       - name: Stop Supabase
         if: always()
         run: supabase stop || true

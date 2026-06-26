@@ -72,6 +72,13 @@ begin
   if not exists (select 1 from pg_type where typname = 'payout_request_status') then
     raise exception 'MISSING ENUM: payout_request_status';
   end if;
+  -- Phase 8C.2: payout_request_status extended with on_hold (admin payout mgmt)
+  if not exists (
+    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'payout_request_status' and e.enumlabel = 'on_hold'
+  ) then
+    raise exception 'MISSING ENUM VALUE: payout_request_status.on_hold';
+  end if;
   -- Phase 7 enums
   if not exists (select 1 from pg_type where typname = 'notification_type') then
     raise exception 'MISSING ENUM: notification_type';
@@ -215,6 +222,9 @@ begin
   if to_regprocedure('public.has_content_entitlement(uuid, uuid)') is null then
     raise exception 'MISSING FUNCTION: has_content_entitlement';
   end if;
+  if to_regprocedure('public.admin_review_payout(uuid, text, text)') is null then
+    raise exception 'MISSING FUNCTION: admin_review_payout';
+  end if;
   if to_regprocedure('public.recalc_creator_balance(uuid, text)') is null then
     raise exception 'MISSING FUNCTION: recalc_creator_balance';
   end if;
@@ -236,6 +246,11 @@ begin
     select 1 from pg_trigger where tgname = 'audit_on_report_change' and not tgisinternal
   ) then
     raise exception 'MISSING TRIGGER: audit_on_report_change';
+  end if;
+  if not exists (
+    select 1 from pg_trigger where tgname = 'audit_on_payout_request_change' and not tgisinternal
+  ) then
+    raise exception 'MISSING TRIGGER: audit_on_payout_request_change';
   end if;
   if to_regprocedure('public.on_follow_notify()') is null then
     raise exception 'MISSING FUNCTION: on_follow_notify';
