@@ -46,7 +46,10 @@ import { Route as DashboardEarningsRouteImport } from './routes/dashboard.earnin
 import { Route as DashboardAnalyticsRouteImport } from './routes/dashboard.analytics'
 import { Route as DashboardAiRouteImport } from './routes/dashboard.ai'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
+import { Route as AdminLedgerRouteImport } from './routes/admin.ledger'
+import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
 import { Route as AdminAuditRouteImport } from './routes/admin.audit'
+import { Route as AdminLedgerTransactionIdRouteImport } from './routes/admin.ledger.$transactionId'
 
 const TdRoute = TdRouteImport.update({
   id: '/td',
@@ -233,11 +236,27 @@ const AdminReportsRoute = AdminReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminLedgerRoute = AdminLedgerRouteImport.update({
+  id: '/ledger',
+  path: '/ledger',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFinanceRoute = AdminFinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAuditRoute = AdminAuditRouteImport.update({
   id: '/audit',
   path: '/audit',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminLedgerTransactionIdRoute =
+  AdminLedgerTransactionIdRouteImport.update({
+    id: '/$transactionId',
+    path: '/$transactionId',
+    getParentRoute: () => AdminLedgerRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -259,6 +278,8 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/td': typeof TdRoute
   '/admin/audit': typeof AdminAuditRoute
+  '/admin/finance': typeof AdminFinanceRoute
+  '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/reports': typeof AdminReportsRoute
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
@@ -278,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/messages/$conversationId': typeof MessagesConversationIdRoute
   '/post/$postId': typeof PostPostIdRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/admin/ledger/$transactionId': typeof AdminLedgerTransactionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -298,6 +320,8 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/td': typeof TdRoute
   '/admin/audit': typeof AdminAuditRoute
+  '/admin/finance': typeof AdminFinanceRoute
+  '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/reports': typeof AdminReportsRoute
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
@@ -317,6 +341,7 @@ export interface FileRoutesByTo {
   '/messages/$conversationId': typeof MessagesConversationIdRoute
   '/post/$postId': typeof PostPostIdRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/admin/ledger/$transactionId': typeof AdminLedgerTransactionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -339,6 +364,8 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/td': typeof TdRoute
   '/admin/audit': typeof AdminAuditRoute
+  '/admin/finance': typeof AdminFinanceRoute
+  '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/reports': typeof AdminReportsRoute
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
@@ -358,6 +385,7 @@ export interface FileRoutesById {
   '/messages/$conversationId': typeof MessagesConversationIdRoute
   '/post/$postId': typeof PostPostIdRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/admin/ledger/$transactionId': typeof AdminLedgerTransactionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -381,6 +409,8 @@ export interface FileRouteTypes {
     | '/signup'
     | '/td'
     | '/admin/audit'
+    | '/admin/finance'
+    | '/admin/ledger'
     | '/admin/reports'
     | '/dashboard/ai'
     | '/dashboard/analytics'
@@ -400,6 +430,7 @@ export interface FileRouteTypes {
     | '/messages/$conversationId'
     | '/post/$postId'
     | '/dashboard/'
+    | '/admin/ledger/$transactionId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -420,6 +451,8 @@ export interface FileRouteTypes {
     | '/signup'
     | '/td'
     | '/admin/audit'
+    | '/admin/finance'
+    | '/admin/ledger'
     | '/admin/reports'
     | '/dashboard/ai'
     | '/dashboard/analytics'
@@ -439,6 +472,7 @@ export interface FileRouteTypes {
     | '/messages/$conversationId'
     | '/post/$postId'
     | '/dashboard'
+    | '/admin/ledger/$transactionId'
   id:
     | '__root__'
     | '/'
@@ -460,6 +494,8 @@ export interface FileRouteTypes {
     | '/signup'
     | '/td'
     | '/admin/audit'
+    | '/admin/finance'
+    | '/admin/ledger'
     | '/admin/reports'
     | '/dashboard/ai'
     | '/dashboard/analytics'
@@ -479,6 +515,7 @@ export interface FileRouteTypes {
     | '/messages/$conversationId'
     | '/post/$postId'
     | '/dashboard/'
+    | '/admin/ledger/$transactionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -767,6 +804,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminReportsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/ledger': {
+      id: '/admin/ledger'
+      path: '/ledger'
+      fullPath: '/admin/ledger'
+      preLoaderRoute: typeof AdminLedgerRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/finance': {
+      id: '/admin/finance'
+      path: '/finance'
+      fullPath: '/admin/finance'
+      preLoaderRoute: typeof AdminFinanceRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/audit': {
       id: '/admin/audit'
       path: '/audit'
@@ -774,16 +825,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAuditRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/ledger/$transactionId': {
+      id: '/admin/ledger/$transactionId'
+      path: '/$transactionId'
+      fullPath: '/admin/ledger/$transactionId'
+      preLoaderRoute: typeof AdminLedgerTransactionIdRouteImport
+      parentRoute: typeof AdminLedgerRoute
+    }
   }
 }
 
+interface AdminLedgerRouteChildren {
+  AdminLedgerTransactionIdRoute: typeof AdminLedgerTransactionIdRoute
+}
+
+const AdminLedgerRouteChildren: AdminLedgerRouteChildren = {
+  AdminLedgerTransactionIdRoute: AdminLedgerTransactionIdRoute,
+}
+
+const AdminLedgerRouteWithChildren = AdminLedgerRoute._addFileChildren(
+  AdminLedgerRouteChildren,
+)
+
 interface AdminRouteChildren {
   AdminAuditRoute: typeof AdminAuditRoute
+  AdminFinanceRoute: typeof AdminFinanceRoute
+  AdminLedgerRoute: typeof AdminLedgerRouteWithChildren
   AdminReportsRoute: typeof AdminReportsRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAuditRoute: AdminAuditRoute,
+  AdminFinanceRoute: AdminFinanceRoute,
+  AdminLedgerRoute: AdminLedgerRouteWithChildren,
   AdminReportsRoute: AdminReportsRoute,
 }
 

@@ -29,6 +29,7 @@ export default defineConfig({
         "src/lib/cabana-messaging.ts",
         "src/lib/cabana-notifications.ts",
         "src/lib/cabana-moderation.ts",
+        "src/lib/cabana-finance.ts",
       ],
       thresholds: {
         lines: 95,
