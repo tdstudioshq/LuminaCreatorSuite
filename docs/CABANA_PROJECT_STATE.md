@@ -1,7 +1,7 @@
 # CABANA — Project State (Engineering Checkpoint)
 
 > Canonical high-level engineering snapshot.
-> Branch at capture: `feat/phase-4-subscriptions` (through Phase 4).
+> Branch at capture: `feat/phase-5-messaging` (through Phase 5).
 > Demo clock / "today" in code: **June 25, 2026**.
 > Audience: a brand-new engineer who needs to understand CABANA end-to-end in under 15 minutes.
 >
@@ -318,37 +318,70 @@ LuminaCreatorSuite/
 - **Validation status:** ✅ unit tests pass (subscriptions module 100%); migration applies from zero; all
   **six** SQL suites pass through the DB container; lint/tsc/build green.
 
+## Phase 5 — Messaging Foundation
+
+- **Objectives:** Direct (1:1) conversations, messages, and read receipts with participant-scoped RLS and
+  Supabase Realtime. No paid messages, attachments, or notifications.
+- **Completed work:**
+  - `conversations`, `conversation_participants`, `messages` (soft-delete), `message_read_receipts`;
+    SECURITY DEFINER participant/block helpers (recursion-safe RLS); RPCs `create_direct_conversation` /
+    `start_conversation_with_username` / `list_conversations` / `conversation_header` /
+    `conversation_messages` / `mark_conversation_read` / `unread_message_count`; bump trigger for inbox
+    ordering; `messages` + receipts added to the `supabase_realtime` publication.
+  - Pure `cabana-messaging.ts` (+ tests, repository-injected); `messaging-actions.ts`; `use-messaging.ts`
+    with Realtime subscriptions (live messages/receipts/inbox; auto-reconnect).
+  - UI: `Inbox`, `ConversationView` (auto-scroll, mark-read, typing placeholder), `MessageBubble`,
+    `MessageComposer`; real `/messages` + new `/messages/$conversationId`; `/$username` Message button.
+- **Migrations:** `20260517000000_messaging.sql`.
+- **Server actions:** `createConversation`, `startConversationWithUsername`, `getConversations`,
+  `getConversation`, `getMessages`, `sendMessage`, `editMessage`, `deleteMessage`, `markConversationRead`,
+  `getUnreadCount`.
+- **React hooks:** `useConversations`, `useConversation`, `useMessages`, `useSendMessage`,
+  `useUnreadMessages`, `useCreateConversation`, `useStartConversationWithUsername`, `useEditMessage`,
+  `useDeleteMessage`, `useMarkConversationRead`.
+- **Routes:** `/messages` (real inbox), `/messages/$conversationId` (thread).
+- **Tests:** `cabana-messaging.test.ts`; `supabase/tests/messaging.sql` (conversation/message/receipt RLS,
+  participant isolation, unread, receipts, edit/delete rules, block enforcement, self-conversation + anon
+  denial). `smoke.sql` extended; `db-validate.sh` + CI run it.
+- **Validation status:** ✅ unit tests pass (messaging module 100%); migration applies from zero; all
+  **seven** SQL suites pass through the DB container; lint/tsc/build green.
+
 ---
 
 # Current Database
 
-Schema is rebuilt from zero by six ordered migrations:
+Schema is rebuilt from zero by seven ordered migrations:
 `20260511000000_baseline.sql` → `20260512000000_member_accounts.sql` →
 `20260513000000_social_relationships.sql` → `20260514000000_posts_feed.sql` →
-`20260515000000_engagement.sql` → `20260516000000_creator_subscriptions.sql`.
+`20260515000000_engagement.sql` → `20260516000000_creator_subscriptions.sql` →
+`20260517000000_messaging.sql`.
 
-## Tables (18)
+## Tables (22)
 
-| Table                        | Purpose                                                                                     | Read access                                                                                             | Write access                                                                    |
-| ---------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `profiles`                   | Shared identity, 1:1 with `auth.users`; holds `account_type`.                               | Owner only                                                                                              | Owner update (insert via trigger)                                               |
-| `creator_profiles`           | Public creator presence; drives `/$username`. `user_id` nullable (ownerless `aurora` seed). | **Public** (note: exposes `user_id`)                                                                    | Owner insert/update                                                             |
-| `links`                      | Smart-link blocks on the public page.                                                       | Public                                                                                                  | Owner (via parent profile)                                                      |
-| `products`                   | Storefront products.                                                                        | Public                                                                                                  | Owner (via parent profile)                                                      |
-| `analytics_events`           | First-party page/link/product events.                                                       | Owner (creator) read                                                                                    | Anyone may insert for a real profile                                            |
-| `subscriptions`              | **CABANA SaaS plan** per account (NOT fan-to-creator).                                      | Owner read                                                                                              | Trigger/service-side only                                                       |
-| `user_roles`                 | Authorization roles.                                                                        | Owner read; admins read all                                                                             | Admins manage                                                                   |
-| `reserved_handles`           | Handles that cannot be claimed.                                                             | Public read                                                                                             | — (seed/admin)                                                                  |
-| `member_profiles`            | Private member identity + public `username`.                                                | Owner only                                                                                              | Owner insert/update (no delete)                                                 |
-| `follows`                    | account → creator follow edges.                                                             | Follower reads own; creator reads own followers                                                         | Follower insert/delete                                                          |
-| `blocks`                     | account → account blocks (private to blocker).                                              | Blocker only                                                                                            | Blocker insert/delete                                                           |
-| `posts`                      | Creator posts (`public`/`followers`/subscribers/purchase visibility, draft→published).      | Public reads published-public; followers read published-followers they follow; owner reads all          | Owner (creator) CRUD                                                            |
-| `post_media`                 | Image metadata for a post; objects live in the private `post-media` bucket.                 | **Owner only** (viewers get signed URLs via `getPostMediaUrls`)                                         | Owner CRUD                                                                      |
-| `post_comments`              | Comments on posts (`visible`/`hidden`/`deleted`; soft-delete).                              | Visible comments on viewable posts (anon → public only); authors read own; owners read all on own posts | Author edit/soft-delete own; owner hide; insert requires viewability + no block |
-| `post_likes`                 | Likes (unique per user/post; private to actor).                                             | Owner only (counts via RPC)                                                                             | Insert/delete own; requires viewability + no block                              |
-| `post_saves`                 | Saves (unique per user/post; private to actor).                                             | Owner only                                                                                              | Insert/delete own; requires viewability + no block                              |
-| `creator_subscription_tiers` | Creator-defined demo subscription tiers (integer-cent price).                               | Public reads ACTIVE; owner reads all                                                                    | Owner CRUD                                                                      |
-| `creator_subscriptions`      | Member→creator demo subscriptions (unique live pair; `mock_*` ref, no real money).          | Member reads own; creator reads subs to own profile; anon revoked                                       | **RPC-only** (`subscribe_to_creator`/`cancel_creator_subscription`)             |
+| Table                        | Purpose                                                                                     | Read access                                                                                             | Write access                                                                      |
+| ---------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `profiles`                   | Shared identity, 1:1 with `auth.users`; holds `account_type`.                               | Owner only                                                                                              | Owner update (insert via trigger)                                                 |
+| `creator_profiles`           | Public creator presence; drives `/$username`. `user_id` nullable (ownerless `aurora` seed). | **Public** (note: exposes `user_id`)                                                                    | Owner insert/update                                                               |
+| `links`                      | Smart-link blocks on the public page.                                                       | Public                                                                                                  | Owner (via parent profile)                                                        |
+| `products`                   | Storefront products.                                                                        | Public                                                                                                  | Owner (via parent profile)                                                        |
+| `analytics_events`           | First-party page/link/product events.                                                       | Owner (creator) read                                                                                    | Anyone may insert for a real profile                                              |
+| `subscriptions`              | **CABANA SaaS plan** per account (NOT fan-to-creator).                                      | Owner read                                                                                              | Trigger/service-side only                                                         |
+| `user_roles`                 | Authorization roles.                                                                        | Owner read; admins read all                                                                             | Admins manage                                                                     |
+| `reserved_handles`           | Handles that cannot be claimed.                                                             | Public read                                                                                             | — (seed/admin)                                                                    |
+| `member_profiles`            | Private member identity + public `username`.                                                | Owner only                                                                                              | Owner insert/update (no delete)                                                   |
+| `follows`                    | account → creator follow edges.                                                             | Follower reads own; creator reads own followers                                                         | Follower insert/delete                                                            |
+| `blocks`                     | account → account blocks (private to blocker).                                              | Blocker only                                                                                            | Blocker insert/delete                                                             |
+| `posts`                      | Creator posts (`public`/`followers`/subscribers/purchase visibility, draft→published).      | Public reads published-public; followers read published-followers they follow; owner reads all          | Owner (creator) CRUD                                                              |
+| `post_media`                 | Image metadata for a post; objects live in the private `post-media` bucket.                 | **Owner only** (viewers get signed URLs via `getPostMediaUrls`)                                         | Owner CRUD                                                                        |
+| `post_comments`              | Comments on posts (`visible`/`hidden`/`deleted`; soft-delete).                              | Visible comments on viewable posts (anon → public only); authors read own; owners read all on own posts | Author edit/soft-delete own; owner hide; insert requires viewability + no block   |
+| `post_likes`                 | Likes (unique per user/post; private to actor).                                             | Owner only (counts via RPC)                                                                             | Insert/delete own; requires viewability + no block                                |
+| `post_saves`                 | Saves (unique per user/post; private to actor).                                             | Owner only                                                                                              | Insert/delete own; requires viewability + no block                                |
+| `creator_subscription_tiers` | Creator-defined demo subscription tiers (integer-cent price).                               | Public reads ACTIVE; owner reads all                                                                    | Owner CRUD                                                                        |
+| `creator_subscriptions`      | Member→creator demo subscriptions (unique live pair; `mock_*` ref, no real money).          | Member reads own; creator reads subs to own profile; anon revoked                                       | **RPC-only** (`subscribe_to_creator`/`cancel_creator_subscription`)               |
+| `conversations`              | Direct (1:1) conversation container.                                                        | Participants only (via `is_conversation_participant`)                                                   | RPC-only (`create_direct_conversation`)                                           |
+| `conversation_participants`  | Membership rows (unique `conversation_id, user_id`).                                        | Participants only                                                                                       | RPC-only / cascade                                                                |
+| `messages`                   | Messages (`text`/`system`; `deleted_at` soft-delete).                                       | Participants only                                                                                       | Sender insert (`text`, in-conversation, not blocked); sender edit/soft-delete own |
+| `message_read_receipts`      | Per-message read markers (unique `message_id, reader_id`).                                  | Participants only                                                                                       | Reader insert own (via `mark_conversation_read`)                                  |
 
 ## Public views (2)
 
@@ -357,33 +390,36 @@ Schema is rebuilt from zero by six ordered migrations:
 | `public_creator_profiles` | username, display_name, avatar_url, banner_url, bio, verified (placeholder `false`), follower_count, following_count, post_count (placeholder `0`) | `security_barrier`, `security_invoker = false` (runs with owner privileges to aggregate private `follows`); granted to `anon` + `authenticated`. No UUIDs/email/plan/theme. |
 | `public_member_profiles`  | username, display_name, avatar_url, banner_url (null), bio, verified (`false`), follower_count (`0`), following_count, post_count (`0`)            | Same safety model; the only public projection of otherwise-private member profiles.                                                                                         |
 
-## Enums (7)
+## Enums (8)
 
-| Enum                          | Values                                                  |
-| ----------------------------- | ------------------------------------------------------- |
-| `app_role`                    | `admin`, `moderator`, `user`                            |
-| `account_type`                | `creator`, `member`                                     |
-| `post_visibility`             | `public`, `followers`, `subscribers`, `purchase`        |
-| `post_status`                 | `draft`, `scheduled`, `published`, `archived`           |
-| `post_media_kind`             | `image`, `video`, `audio`                               |
-| `comment_status`              | `visible`, `hidden`, `deleted`                          |
-| `creator_subscription_status` | `trialing`, `active`, `past_due`, `canceled`, `expired` |
+| Enum                          | Values                                                                            |
+| ----------------------------- | --------------------------------------------------------------------------------- |
+| `app_role`                    | `admin`, `moderator`, `user`                                                      |
+| `account_type`                | `creator`, `member`                                                               |
+| `post_visibility`             | `public`, `followers`, `subscribers`, `purchase`                                  |
+| `post_status`                 | `draft`, `scheduled`, `published`, `archived`                                     |
+| `post_media_kind`             | `image`, `video`, `audio`                                                         |
+| `comment_status`              | `visible`, `hidden`, `deleted`                                                    |
+| `creator_subscription_status` | `trialing`, `active`, `past_due`, `canceled`, `expired`                           |
+| `message_type`                | `text`, `system`, `image`, `video`, `paid`, `tip` (only `text`/`system` writable) |
 
 ## Triggers
 
-| Trigger                                       | Table                        | Fires                            | Function                                                            |
-| --------------------------------------------- | ---------------------------- | -------------------------------- | ------------------------------------------------------------------- |
-| `on_auth_user_created`                        | `auth.users`                 | AFTER INSERT                     | `handle_new_user()` — provisions identity + branches creator/member |
-| `touch_profiles_updated_at`                   | `profiles`                   | BEFORE UPDATE                    | `touch_updated_at()`                                                |
-| `touch_creator_profiles_updated_at`           | `creator_profiles`           | BEFORE UPDATE                    | `touch_updated_at()`                                                |
-| `touch_subscriptions_updated_at`              | `subscriptions`              | BEFORE UPDATE                    | `touch_updated_at()`                                                |
-| `touch_member_profiles_updated_at`            | `member_profiles`            | BEFORE UPDATE                    | `touch_updated_at()`                                                |
-| `validate_creator_handle_trigger`             | `creator_profiles`           | BEFORE INSERT/UPDATE OF handle   | `validate_creator_handle()` — blocks empty/reserved handles         |
-| `validate_member_username_trigger`            | `member_profiles`            | BEFORE INSERT/UPDATE OF username | `validate_member_username()` — lowercases, pattern + reserved check |
-| `touch_posts_updated_at`                      | `posts`                      | BEFORE UPDATE                    | `touch_updated_at()`                                                |
-| `touch_post_comments_updated_at`              | `post_comments`              | BEFORE UPDATE                    | `touch_updated_at()`                                                |
-| `touch_creator_subscription_tiers_updated_at` | `creator_subscription_tiers` | BEFORE UPDATE                    | `touch_updated_at()`                                                |
-| `touch_creator_subscriptions_updated_at`      | `creator_subscriptions`      | BEFORE UPDATE                    | `touch_updated_at()`                                                |
+| Trigger                                       | Table                        | Fires                            | Function                                                                   |
+| --------------------------------------------- | ---------------------------- | -------------------------------- | -------------------------------------------------------------------------- |
+| `on_auth_user_created`                        | `auth.users`                 | AFTER INSERT                     | `handle_new_user()` — provisions identity + branches creator/member        |
+| `touch_profiles_updated_at`                   | `profiles`                   | BEFORE UPDATE                    | `touch_updated_at()`                                                       |
+| `touch_creator_profiles_updated_at`           | `creator_profiles`           | BEFORE UPDATE                    | `touch_updated_at()`                                                       |
+| `touch_subscriptions_updated_at`              | `subscriptions`              | BEFORE UPDATE                    | `touch_updated_at()`                                                       |
+| `touch_member_profiles_updated_at`            | `member_profiles`            | BEFORE UPDATE                    | `touch_updated_at()`                                                       |
+| `validate_creator_handle_trigger`             | `creator_profiles`           | BEFORE INSERT/UPDATE OF handle   | `validate_creator_handle()` — blocks empty/reserved handles                |
+| `validate_member_username_trigger`            | `member_profiles`            | BEFORE INSERT/UPDATE OF username | `validate_member_username()` — lowercases, pattern + reserved check        |
+| `touch_posts_updated_at`                      | `posts`                      | BEFORE UPDATE                    | `touch_updated_at()`                                                       |
+| `touch_post_comments_updated_at`              | `post_comments`              | BEFORE UPDATE                    | `touch_updated_at()`                                                       |
+| `touch_creator_subscription_tiers_updated_at` | `creator_subscription_tiers` | BEFORE UPDATE                    | `touch_updated_at()`                                                       |
+| `touch_creator_subscriptions_updated_at`      | `creator_subscriptions`      | BEFORE UPDATE                    | `touch_updated_at()`                                                       |
+| `touch_conversations_updated_at`              | `conversations`              | BEFORE UPDATE                    | `touch_updated_at()`                                                       |
+| `bump_conversation_after_message`             | `messages`                   | AFTER INSERT                     | `bump_conversation_on_message()` — touches conversation for inbox ordering |
 
 ## Functions / RPCs
 
@@ -437,6 +473,17 @@ Schema is rebuilt from zero by six ordered migrations:
 currency, current_period_end, is_self)`; `anon` + `authenticated`.
 - `creator_subscribers_list(timestamptz cursor, int limit)` → the calling creator's active subscribers with
   safe member identity; `authenticated` only.
+
+**Messaging helpers + RPCs (Phase 5, `SECURITY DEFINER`, `authenticated` only):**
+
+- `is_conversation_participant(uuid)` / `is_conversation_blocked(uuid)` / `is_message_in_my_conversation(uuid)`
+  — participant + block checks used by RLS (break the `conversation_participants` policy recursion).
+- `create_direct_conversation(uuid other_user_id)` / `start_conversation_with_username(text)` → uuid —
+  find-or-create a 1:1 conversation; reject self and any block (either direction).
+- `list_conversations()` → inbox rows (other-party safe identity, last-message preview, unread count).
+- `conversation_header(uuid)` / `conversation_messages(uuid, timestamptz cursor, int limit)` — participant-
+  gated; deleted messages blanked.
+- `mark_conversation_read(uuid)` → void; `unread_message_count()` → bigint.
 
 ## Storage buckets (4)
 
@@ -587,11 +634,11 @@ action executes under the caller's row-level permissions.
 
 - Config: `vitest.config.ts` (standalone — **not** the Lovable `vite.config.ts`; the modules under test
   are pure, needing only the `@` alias and `node` environment).
-- Coverage is restricted to the six pure business modules — `cabana-money`, `cabana-entitlements`,
-  `cabana-account`, `cabana-relationships`, `cabana-posts`, `cabana-engagement`, `cabana-subscriptions`
-  — with **95%** thresholds on lines/functions/branches/statements (currently 100% statements/functions/
-  lines, ≥99.5% branches; **146 tests**: money 34, entitlements 25, account 14, relationships 10, posts
-  33, engagement 17, subscriptions 13).
+- Coverage is restricted to the seven pure business modules — `cabana-money`, `cabana-entitlements`,
+  `cabana-account`, `cabana-relationships`, `cabana-posts`, `cabana-engagement`, `cabana-subscriptions`,
+  `cabana-messaging` — with **95%** thresholds on lines/functions/branches/statements (currently 100%
+  statements/functions/lines, ≥99.5% branches; **166 tests**: money 34, entitlements 25, account 14,
+  relationships 10, posts 33, engagement 17, subscriptions 13, messaging 20).
 - Run: `bun run test` (one-shot), `bun run test:watch`, `bun run test:coverage`; a single file with
   `bunx vitest run src/lib/<file>.test.ts`, or by name with `bunx vitest run -t "<name>"`.
 - **Rule of thumb:** keep new domain logic in a pure, repository-injected module so it stays unit-testable
@@ -651,7 +698,7 @@ The **handoff gate** for any session is: `bun run lint`, `bun run build`, `bunx 
   not fan subscriptions. It should be renamed `platform_subscriptions` (gated) before
   `creator_subscriptions` becomes production data.
 - **`moderator` role unused.** Present in `app_role` but not yet wired to any surface.
-- **No server tests for the T1 hooks / React components.** Only the six pure modules are unit-tested;
+- **No server tests for the T1 hooks / React components.** Only the seven pure modules are unit-tested;
   hooks, actions, and UI are covered only indirectly (and by the SQL suites at the DB layer).
 - **Placeholder public routes carry no real data.** `/feed`, `/discover`, `/messages`, `/notifications`
   are FoundationPage placeholders and must not receive private member/message data while public.
@@ -684,12 +731,12 @@ subscribe/cancel RPCs, and `subscribers` post unlocking across `can_view_post`/f
 See the completed-phases section above. **Deferred:** the `subscriptions`→`platform_subscriptions` rename,
 `content_entitlements`, and the `purchase` per-post unlock (needs the Phase 6 ledger).
 
-## Phase 5 — Messaging & notifications (gated)
+## Phase 5 — Messaging ✅ DONE (foundation)
 
-- Tables: `conversations`, `conversation_participants`, `messages`, `notifications` (roadmap Group D).
-- Participant-membership RLS, cursor pagination on `(created_at, id)`, Supabase Realtime for inserts/read
-  state, private storage + signed URLs for attachments, plus rate limits / blocking / reporting.
-- Notifications generated by trusted event handlers with an outbox for future email/push.
+Delivered: `conversations` / `conversation_participants` / `messages` / `message_read_receipts` with
+participant-scoped RLS, the messaging RPCs, and Supabase Realtime. See the completed-phases section above.
+**Deferred:** `notifications` (+ outbox for email/push), private attachments (image/video) + signed URLs,
+paid messages/tips, and rate-limiting/reporting.
 
 ## Phase 6 — Monetization ledger & trust/operations (gated)
 

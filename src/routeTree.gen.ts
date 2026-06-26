@@ -29,6 +29,7 @@ import { Route as UsernameRouteImport } from './routes/$username'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as PostPostIdRouteImport } from './routes/post.$postId'
+import { Route as MessagesConversationIdRouteImport } from './routes/messages.$conversationId'
 import { Route as FeaturesAiRouteImport } from './routes/features.ai'
 import { Route as DocsSystemRouteImport } from './routes/docs.system'
 import { Route as DocsDataModelRouteImport } from './routes/docs.data-model'
@@ -145,6 +146,11 @@ const PostPostIdRoute = PostPostIdRouteImport.update({
   path: '/post/$postId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MessagesConversationIdRoute = MessagesConversationIdRouteImport.update({
+  id: '/$conversationId',
+  path: '/$conversationId',
+  getParentRoute: () => MessagesRoute,
+} as any)
 const FeaturesAiRoute = FeaturesAiRouteImport.update({
   id: '/features/ai',
   path: '/features/ai',
@@ -233,7 +239,7 @@ export interface FileRoutesByFullPath {
   '/feed': typeof FeedRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
-  '/messages': typeof MessagesRoute
+  '/messages': typeof MessagesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
@@ -255,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/docs/data-model': typeof DocsDataModelRoute
   '/docs/system': typeof DocsSystemRoute
   '/features/ai': typeof FeaturesAiRoute
+  '/messages/$conversationId': typeof MessagesConversationIdRoute
   '/post/$postId': typeof PostPostIdRoute
   '/dashboard/': typeof DashboardIndexRoute
 }
@@ -269,7 +276,7 @@ export interface FileRoutesByTo {
   '/feed': typeof FeedRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
-  '/messages': typeof MessagesRoute
+  '/messages': typeof MessagesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
@@ -291,6 +298,7 @@ export interface FileRoutesByTo {
   '/docs/data-model': typeof DocsDataModelRoute
   '/docs/system': typeof DocsSystemRoute
   '/features/ai': typeof FeaturesAiRoute
+  '/messages/$conversationId': typeof MessagesConversationIdRoute
   '/post/$postId': typeof PostPostIdRoute
   '/dashboard': typeof DashboardIndexRoute
 }
@@ -307,7 +315,7 @@ export interface FileRoutesById {
   '/feed': typeof FeedRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
-  '/messages': typeof MessagesRoute
+  '/messages': typeof MessagesRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
@@ -329,6 +337,7 @@ export interface FileRoutesById {
   '/docs/data-model': typeof DocsDataModelRoute
   '/docs/system': typeof DocsSystemRoute
   '/features/ai': typeof FeaturesAiRoute
+  '/messages/$conversationId': typeof MessagesConversationIdRoute
   '/post/$postId': typeof PostPostIdRoute
   '/dashboard/': typeof DashboardIndexRoute
 }
@@ -368,6 +377,7 @@ export interface FileRouteTypes {
     | '/docs/data-model'
     | '/docs/system'
     | '/features/ai'
+    | '/messages/$conversationId'
     | '/post/$postId'
     | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
@@ -404,6 +414,7 @@ export interface FileRouteTypes {
     | '/docs/data-model'
     | '/docs/system'
     | '/features/ai'
+    | '/messages/$conversationId'
     | '/post/$postId'
     | '/dashboard'
   id:
@@ -441,6 +452,7 @@ export interface FileRouteTypes {
     | '/docs/data-model'
     | '/docs/system'
     | '/features/ai'
+    | '/messages/$conversationId'
     | '/post/$postId'
     | '/dashboard/'
   fileRoutesById: FileRoutesById
@@ -457,7 +469,7 @@ export interface RootRouteChildren {
   FeedRoute: typeof FeedRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
-  MessagesRoute: typeof MessagesRoute
+  MessagesRoute: typeof MessagesRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
   OnboardingRoute: typeof OnboardingRoute
   PricingRoute: typeof PricingRoute
@@ -612,6 +624,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PostPostIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/messages/$conversationId': {
+      id: '/messages/$conversationId'
+      path: '/$conversationId'
+      fullPath: '/messages/$conversationId'
+      preLoaderRoute: typeof MessagesConversationIdRouteImport
+      parentRoute: typeof MessagesRoute
+    }
     '/features/ai': {
       id: '/features/ai'
       path: '/features/ai'
@@ -756,6 +775,18 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
   DashboardRouteChildren,
 )
 
+interface MessagesRouteChildren {
+  MessagesConversationIdRoute: typeof MessagesConversationIdRoute
+}
+
+const MessagesRouteChildren: MessagesRouteChildren = {
+  MessagesConversationIdRoute: MessagesConversationIdRoute,
+}
+
+const MessagesRouteWithChildren = MessagesRoute._addFileChildren(
+  MessagesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   UsernameRoute: UsernameRoute,
@@ -768,7 +799,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedRoute: FeedRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
-  MessagesRoute: MessagesRoute,
+  MessagesRoute: MessagesRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
   OnboardingRoute: OnboardingRoute,
   PricingRoute: PricingRoute,

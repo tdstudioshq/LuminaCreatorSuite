@@ -149,6 +149,31 @@ charge, or payout. Writes use `requireSupabaseAuth`; public reads use `optionalS
 Hooks in `use-subscriptions.ts`: `useCreatorTiers`, `useMyTiers`, `useSubscriptionState`,
 `useCreatorSubscribers`, `useSubscribe`, `useUpsertTier`, `useSetTierActive`.
 
+## 2g. Implemented Messaging Actions (T2 — Phase 5)
+
+`src/lib/messaging-actions.ts`. All run under the caller's RLS (`requireSupabaseAuth`); participant
+scoping + block enforcement live in SQL (RLS + SECURITY DEFINER RPCs). No service role. Conversation
+creation, reads, and unread all go through ID-free RPCs.
+
+| Action                                      | Contract                                                                            |
+| ------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `createConversation({otherUserId})`         | [auth] find-or-create a 1:1 conversation; rejects self / block → `{conversationId}` |
+| `startConversationWithUsername({username})` | [auth] same, by creator handle / member username (public-page entry)                |
+| `getConversations()`                        | [auth] → inbox rows (other party, last-message preview, unread count)               |
+| `getConversation({conversationId})`         | [auth] → the other party's safe identity (participant-gated)                        |
+| `getMessages({conversationId,cursor?})`     | [auth] → messages oldest-first (deleted ones blanked)                               |
+| `sendMessage({conversationId,body})`        | [auth] send a `text` message; denied across a block                                 |
+| `editMessage({messageId,body})`             | [auth, sender] edit own non-deleted message                                         |
+| `deleteMessage({messageId})`                | [auth, sender] soft-delete own message                                              |
+| `markConversationRead({conversationId})`    | [auth] receipt all of the other party's undeleted messages                          |
+| `getUnreadCount()`                          | [auth] → total unread across conversations                                          |
+
+Hooks in `use-messaging.ts`: `useConversations`, `useConversation`, `useMessages`, `useSendMessage`,
+`useUnreadMessages`, `useCreateConversation`, `useStartConversationWithUsername`, `useEditMessage`,
+`useDeleteMessage`, `useMarkConversationRead`. **Realtime:** `useConversations`/`useMessages`/
+`useUnreadMessages` subscribe to `postgres_changes` on `messages` + `message_read_receipts` (RLS-filtered)
+for live delivery, receipts, and inbox ordering; supabase-js auto-reconnects.
+
 ## 3. Planned Server Actions (T2)
 
 Grouped by domain. Each entry: **name** — input → output [auth]. "Owner" = authenticated owner of the resource; "Server" = service-role inside a guarded action.

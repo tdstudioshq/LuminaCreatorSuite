@@ -163,6 +163,30 @@ values and references are `mock_*`. The existing `subscriptions` table is **not*
 unique live pair, subscriber entitlement on posts + feed locking, self-subscribe rejection, direct-write
 denial, creator subscriber visibility, and anonymous denial. Runs in `db:validate` and CI.
 
+### Messaging migration (Phase 5)
+
+`supabase/migrations/20260517000000_messaging.sql` adds direct (1:1) messaging with participant-scoped
+RLS and Supabase Realtime. No paid messages, attachments, or notifications.
+
+- **`message_type`** enum (`text`/`system` usable now; `image`/`video`/`paid`/`tip` reserved).
+- **`conversations`**, **`conversation_participants`** (unique `conversation_id, user_id`), **`messages`**
+  (`deleted_at` soft-delete; `body` ≤ 4000), **`message_read_receipts`** (unique `message_id, reader_id`).
+- **Recursion-safe RLS** — participant checks go through SECURITY DEFINER helpers
+  (`is_conversation_participant`, `is_conversation_blocked`, `is_message_in_my_conversation`) so the
+  `conversation_participants` policy never queries itself. Participants read their conversations/roster/
+  messages/receipts; send only as self, only `text`, only in their conversation, **never across a block**;
+  edit/soft-delete only own messages; anon revoked.
+- **RPCs** — `create_direct_conversation` / `start_conversation_with_username` (find-or-create, block-aware,
+  no self), `list_conversations` (other-party safe identity + last-message preview + unread),
+  `conversation_header`, `conversation_messages`, `mark_conversation_read`, `unread_message_count`. A bump
+  trigger updates `conversations.updated_at` on new messages for inbox ordering.
+- **Realtime** — `messages` and `message_read_receipts` are added to the `supabase_realtime` publication;
+  delivery is still RLS-filtered, so a subscriber only receives rows it may read.
+
+**Validation:** `supabase/tests/messaging.sql` covers conversation/message/receipt RLS, participant
+isolation, unread calculations, read receipts, edit/delete rules, block enforcement (no new conversation,
+no new message), self-conversation rejection, and anon denial. Runs in `db:validate` and CI.
+
 ## 2. Target Production Schema
 
 New tables grouped by dependency. Group letters match the build roadmap (`CABANA_BUILD_ROADMAP.md` §5).

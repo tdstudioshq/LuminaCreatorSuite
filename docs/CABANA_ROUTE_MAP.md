@@ -16,7 +16,7 @@
   uses RLS-scoped server actions, but no server route loaders guard pages yet. Hardening this remains
   a security item (see `CABANA_TECH_DEBT.md`).
 
-## 2. Existing Routes (35 route files)
+## 2. Existing Routes (36 route files)
 
 ### Public / marketing
 
@@ -41,12 +41,13 @@
 
 ### Public creator surface
 
-| Route           | File             | Protection              | State                                                                                    |
-| --------------- | ---------------- | ----------------------- | ---------------------------------------------------------------------------------------- |
-| `/$username`    | $username.tsx    | Public                  | ✅ dynamic creator profile; Follow persists; shows public posts + locked follower teases |
-| `/post/$postId` | post.$postId.tsx | Public (guest-callable) | ✅ post detail (locked-aware) + comments/likes/saves (Phase 3.2)                         |
-| `/td`           | td.tsx           | Public                  | 🟡 bespoke static microsite                                                              |
-| `/eldondolla`   | eldondolla.tsx   | Public                  | 🟡 bespoke static microsite                                                              |
+| Route                       | File                         | Protection              | State                                                                                    |
+| --------------------------- | ---------------------------- | ----------------------- | ---------------------------------------------------------------------------------------- |
+| `/$username`                | $username.tsx                | Public                  | ✅ dynamic creator profile; Follow persists; shows public posts + locked follower teases |
+| `/post/$postId`             | post.$postId.tsx             | Public (guest-callable) | ✅ post detail (locked-aware) + comments/likes/saves (Phase 3.2)                         |
+| `/messages/$conversationId` | messages.$conversationId.tsx | Client auth gate        | ✅ conversation thread + composer + realtime (Phase 5)                                   |
+| `/td`                       | td.tsx                       | Public                  | 🟡 bespoke static microsite                                                              |
+| `/eldondolla`               | eldondolla.tsx               | Public                  | 🟡 bespoke static microsite                                                              |
 
 ### Member account (Phase 2B)
 
@@ -83,7 +84,7 @@
 | ---------------- | ----------------- | ---------------------------------------------- | -------------------- |
 | `/feed`          | feed.tsx          | ✅ real home feed (signed-in; guests prompted) | Member-auth (P2)     |
 | `/discover`      | discover.tsx      | Public placeholder                             | Public + member (P2) |
-| `/messages`      | messages.tsx      | Public placeholder                             | Member-auth (P4)     |
+| `/messages`      | messages.tsx      | ✅ real inbox (client auth gate; Phase 5)      | Member-auth          |
 | `/notifications` | notifications.tsx | Public placeholder                             | Member-auth (P9)     |
 
 ### Admin

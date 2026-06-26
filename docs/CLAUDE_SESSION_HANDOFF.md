@@ -16,7 +16,50 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
-## Latest Status — Phase 4 COMPLETE (Creator Subscriptions & Mock Entitlements)
+## Latest Status — Phase 5 COMPLETE (Messaging Foundation)
+
+Built on Phase 4. Local Docker only; remote/push/deploy untouched (config deny-list enforces this).
+
+**Scope delivered:** direct (1:1) conversations, messages, and read receipts with participant-scoped RLS
+and **Supabase Realtime**. NOT in scope: paid messages, tips, attachments, notifications/push (the
+`message_type` enum carries `image`/`video`/`paid`/`tip` for forward-compat; only `text`/`system` are
+writable).
+
+- **Migration** `20260517000000_messaging.sql`: `message_type` enum; `conversations`,
+  `conversation_participants` (unique pair), `messages` (soft-delete via `deleted_at`),
+  `message_read_receipts` (unique per message/reader). SECURITY DEFINER helpers
+  `is_conversation_participant` / `is_conversation_blocked` / `is_message_in_my_conversation` (break the
+  participant⇄policy recursion). RPCs `create_direct_conversation` / `start_conversation_with_username`
+  (find-or-create, block-aware, no self), `list_conversations` (other-party identity + last-message
+  preview + unread), `conversation_header`, `conversation_messages`, `mark_conversation_read`,
+  `unread_message_count`. A bump trigger orders the inbox; `messages` + `message_read_receipts` are added
+  to the `supabase_realtime` publication (delivery is still RLS-filtered).
+- **RLS:** participants read their conversations/roster/messages/receipts; send only as self, only `text`,
+  only inside your conversation, **never across a block**; edit/soft-delete only your own messages;
+  anon fully revoked.
+- **Pure module** `cabana-messaging.ts` (+ tests): body validation, self-guard, preview/unread/sort math,
+  edit/delete rules, mappers, and a repository-injected behavior layer.
+- **Server actions** `messaging-actions.ts`: createConversation, startConversationWithUsername,
+  getConversations, getConversation, getMessages, sendMessage, editMessage, deleteMessage,
+  markConversationRead, getUnreadCount. **Hooks** `use-messaging.ts` with Realtime subscriptions
+  (live messages, live receipts, live inbox ordering; supabase-js auto-reconnects).
+- **UI**: `Inbox`, `ConversationView` (auto-scroll, mark-read on new messages, typing placeholder),
+  `MessageBubble`, `MessageComposer`. Real `/messages` (replaced FoundationPage) + new
+  `/messages/$conversationId`; the `/$username` Message button now opens a conversation.
+- **Tests**: `supabase/tests/messaging.sql` (conversation/message/receipt RLS, participant isolation,
+  unread, read receipts, edit/delete rules, block enforcement, self-conversation + anon denial).
+  `smoke.sql` extended; `db-validate.sh` + CI run it.
+
+**Local verification:** from-zero rebuild applies; all **seven** SQL suites pass via the DB container;
+unit tests pass at ≥95% (messaging module 100%); lint / tsc / build green.
+
+**Next:** Phase 6 (monetization ledger & payments foundation — `transactions`/`tips`/`creator_balances`/
+`payouts`, `purchase` post unlock, paid messages) — gated. Remote schema reconciliation + the
+`subscriptions` rename remain deferred.
+
+---
+
+## Phase 4 COMPLETE (Creator Subscriptions & Mock Entitlements)
 
 Built on Phase 3.2 engagement. **DEMO-ONLY** — no real money, payment provider, payouts, or KYC. Local
 Docker only; remote/push/deploy untouched (config deny-list enforces this).

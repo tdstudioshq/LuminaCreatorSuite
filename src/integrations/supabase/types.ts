@@ -102,6 +102,60 @@ export type Database = {
           },
         ];
       };
+      conversation_participants: {
+        Row: {
+          conversation_id: string;
+          id: string;
+          joined_at: string;
+          user_id: string;
+        };
+        Insert: {
+          conversation_id: string;
+          id?: string;
+          joined_at?: string;
+          user_id: string;
+        };
+        Update: {
+          conversation_id?: string;
+          id?: string;
+          joined_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey";
+            columns: ["conversation_id"];
+            isOneToOne: false;
+            referencedRelation: "conversations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "conversation_participants_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      conversations: {
+        Row: {
+          created_at: string;
+          id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       creator_profiles: {
         Row: {
           avatar_url: string | null;
@@ -373,6 +427,90 @@ export type Database = {
           username?: string;
         };
         Relationships: [];
+      };
+      message_read_receipts: {
+        Row: {
+          id: string;
+          message_id: string;
+          read_at: string;
+          reader_id: string;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          read_at?: string;
+          reader_id: string;
+        };
+        Update: {
+          id?: string;
+          message_id?: string;
+          read_at?: string;
+          reader_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "message_read_receipts_message_id_fkey";
+            columns: ["message_id"];
+            isOneToOne: false;
+            referencedRelation: "messages";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "message_read_receipts_reader_id_fkey";
+            columns: ["reader_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      messages: {
+        Row: {
+          body: string;
+          conversation_id: string;
+          created_at: string;
+          deleted_at: string | null;
+          edited_at: string | null;
+          id: string;
+          message_type: Database["public"]["Enums"]["message_type"];
+          sender_id: string;
+        };
+        Insert: {
+          body?: string;
+          conversation_id: string;
+          created_at?: string;
+          deleted_at?: string | null;
+          edited_at?: string | null;
+          id?: string;
+          message_type?: Database["public"]["Enums"]["message_type"];
+          sender_id: string;
+        };
+        Update: {
+          body?: string;
+          conversation_id?: string;
+          created_at?: string;
+          deleted_at?: string | null;
+          edited_at?: string | null;
+          id?: string;
+          message_type?: Database["public"]["Enums"]["message_type"];
+          sender_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey";
+            columns: ["conversation_id"];
+            isOneToOne: false;
+            referencedRelation: "conversations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey";
+            columns: ["sender_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       post_comments: {
         Row: {
@@ -816,6 +954,34 @@ export type Database = {
         Args: { _username: string };
         Returns: undefined;
       };
+      conversation_header: {
+        Args: { _conversation_id: string };
+        Returns: {
+          conversation_id: string;
+          other_avatar_url: string;
+          other_display_name: string;
+          other_username: string;
+        }[];
+      };
+      conversation_messages: {
+        Args: { _conversation_id: string; _cursor?: string; _limit?: number };
+        Returns: {
+          body: string;
+          created_at: string;
+          edited_at: string;
+          is_deleted: boolean;
+          message_id: string;
+          message_type: Database["public"]["Enums"]["message_type"];
+          mine: boolean;
+          sender_avatar_url: string;
+          sender_display_name: string;
+          sender_username: string;
+        }[];
+      };
+      create_direct_conversation: {
+        Args: { _other_user_id: string };
+        Returns: string;
+      };
       creator_subscribers_list: {
         Args: { _cursor?: string; _limit?: number };
         Returns: {
@@ -879,6 +1045,14 @@ export type Database = {
         Args: { _creator_profile_id: string };
         Returns: boolean;
       };
+      is_conversation_blocked: {
+        Args: { _conversation_id: string };
+        Returns: boolean;
+      };
+      is_conversation_participant: {
+        Args: { _conversation_id: string };
+        Returns: boolean;
+      };
       is_current_user_creator: {
         Args: { _creator_profile_id: string };
         Returns: boolean;
@@ -891,6 +1065,28 @@ export type Database = {
       is_following_creator: {
         Args: { _creator_profile_id: string };
         Returns: boolean;
+      };
+      is_message_in_my_conversation: {
+        Args: { _message_id: string };
+        Returns: boolean;
+      };
+      list_conversations: {
+        Args: never;
+        Returns: {
+          conversation_id: string;
+          last_message_at: string;
+          last_message_preview: string;
+          last_message_type: Database["public"]["Enums"]["message_type"];
+          other_avatar_url: string;
+          other_display_name: string;
+          other_username: string;
+          unread_count: number;
+          updated_at: string;
+        }[];
+      };
+      mark_conversation_read: {
+        Args: { _conversation_id: string };
+        Returns: undefined;
       };
       post_card: {
         Args: { _post_id: string };
@@ -947,16 +1143,22 @@ export type Database = {
         Args: { _username: string };
         Returns: undefined;
       };
+      start_conversation_with_username: {
+        Args: { _username: string };
+        Returns: string;
+      };
       subscribe_to_creator: {
         Args: { _tier_id: string; _username: string };
         Returns: undefined;
       };
+      unread_message_count: { Args: never; Returns: number };
     };
     Enums: {
       account_type: "creator" | "member";
       app_role: "admin" | "moderator" | "user";
       comment_status: "visible" | "hidden" | "deleted";
       creator_subscription_status: "trialing" | "active" | "past_due" | "canceled" | "expired";
+      message_type: "text" | "system" | "image" | "video" | "paid" | "tip";
       post_media_kind: "image" | "video" | "audio";
       post_status: "draft" | "scheduled" | "published" | "archived";
       post_visibility: "public" | "followers" | "subscribers" | "purchase";
@@ -1092,6 +1294,7 @@ export const Constants = {
       app_role: ["admin", "moderator", "user"],
       comment_status: ["visible", "hidden", "deleted"],
       creator_subscription_status: ["trialing", "active", "past_due", "canceled", "expired"],
+      message_type: ["text", "system", "image", "video", "paid", "tip"],
       post_media_kind: ["image", "video", "audio"],
       post_status: ["draft", "scheduled", "published", "archived"],
       post_visibility: ["public", "followers", "subscribers", "purchase"],
