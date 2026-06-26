@@ -28,6 +28,404 @@ export type Database = {
   };
   public: {
     Tables: {
+      content_entitlements: {
+        Row: {
+          created_at: string;
+          id: string;
+          post_id: string;
+          purchase_id: string | null;
+          source: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          post_id: string;
+          purchase_id?: string | null;
+          source?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          post_id?: string;
+          purchase_id?: string | null;
+          source?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "content_entitlements_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "posts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "content_entitlements_purchase_id_fkey";
+            columns: ["purchase_id"];
+            isOneToOne: false;
+            referencedRelation: "purchases";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "content_entitlements_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      creator_balances: {
+        Row: {
+          available_cents: number;
+          created_at: string;
+          creator_profile_id: string;
+          currency: string;
+          id: string;
+          lifetime_fees_cents: number;
+          lifetime_gross_cents: number;
+          lifetime_net_cents: number;
+          lifetime_paid_out_cents: number;
+          pending_cents: number;
+          updated_at: string;
+        };
+        Insert: {
+          available_cents?: number;
+          created_at?: string;
+          creator_profile_id: string;
+          currency?: string;
+          id?: string;
+          lifetime_fees_cents?: number;
+          lifetime_gross_cents?: number;
+          lifetime_net_cents?: number;
+          lifetime_paid_out_cents?: number;
+          pending_cents?: number;
+          updated_at?: string;
+        };
+        Update: {
+          available_cents?: number;
+          created_at?: string;
+          creator_profile_id?: string;
+          currency?: string;
+          id?: string;
+          lifetime_fees_cents?: number;
+          lifetime_gross_cents?: number;
+          lifetime_net_cents?: number;
+          lifetime_paid_out_cents?: number;
+          pending_cents?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "creator_balances_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payout_requests: {
+        Row: {
+          amount_cents: number;
+          created_at: string;
+          creator_profile_id: string;
+          currency: string;
+          decided_at: string | null;
+          id: string;
+          mock_provider_reference: string | null;
+          note: string | null;
+          status: Database["public"]["Enums"]["payout_request_status"];
+          updated_at: string;
+        };
+        Insert: {
+          amount_cents: number;
+          created_at?: string;
+          creator_profile_id: string;
+          currency?: string;
+          decided_at?: string | null;
+          id?: string;
+          mock_provider_reference?: string | null;
+          note?: string | null;
+          status?: Database["public"]["Enums"]["payout_request_status"];
+          updated_at?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          created_at?: string;
+          creator_profile_id?: string;
+          currency?: string;
+          decided_at?: string | null;
+          id?: string;
+          mock_provider_reference?: string | null;
+          note?: string | null;
+          status?: Database["public"]["Enums"]["payout_request_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payout_requests_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payouts: {
+        Row: {
+          amount_cents: number;
+          created_at: string;
+          creator_profile_id: string;
+          currency: string;
+          failure_reason: string | null;
+          id: string;
+          mock_provider_reference: string | null;
+          paid_at: string | null;
+          payout_request_id: string | null;
+          requested_at: string;
+          status: Database["public"]["Enums"]["payout_status"];
+          updated_at: string;
+        };
+        Insert: {
+          amount_cents: number;
+          created_at?: string;
+          creator_profile_id: string;
+          currency?: string;
+          failure_reason?: string | null;
+          id?: string;
+          mock_provider_reference?: string | null;
+          paid_at?: string | null;
+          payout_request_id?: string | null;
+          requested_at?: string;
+          status?: Database["public"]["Enums"]["payout_status"];
+          updated_at?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          created_at?: string;
+          creator_profile_id?: string;
+          currency?: string;
+          failure_reason?: string | null;
+          id?: string;
+          mock_provider_reference?: string | null;
+          paid_at?: string | null;
+          payout_request_id?: string | null;
+          requested_at?: string;
+          status?: Database["public"]["Enums"]["payout_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payouts_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payouts_payout_request_id_fkey";
+            columns: ["payout_request_id"];
+            isOneToOne: false;
+            referencedRelation: "payout_requests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      purchases: {
+        Row: {
+          amount_cents: number;
+          buyer_user_id: string;
+          created_at: string;
+          creator_profile_id: string | null;
+          currency: string;
+          id: string;
+          post_id: string | null;
+          status: string;
+          transaction_id: string;
+        };
+        Insert: {
+          amount_cents: number;
+          buyer_user_id: string;
+          created_at?: string;
+          creator_profile_id?: string | null;
+          currency?: string;
+          id?: string;
+          post_id?: string | null;
+          status?: string;
+          transaction_id: string;
+        };
+        Update: {
+          amount_cents?: number;
+          buyer_user_id?: string;
+          created_at?: string;
+          creator_profile_id?: string | null;
+          currency?: string;
+          id?: string;
+          post_id?: string | null;
+          status?: string;
+          transaction_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "purchases_buyer_user_id_fkey";
+            columns: ["buyer_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "purchases_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "purchases_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "posts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "purchases_transaction_id_fkey";
+            columns: ["transaction_id"];
+            isOneToOne: false;
+            referencedRelation: "transactions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      tips: {
+        Row: {
+          amount_cents: number;
+          created_at: string;
+          creator_profile_id: string;
+          currency: string;
+          id: string;
+          message: string | null;
+          sender_user_id: string | null;
+          status: string;
+          transaction_id: string;
+        };
+        Insert: {
+          amount_cents: number;
+          created_at?: string;
+          creator_profile_id: string;
+          currency?: string;
+          id?: string;
+          message?: string | null;
+          sender_user_id?: string | null;
+          status?: string;
+          transaction_id: string;
+        };
+        Update: {
+          amount_cents?: number;
+          created_at?: string;
+          creator_profile_id?: string;
+          currency?: string;
+          id?: string;
+          message?: string | null;
+          sender_user_id?: string | null;
+          status?: string;
+          transaction_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tips_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tips_sender_user_id_fkey";
+            columns: ["sender_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tips_transaction_id_fkey";
+            columns: ["transaction_id"];
+            isOneToOne: false;
+            referencedRelation: "transactions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      transactions: {
+        Row: {
+          created_at: string;
+          creator_profile_id: string | null;
+          creator_net_cents: number;
+          currency: string;
+          gross_cents: number;
+          id: string;
+          mock_provider_reference: string | null;
+          payer_user_id: string | null;
+          platform_fee_cents: number;
+          processor_fee_cents: number;
+          reference_id: string | null;
+          reference_type: string | null;
+          status: Database["public"]["Enums"]["transaction_status"];
+          type: Database["public"]["Enums"]["transaction_type"];
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          creator_profile_id?: string | null;
+          creator_net_cents: number;
+          currency?: string;
+          gross_cents: number;
+          id?: string;
+          mock_provider_reference?: string | null;
+          payer_user_id?: string | null;
+          platform_fee_cents?: number;
+          processor_fee_cents?: number;
+          reference_id?: string | null;
+          reference_type?: string | null;
+          status?: Database["public"]["Enums"]["transaction_status"];
+          type: Database["public"]["Enums"]["transaction_type"];
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          creator_profile_id?: string | null;
+          creator_net_cents?: number;
+          currency?: string;
+          gross_cents?: number;
+          id?: string;
+          mock_provider_reference?: string | null;
+          payer_user_id?: string | null;
+          platform_fee_cents?: number;
+          processor_fee_cents?: number;
+          reference_id?: string | null;
+          reference_type?: string | null;
+          status?: Database["public"]["Enums"]["transaction_status"];
+          type?: Database["public"]["Enums"]["transaction_type"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "transactions_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "transactions_payer_user_id_fkey";
+            columns: ["payer_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       analytics_events: {
         Row: {
           created_at: string;
@@ -694,7 +1092,9 @@ export type Database = {
           caption: string;
           created_at: string;
           creator_profile_id: string;
+          currency: string;
           id: string;
+          price_cents: number | null;
           published_at: string | null;
           scheduled_at: string | null;
           status: Database["public"]["Enums"]["post_status"];
@@ -705,7 +1105,9 @@ export type Database = {
           caption?: string;
           created_at?: string;
           creator_profile_id: string;
+          currency?: string;
           id?: string;
+          price_cents?: number | null;
           published_at?: string | null;
           scheduled_at?: string | null;
           status?: Database["public"]["Enums"]["post_status"];
@@ -716,7 +1118,9 @@ export type Database = {
           caption?: string;
           created_at?: string;
           creator_profile_id?: string;
+          currency?: string;
           id?: string;
+          price_cents?: number | null;
           published_at?: string | null;
           scheduled_at?: string | null;
           status?: Database["public"]["Enums"]["post_status"];
@@ -982,6 +1386,26 @@ export type Database = {
         Args: { _other_user_id: string };
         Returns: string;
       };
+      create_mock_purchase: {
+        Args: { _post_id: string };
+        Returns: undefined;
+      };
+      create_mock_tip: {
+        Args: { _amount_cents: number; _message?: string; _username: string };
+        Returns: undefined;
+      };
+      creator_balance: {
+        Args: never;
+        Returns: {
+          available_cents: number;
+          currency: string;
+          lifetime_fees_cents: number;
+          lifetime_gross_cents: number;
+          lifetime_net_cents: number;
+          lifetime_paid_out_cents: number;
+          pending_cents: number;
+        }[];
+      };
       creator_subscribers_list: {
         Args: { _cursor?: string; _limit?: number };
         Returns: {
@@ -1033,6 +1457,10 @@ export type Database = {
           username: string;
           visibility: Database["public"]["Enums"]["post_visibility"];
         }[];
+      };
+      has_content_entitlement: {
+        Args: { _post_id: string; _user_id: string };
+        Returns: boolean;
       };
       has_role: {
         Args: {
@@ -1124,6 +1552,10 @@ export type Database = {
           saved_by_me: boolean;
         }[];
       };
+      recalc_creator_balance: {
+        Args: { _creator_profile_id: string; _currency?: string };
+        Returns: undefined;
+      };
       relationship_follow_creator: {
         Args: { _username: string };
         Returns: undefined;
@@ -1143,6 +1575,10 @@ export type Database = {
         Args: { _username: string };
         Returns: undefined;
       };
+      request_payout: {
+        Args: { _amount_cents: number; _note?: string };
+        Returns: undefined;
+      };
       start_conversation_with_username: {
         Args: { _username: string };
         Returns: string;
@@ -1159,9 +1595,20 @@ export type Database = {
       comment_status: "visible" | "hidden" | "deleted";
       creator_subscription_status: "trialing" | "active" | "past_due" | "canceled" | "expired";
       message_type: "text" | "system" | "image" | "video" | "paid" | "tip";
+      payout_request_status: "requested" | "approved" | "rejected" | "paid";
+      payout_status: "queued" | "processing" | "paid" | "failed" | "canceled";
       post_media_kind: "image" | "video" | "audio";
       post_status: "draft" | "scheduled" | "published" | "archived";
       post_visibility: "public" | "followers" | "subscribers" | "purchase";
+      transaction_status: "pending" | "succeeded" | "failed" | "refunded" | "disputed";
+      transaction_type:
+        | "creator_subscription"
+        | "product"
+        | "post_unlock"
+        | "paid_message"
+        | "tip"
+        | "refund"
+        | "adjustment";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -1295,9 +1742,21 @@ export const Constants = {
       comment_status: ["visible", "hidden", "deleted"],
       creator_subscription_status: ["trialing", "active", "past_due", "canceled", "expired"],
       message_type: ["text", "system", "image", "video", "paid", "tip"],
+      payout_request_status: ["requested", "approved", "rejected", "paid"],
+      payout_status: ["queued", "processing", "paid", "failed", "canceled"],
       post_media_kind: ["image", "video", "audio"],
       post_status: ["draft", "scheduled", "published", "archived"],
       post_visibility: ["public", "followers", "subscribers", "purchase"],
+      transaction_status: ["pending", "succeeded", "failed", "refunded", "disputed"],
+      transaction_type: [
+        "creator_subscription",
+        "product",
+        "post_unlock",
+        "paid_message",
+        "tip",
+        "refund",
+        "adjustment",
+      ],
     },
   },
 } as const;

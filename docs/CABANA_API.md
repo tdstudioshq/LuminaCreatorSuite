@@ -174,6 +174,29 @@ Hooks in `use-messaging.ts`: `useConversations`, `useConversation`, `useMessages
 `useUnreadMessages` subscribe to `postgres_changes` on `messages` + `message_read_receipts` (RLS-filtered)
 for live delivery, receipts, and inbox ordering; supabase-js auto-reconnects.
 
+## 2h. Implemented Monetization Actions (T2 — Phase 6, DEMO-ONLY)
+
+`src/lib/money-actions.ts`. All run under the caller's RLS (`requireSupabaseAuth`); writes go through
+SECURITY DEFINER RPCs that record integer-cent amounts with a `mock_*` reference. **No payment processor,
+cards, webhooks, or real money.** Reads are creator-scoped except `getEntitlements` (caller-scoped).
+
+| Action                                       | Contract                                                                                  |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `createMockPurchase({postId})`               | [auth] unlock a `purchase` post; idempotent; records transaction + purchase + entitlement |
+| `createMockTip({username,amountCents,note?})`| [auth] tip a creator (min $1); rejects self → `{ok}`                                       |
+| `requestPayout({amountCents,note?})`         | [creator] request a mock payout (min $10, ≤ available) → refreshed balance                 |
+| `getCreatorBalance()`                        | [creator] → balance projection (pending/available/lifetime/withdrawn), recomputed on read |
+| `getTransactions()`                          | [creator] → up to 100 ledger transactions received, newest first                          |
+| `getPayoutHistory()`                         | [creator] → mock payout history                                                            |
+| `getTips()`                                  | [creator] → tips received                                                                  |
+| `getPurchases()`                             | [creator] → sales (unlocks of own content)                                                |
+| `getEntitlements()`                          | [auth] → the caller's own permanent content entitlements                                   |
+
+Fee model = 10% platform + 3% processor (rounded; creator net is the remainder), mirroring `cabana-money`.
+Hooks in `use-money.ts`: `useBalance`, `useTransactions`, `usePayouts`, `usePurchases`, `useTips`,
+`useEntitlements`, `useRequestPayout`, `useSendTip`, `usePurchaseUnlock`. Pure validation helpers
+(`evaluatePayoutEligibility`, `evaluatePurchase`, `entitlementFromPurchase`) live in `cabana-money.ts`.
+
 ## 3. Planned Server Actions (T2)
 
 Grouped by domain. Each entry: **name** — input → output [auth]. "Owner" = authenticated owner of the resource; "Server" = service-role inside a guarded action.

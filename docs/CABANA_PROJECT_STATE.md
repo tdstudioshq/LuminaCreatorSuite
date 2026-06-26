@@ -1,7 +1,7 @@
 # CABANA — Project State (Engineering Checkpoint)
 
 > Canonical high-level engineering snapshot.
-> Branch at capture: `feat/phase-5-messaging` (through Phase 5).
+> Branch at capture: `feat/phase-6-monetization-ledger` (through Phase 6 — monetization ledger, demo-only).
 > Demo clock / "today" in code: **June 25, 2026**.
 > Audience: a brand-new engineer who needs to understand CABANA end-to-end in under 15 minutes.
 >
@@ -738,13 +738,21 @@ participant-scoped RLS, the messaging RPCs, and Supabase Realtime. See the compl
 **Deferred:** `notifications` (+ outbox for email/push), private attachments (image/video) + signed URLs,
 paid messages/tips, and rate-limiting/reporting.
 
-## Phase 6 — Monetization ledger & trust/operations (gated)
+## Phase 6 — Monetization ledger ✅ DONE (foundation, demo-only)
 
-- Tables: `transactions`, `tips`, `creator_balances`, `payouts` (Group E) and `reports`, `audit_logs`
-  (Group F).
-- Mock transactions behave like **immutable** financial records (integer minor units, `mock_` provider
-  refs, succeeded amounts never edited in place); creator balance is derived, payouts never leave CABANA.
-- URL-backed admin routes, read-only report/audit tables, then report triage and moderation actions.
+Delivered: migration `20260518000000_monetization_ledger.sql` — `transactions` (append-only/immutable,
+`net = gross − fees` CHECK), `creator_balances` (cached projection via `recalc_creator_balance`),
+`payout_requests`, `payouts`, `tips`, `purchases`, `content_entitlements`; `posts.price_cents`/`currency`
+activating the `purchase` tier. SECURITY DEFINER RPCs `create_mock_purchase` / `create_mock_tip` /
+`request_payout` / `creator_balance` (+ `has_content_entitlement`, `is_current_user_admin`); `purchase`
+wired into `can_view_post` / feed / `post_card`. `cabana-money.ts` (payout eligibility, purchase
+validation, entitlement generation), `money-actions.ts`, `use-money.ts`, and the `/dashboard/earnings`
+dashboard (`components/cabana/earnings/`). Fee model 10% + 3%, integer cents, `mock_*` refs. Creators read
+own financial rows; buyers read own purchases/entitlements; admins read all; anon revoked; writes via RPCs.
+Behavioral suite `monetization_ledger.sql`. **No payment processor, cards, webhooks, KYC, or real payouts.**
+
+**Deferred (still gated):** `reports` / `audit_logs` (Group F), URL-backed admin moderation/finance
+subroutes, refunds/disputes UI, admin payout approval, paid messages, notifications.
 
 ## Production launch (gated, post-demo)
 

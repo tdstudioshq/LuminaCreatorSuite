@@ -187,6 +187,42 @@ RLS and Supabase Realtime. No paid messages, attachments, or notifications.
 isolation, unread calculations, read receipts, edit/delete rules, block enforcement (no new conversation,
 no new message), self-conversation rejection, and anon denial. Runs in `db:validate` and CI.
 
+### Monetization ledger migration (Phase 6, DEMO-ONLY)
+
+`supabase/migrations/20260518000000_monetization_ledger.sql` adds the internal financial ledger a future
+real processor (Stripe) would settle into. **No payment processor, cards, webhooks, KYC, or real payouts.**
+Every financial event is created by a SECURITY DEFINER RPC with integer-cent amounts and a `mock_*`
+reference.
+
+- **Enums** — `transaction_type` (`creator_subscription|product|post_unlock|paid_message|tip|refund|adjustment`),
+  `transaction_status` (`pending|succeeded|failed|refunded|disputed`), `payout_status`
+  (`queued|processing|paid|failed|canceled`), `payout_request_status` (`requested|approved|rejected|paid`).
+- **`transactions`** — every financial event; **append-only / immutable**. A BEFORE UPDATE/DELETE trigger
+  (`prevent_ledger_mutation`) blocks any change to monetary/identity fields and all deletes, permitting only
+  FK columns being nulled by `ON DELETE SET NULL` (so accounts can be deleted while the ledger row is
+  retained). A CHECK enforces `creator_net_cents = gross_cents − platform_fee_cents − processor_fee_cents`;
+  all cent columns are non-negative (the `refund` *type* carries reversal semantics, not a negative amount).
+- **`creator_balances`** — cached projection (pending / available / lifetime gross·fees·net / paid-out),
+  unique per `(creator_profile_id, currency)`. Never the source of truth: `recalc_creator_balance`
+  recomputes it from the immutable ledger (mirrors the pure `deriveCreatorBalance`).
+- **`payout_requests`** (lifecycle: requested→approved/rejected→paid) and **`payouts`** (disbursement
+  history; `queued`/`processing` reserve available balance, `paid` counts as withdrawn).
+- **`tips`**, **`purchases`** (each backed by one ledger `transaction`), and **`content_entitlements`**
+  (permanent access, unique per `user_id, post_id`, `source` = purchase/subscription/grant).
+- **`posts`** gains nullable `price_cents` + `currency`, activating the `purchase` visibility tier.
+- **RPCs** — `create_mock_purchase` (idempotent: transaction + purchase + entitlement, then recalc),
+  `create_mock_tip`, `request_payout` (eligibility-checked: min $10, ≤ available; records a request + a
+  reserved `processing` payout), `creator_balance` (recompute-on-read), helpers `has_content_entitlement`
+  and `is_current_user_admin` (wraps the authenticated-revoked `has_role` so admin SELECT policies work).
+  `purchase` is wired into `can_view_post`, `feed_creator_posts`, `post_card`, and a buyer `posts` policy.
+- **RLS** — creators read their own balance/transactions/payouts/tips/sales; buyers read their own
+  purchases/entitlements; admins read all; **anon has no access to any financial table**; all writes go
+  through the RPCs (no INSERT/UPDATE/DELETE grants).
+
+**Validation:** `supabase/tests/monetization_ledger.sql` covers purchase unlock (+ idempotency), tips,
+balance derivation, payout request/reservation + eligibility guards, ledger immutability, self-action
+rejection, buyer/creator/stranger RLS isolation, and anon denial. Runs in `db:validate` and CI.
+
 ## 2. Target Production Schema
 
 New tables grouped by dependency. Group letters match the build roadmap (`CABANA_BUILD_ROADMAP.md` §5).

@@ -15,7 +15,9 @@ declare
     'posts','post_media',
     'post_comments','post_likes','post_saves',
     'creator_subscription_tiers','creator_subscriptions',
-    'conversations','conversation_participants','messages','message_read_receipts'
+    'conversations','conversation_participants','messages','message_read_receipts',
+    'transactions','creator_balances','payouts','payout_requests',
+    'tips','purchases','content_entitlements'
   ];
   t text;
 begin
@@ -54,6 +56,19 @@ begin
   -- Phase 5 enum
   if not exists (select 1 from pg_type where typname = 'message_type') then
     raise exception 'MISSING ENUM: message_type';
+  end if;
+  -- Phase 6 enums
+  if not exists (select 1 from pg_type where typname = 'transaction_type') then
+    raise exception 'MISSING ENUM: transaction_type';
+  end if;
+  if not exists (select 1 from pg_type where typname = 'transaction_status') then
+    raise exception 'MISSING ENUM: transaction_status';
+  end if;
+  if not exists (select 1 from pg_type where typname = 'payout_status') then
+    raise exception 'MISSING ENUM: payout_status';
+  end if;
+  if not exists (select 1 from pg_type where typname = 'payout_request_status') then
+    raise exception 'MISSING ENUM: payout_request_status';
   end if;
 
   -- Phase 2B: profiles.account_type column (NOT NULL, default creator)
@@ -143,6 +158,33 @@ begin
   if to_regprocedure('public.unread_message_count()') is null then
     raise exception 'MISSING FUNCTION: unread_message_count';
   end if;
+  -- Phase 6 ledger RPCs + helpers
+  if to_regprocedure('public.create_mock_purchase(uuid)') is null then
+    raise exception 'MISSING FUNCTION: create_mock_purchase';
+  end if;
+  if to_regprocedure('public.create_mock_tip(text, integer, text)') is null then
+    raise exception 'MISSING FUNCTION: create_mock_tip';
+  end if;
+  if to_regprocedure('public.request_payout(integer, text)') is null then
+    raise exception 'MISSING FUNCTION: request_payout';
+  end if;
+  if to_regprocedure('public.creator_balance()') is null then
+    raise exception 'MISSING FUNCTION: creator_balance';
+  end if;
+  if to_regprocedure('public.has_content_entitlement(uuid, uuid)') is null then
+    raise exception 'MISSING FUNCTION: has_content_entitlement';
+  end if;
+  if to_regprocedure('public.recalc_creator_balance(uuid, text)') is null then
+    raise exception 'MISSING FUNCTION: recalc_creator_balance';
+  end if;
+
+  -- Phase 6: posts gains a nullable purchase price.
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'posts' and column_name = 'price_cents'
+  ) then
+    raise exception 'MISSING COLUMN: public.posts.price_cents';
+  end if;
 
   -- Signup trigger on auth.users
   if not exists (
@@ -191,6 +233,28 @@ begin
   if not (select relrowsecurity from pg_class where oid = 'public.messages'::regclass) then
     raise exception 'RLS NOT ENABLED: messages';
   end if;
+  -- Phase 6 financial tables must have RLS enabled
+  if not (select relrowsecurity from pg_class where oid = 'public.transactions'::regclass) then
+    raise exception 'RLS NOT ENABLED: transactions';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.creator_balances'::regclass) then
+    raise exception 'RLS NOT ENABLED: creator_balances';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.purchases'::regclass) then
+    raise exception 'RLS NOT ENABLED: purchases';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.content_entitlements'::regclass) then
+    raise exception 'RLS NOT ENABLED: content_entitlements';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.payouts'::regclass) then
+    raise exception 'RLS NOT ENABLED: payouts';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.payout_requests'::regclass) then
+    raise exception 'RLS NOT ENABLED: payout_requests';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.tips'::regclass) then
+    raise exception 'RLS NOT ENABLED: tips';
+  end if;
   -- messages must NOT be readable by anon (no grant)
   if exists (
     select 1 from information_schema.role_table_grants
@@ -206,6 +270,16 @@ begin
       and grantee = 'anon' and privilege_type = 'SELECT'
   ) then
     raise exception 'SECURITY: anon has SELECT on creator_subscriptions';
+  end if;
+  -- Phase 6 financial tables must NOT be readable by anon (no grant)
+  if exists (
+    select 1 from information_schema.role_table_grants
+    where table_schema = 'public'
+      and table_name in ('transactions','creator_balances','payouts',
+                         'payout_requests','tips','purchases','content_entitlements')
+      and grantee = 'anon'
+  ) then
+    raise exception 'SECURITY: anon has privileges on a Phase 6 financial table';
   end if;
 
   -- member_profiles must NOT be publicly readable (no USING(true) select policy)

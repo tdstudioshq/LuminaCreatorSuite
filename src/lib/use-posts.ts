@@ -85,8 +85,12 @@ function useFeedInvalidation() {
 export function useCreatePost() {
   const invalidate = useFeedInvalidation();
   return useMutation({
-    mutationFn: (input: { caption: string; visibility: PostVisibility }) =>
-      createPost({ data: input }),
+    mutationFn: (input: {
+      caption: string;
+      visibility: PostVisibility;
+      priceCents?: number | null;
+      currency?: string;
+    }) => createPost({ data: input }),
     onSuccess: invalidate,
   });
 }
@@ -94,8 +98,13 @@ export function useCreatePost() {
 export function useUpdatePost() {
   const invalidate = useFeedInvalidation();
   return useMutation({
-    mutationFn: (input: { postId: string; caption?: string; visibility?: PostVisibility }) =>
-      updatePost({ data: input }),
+    mutationFn: (input: {
+      postId: string;
+      caption?: string;
+      visibility?: PostVisibility;
+      priceCents?: number | null;
+      currency?: string;
+    }) => updatePost({ data: input }),
     onSuccess: invalidate,
   });
 }

@@ -1,11 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { Crown, Lock, Sparkles } from "lucide-react";
+import { Crown, Lock, Sparkles, Unlock } from "lucide-react";
 import type { PostVisibility } from "@/lib/cabana-posts";
 
 /**
- * Tease shown in place of a followers/subscribers-only post the viewer can't
- * see. Followers posts offer a Follow CTA; subscribers posts link to the
- * creator page to subscribe.
+ * Tease shown in place of a restricted post the viewer can't see.
+ *   - followers: a Follow CTA (via onUnlock)
+ *   - subscribers: links to the creator page to subscribe
+ *   - purchase: a one-time (mock) unlock CTA (via onUnlock)
  */
 export function LockedContentGate({
   visibility,
@@ -19,25 +20,38 @@ export function LockedContentGate({
   pending?: boolean;
 }) {
   const subscribers = visibility === "subscribers";
+  const purchase = visibility === "purchase";
+
+  const icon = subscribers ? (
+    <Crown className="h-4 w-4 text-iridescent" />
+  ) : purchase ? (
+    <Unlock className="h-4 w-4 text-emerald-300/90" />
+  ) : (
+    <Lock className="h-4 w-4 text-sky-300/90" />
+  );
+
+  const title = subscribers
+    ? "Subscribers-only post"
+    : purchase
+      ? "Paid post"
+      : "Followers-only post";
+
+  const description = subscribers
+    ? "Subscribe to this creator to see this content."
+    : purchase
+      ? "Unlock this post with a one-time purchase."
+      : "Follow this creator to see this content.";
+
   return (
     <div className="glass-strong flex flex-col items-center gap-3 rounded-2xl px-6 py-8 text-center">
       <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5">
-        {subscribers ? (
-          <Crown className="h-4 w-4 text-iridescent" />
-        ) : (
-          <Lock className="h-4 w-4 text-sky-300/90" />
-        )}
+        {icon}
       </span>
       <div>
-        <p className="text-sm font-medium">
-          {subscribers ? "Subscribers-only post" : "Followers-only post"}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {subscribers
-            ? "Subscribe to this creator to see this content."
-            : "Follow this creator to see this content."}
-        </p>
+        <p className="text-sm font-medium">{title}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
       </div>
+
       {subscribers ? (
         <Link to="/$username" params={{ username }} className="btn-luxury !px-5 !py-2.5 text-xs">
           Subscribe to unlock <Crown className="h-3.5 w-3.5" />
@@ -49,10 +63,16 @@ export function LockedContentGate({
             disabled={pending}
             className="btn-luxury !px-5 !py-2.5 text-xs disabled:opacity-60"
           >
-            {pending ? "Updating…" : "Follow to unlock"}
+            {pending ? "Updating…" : purchase ? "Unlock this post" : "Follow to unlock"}
             {!pending && <Sparkles className="h-3.5 w-3.5" />}
           </button>
         )
+      )}
+
+      {purchase && (
+        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
+          Demo Mode — No real payment is processed.
+        </p>
       )}
     </div>
   );

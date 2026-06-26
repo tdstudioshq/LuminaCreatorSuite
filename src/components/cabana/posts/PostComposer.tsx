@@ -1,19 +1,22 @@
 import { useRef, useState } from "react";
-import { Crown, Globe, ImagePlus, Loader2, Users, X } from "lucide-react";
+import { Crown, Globe, ImagePlus, Loader2, Lock, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import type { PostVisibility } from "@/lib/cabana-posts";
 import { CAPTION_MAX, IMAGE_MIME_ALLOWLIST, MEDIA_PER_POST_MAX } from "@/lib/cabana-posts";
+import { dollarsToCents } from "@/lib/cabana-money";
 import { useCreatePost, usePublishPost, useUploadPostMedia } from "@/lib/use-posts";
 
 const VISIBILITY_OPTIONS: { value: PostVisibility; label: string; icon: typeof Globe }[] = [
   { value: "public", label: "Public", icon: Globe },
   { value: "followers", label: "Followers", icon: Users },
   { value: "subscribers", label: "Subscribers", icon: Crown },
+  { value: "purchase", label: "Paid unlock", icon: Lock },
 ];
 
 export function PostComposer() {
   const [caption, setCaption] = useState("");
   const [visibility, setVisibility] = useState<PostVisibility>("public");
+  const [price, setPrice] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -22,7 +25,12 @@ export function PostComposer() {
   const publishPost = usePublishPost();
   const busy = createPost.isPending || uploadMedia.isPending || publishPost.isPending;
 
-  const canSubmit = (caption.trim().length > 0 || files.length > 0) && !busy;
+  const isPurchase = visibility === "purchase";
+  const parsedPrice = Number.parseFloat(price);
+  const priceCents =
+    isPurchase && Number.isFinite(parsedPrice) ? dollarsToCents(parsedPrice) : null;
+  const priceValid = !isPurchase || (priceCents !== null && priceCents > 0);
+  const canSubmit = (caption.trim().length > 0 || files.length > 0) && priceValid && !busy;
 
   function addFiles(list: FileList | null) {
     if (!list) return;
@@ -36,12 +44,17 @@ export function PostComposer() {
   function reset() {
     setCaption("");
     setVisibility("public");
+    setPrice("");
     setFiles([]);
   }
 
   async function submit(publish: boolean) {
     try {
-      const post = await createPost.mutateAsync({ caption: caption.trim(), visibility });
+      const post = await createPost.mutateAsync({
+        caption: caption.trim(),
+        visibility,
+        priceCents: isPurchase ? priceCents : null,
+      });
       for (let i = 0; i < files.length; i++) {
         await uploadMedia.mutateAsync({ postId: post.id, file: files[i], position: i });
       }
@@ -119,6 +132,31 @@ export function PostComposer() {
           })}
         </div>
       </div>
+
+      {isPurchase && (
+        <div className="flex flex-col gap-1.5">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>Unlock price (USD)</span>
+            <span className="inline-flex items-center rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em]">
+              Demo
+            </span>
+          </label>
+          <input
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            placeholder="9.99"
+            className="w-40 rounded-xl bg-white/5 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/60 focus:ring-1 focus:ring-white/20"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Buyers pay a one-time price to unlock this post. Demo Mode — no real payment is
+            processed.
+          </p>
+        </div>
+      )}
 
       <div className="flex items-center justify-end gap-2">
         <button

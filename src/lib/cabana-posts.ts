@@ -7,10 +7,9 @@
 // server actions (`post-actions.ts`) stay thin by delegating all shaping and
 // rule enforcement here; hooks live in `use-posts.ts`.
 //
-// Phase 3 scope: visibility is limited to `public` and `followers`. The
-// `subscribers` / `purchase` enum values exist for forward-compatibility but
-// are rejected by the write layer — there is no fan-subscription/monetization
-// backend yet (Phase 4). Media is image-only this phase.
+// Visibility: `public`, `followers`, `subscribers` (Phase 4), and `purchase`
+// (Phase 6 — a one-time paid unlock priced in integer cents, gated by the
+// monetization ledger / `content_entitlements`). Media is image-only.
 // ============================================================================
 import type { Database } from "@/integrations/supabase/types";
 
@@ -25,12 +24,15 @@ type PostMediaRow = Database["public"]["Tables"]["post_media"]["Row"];
 
 export const CAPTION_MAX = 2000;
 export const MEDIA_PER_POST_MAX = 10;
+/** Max demo unlock price for a `purchase` post, in integer cents ($1,000,000). */
+export const POST_PRICE_CENTS_MAX = 100_000_000;
 
-/** Visibility values a creator may publish under (Phase 4 adds `subscribers`). */
+/** Visibility values a creator may publish under (Phase 6 adds `purchase`). */
 export const WRITABLE_VISIBILITIES: readonly PostVisibility[] = [
   "public",
   "followers",
   "subscribers",
+  "purchase",
 ] as const;
 
 /** Media kinds accepted by the composer in Phase 3 (image-only). */
@@ -52,6 +54,9 @@ export type Post = {
   creatorProfileId: string;
   caption: string;
   visibility: PostVisibility;
+  /** Unlock price in integer cents for a `purchase` post; null otherwise. */
+  priceCents: number | null;
+  currency: string;
   status: PostStatus;
   publishedAt: string | null;
   scheduledAt: string | null;
@@ -99,6 +104,9 @@ export type FeedPost = {
 export type NewPostInput = {
   caption: string;
   visibility: PostVisibility;
+  /** Required (> 0) for `purchase` posts; null for every other visibility. */
+  priceCents: number | null;
+  currency: string;
 };
 
 export type NewPostMediaInput = {
@@ -124,23 +132,53 @@ export function normalizeCaption(raw: unknown): string {
 }
 
 /**
- * Resolve a writable post visibility. `public`, `followers`, and `subscribers`
- * are supported; `purchase` (paid per-post unlock) needs the Phase 6 ledger and
- * raises a clear "not available yet" error so the UI can guide the creator.
+ * Resolve a writable post visibility. All four tiers are supported as of Phase 6:
+ * `public`, `followers`, `subscribers`, and `purchase` (a one-time paid unlock).
  */
 export function normalizePostVisibility(raw: unknown): PostVisibility {
-  if (raw === "public" || raw === "followers" || raw === "subscribers") return raw;
-  if (raw === "purchase") {
-    throw new Error("Paid-unlock posts are not available yet.");
+  if (raw === "public" || raw === "followers" || raw === "subscribers" || raw === "purchase") {
+    return raw;
   }
-  throw new Error("Visibility must be 'public', 'followers', or 'subscribers'.");
+  throw new Error("Visibility must be 'public', 'followers', 'subscribers', or 'purchase'.");
 }
 
-/** Validate the caption + visibility for a new or edited post. */
-export function normalizeNewPost(input: { caption?: unknown; visibility?: unknown }): NewPostInput {
+/** Validate a 3-letter currency code, defaulting to USD. */
+export function normalizePostCurrency(raw: unknown): string {
+  if (raw == null || raw === "") return "USD";
+  if (typeof raw !== "string" || !/^[A-Za-z]{3}$/.test(raw)) {
+    throw new Error("Currency must be a 3-letter code.");
+  }
+  return raw.toUpperCase();
+}
+
+/** Validate a demo unlock price in integer cents (whole cents, 1..MAX). */
+export function normalizePostPriceCents(raw: unknown): number {
+  if (typeof raw !== "number" || !Number.isInteger(raw)) {
+    throw new Error("Price must be a whole number of cents.");
+  }
+  if (raw <= 0) throw new Error("A purchase post needs a price above zero.");
+  if (raw > POST_PRICE_CENTS_MAX) throw new Error("Price is too large.");
+  return raw;
+}
+
+/**
+ * Validate caption + visibility (+ price for purchase posts). A `purchase` post
+ * requires a positive integer-cent price; every other visibility forces a null
+ * price so a leftover value can never make a free post look paid.
+ */
+export function normalizeNewPost(input: {
+  caption?: unknown;
+  visibility?: unknown;
+  priceCents?: unknown;
+  currency?: unknown;
+}): NewPostInput {
+  const visibility = normalizePostVisibility(input.visibility);
+  const isPurchase = visibility === "purchase";
   return {
     caption: normalizeCaption(input.caption),
-    visibility: normalizePostVisibility(input.visibility),
+    visibility,
+    priceCents: isPurchase ? normalizePostPriceCents(input.priceCents) : null,
+    currency: normalizePostCurrency(input.currency),
   };
 }
 
@@ -236,6 +274,8 @@ export function mapPost(row: PostRow): Post {
     creatorProfileId: row.creator_profile_id,
     caption: row.caption,
     visibility: row.visibility,
+    priceCents: row.price_cents,
+    currency: row.currency,
     status: row.status,
     publishedAt: row.published_at,
     scheduledAt: row.scheduled_at,

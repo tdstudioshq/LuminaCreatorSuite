@@ -32,7 +32,9 @@ import {
   mapPostMedia,
   normalizeCaption,
   normalizeNewPost,
+  normalizePostCurrency,
   normalizePostMediaInput,
+  normalizePostPriceCents,
   normalizePostVisibility,
   resolvePublishPatch,
 } from "@/lib/cabana-posts";
@@ -74,7 +76,10 @@ function normalizeCursor(raw: unknown): string | null {
 
 export const createPost = createServerFn({ method: "POST" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
-  .inputValidator((raw: { caption?: unknown; visibility?: unknown }) => normalizeNewPost(raw ?? {}))
+  .inputValidator(
+    (raw: { caption?: unknown; visibility?: unknown; priceCents?: unknown; currency?: unknown }) =>
+      normalizeNewPost(raw ?? {}),
+  )
   .handler(async ({ context, data }): Promise<Post> => {
     const { supabase, userId } = context;
     const creatorProfileId = await requireCreatorProfileId(supabase, userId);
@@ -84,6 +89,8 @@ export const createPost = createServerFn({ method: "POST" })
         creator_profile_id: creatorProfileId,
         caption: data.caption,
         visibility: data.visibility,
+        price_cents: data.priceCents,
+        currency: data.currency,
         status: "draft",
       })
       .select("*")
@@ -94,16 +101,45 @@ export const createPost = createServerFn({ method: "POST" })
 
 export const updatePost = createServerFn({ method: "POST" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
-  .inputValidator((raw: { postId?: unknown; caption?: unknown; visibility?: unknown }) => ({
-    postId: normalizeUuid(raw?.postId, "post id"),
-    caption: raw?.caption === undefined ? undefined : normalizeCaption(raw.caption),
-    visibility: raw?.visibility === undefined ? undefined : normalizePostVisibility(raw.visibility),
-  }))
+  .inputValidator(
+    (raw: {
+      postId?: unknown;
+      caption?: unknown;
+      visibility?: unknown;
+      priceCents?: unknown;
+      currency?: unknown;
+    }) => ({
+      postId: normalizeUuid(raw?.postId, "post id"),
+      caption: raw?.caption === undefined ? undefined : normalizeCaption(raw.caption),
+      visibility:
+        raw?.visibility === undefined ? undefined : normalizePostVisibility(raw.visibility),
+      priceCents:
+        raw?.priceCents === undefined
+          ? undefined
+          : raw.priceCents === null
+            ? null
+            : normalizePostPriceCents(raw.priceCents),
+      currency: raw?.currency === undefined ? undefined : normalizePostCurrency(raw.currency),
+    }),
+  )
   .handler(async ({ context, data }): Promise<Post> => {
     const { supabase } = context;
     const patch: Database["public"]["Tables"]["posts"]["Update"] = {};
     if (data.caption !== undefined) patch.caption = data.caption;
-    if (data.visibility !== undefined) patch.visibility = data.visibility;
+    if (data.visibility !== undefined) {
+      patch.visibility = data.visibility;
+      // Switching away from `purchase` clears any stale unlock price.
+      if (data.visibility !== "purchase") patch.price_cents = null;
+    }
+    if (data.currency !== undefined) patch.currency = data.currency;
+    if (data.priceCents !== undefined) patch.price_cents = data.priceCents;
+    // A purchase post must carry a positive price.
+    if (
+      data.visibility === "purchase" &&
+      (data.priceCents === undefined || data.priceCents === null)
+    ) {
+      throw new Error("A purchase post needs a price.");
+    }
     if (Object.keys(patch).length === 0) throw new Error("Nothing to update.");
     const { data: row, error } = await supabase
       .from("posts")

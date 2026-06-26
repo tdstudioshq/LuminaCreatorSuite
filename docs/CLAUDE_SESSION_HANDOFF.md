@@ -16,7 +16,57 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
-## Latest Status — Phase 5 COMPLETE (Messaging Foundation)
+## Latest Status — Phase 6 COMPLETE (Monetization Ledger Foundation)
+
+Built on Phase 5. Local Docker only; remote/push/deploy untouched. **DEMO ONLY — no payment
+processor, Stripe, cards, webhooks, KYC, or real payouts.** Every financial event is written by a
+SECURITY DEFINER RPC with integer-cent amounts and a `mock_*` reference.
+
+**Scope delivered:** the internal financial ledger a future Stripe would settle into. NOT in scope:
+real payments, paid messages (the architecture is prepared but messaging stays free), refunds UI,
+admin payout approval UI.
+
+- **Migration** `20260518000000_monetization_ledger.sql`: enums `transaction_type`,
+  `transaction_status`, `payout_status`, `payout_request_status`. Tables `transactions` (append-only —
+  a BEFORE UPDATE/DELETE trigger blocks money rewrites but permits FK-null cascades; CHECK that
+  `creator_net = gross − platform_fee − processor_fee`), `creator_balances` (cached projection),
+  `payout_requests`, `payouts`, `tips`, `purchases`, `content_entitlements` (permanent, unique per
+  user×post). Adds `posts.price_cents` / `posts.currency` and activates the `purchase` visibility tier.
+- **RPCs:** `recalc_creator_balance` (mirrors the pure `deriveCreatorBalance`), `has_content_entitlement`,
+  `is_current_user_admin` (wraps the authenticated-revoked `has_role` so admin read policies work),
+  `create_mock_purchase` (idempotent unlock → transaction + purchase + entitlement), `create_mock_tip`,
+  `request_payout` (eligibility-checked; records request + reserved `processing` payout), `creator_balance`
+  (recompute-on-read). Fee model = 10% platform + 3% processor, matching `cabana-money`. `purchase`
+  wired into `can_view_post`, `feed_creator_posts`, `post_card`, and a buyer `posts` SELECT policy.
+- **RLS:** creators read their own balance/transactions/payouts/tips/sales; buyers read their own
+  purchases/entitlements; admins read all (via `is_current_user_admin`); anon fully revoked; all writes
+  go through the RPCs only.
+- **Pure module** `cabana-money.ts` (+ tests, 100% lines): added `evaluatePayoutEligibility`,
+  `evaluatePurchase`, `entitlementFromPurchase`, `MIN_PAYOUT_CENTS` alongside the existing
+  fee/balance/format helpers. `cabana-posts.ts` now allows `purchase` visibility + a validated price.
+- **Server actions** `money-actions.ts`: createMockPurchase, createMockTip, requestPayout,
+  getCreatorBalance, getTransactions, getPayoutHistory, getTips, getPurchases (sales), getEntitlements.
+  **Hooks** `use-money.ts`: useBalance, useTransactions, usePayouts, usePurchases, useTips,
+  useEntitlements, useRequestPayout, useSendTip, usePurchaseUnlock.
+- **UI**: `components/cabana/earnings/` — EarningsDashboard (real `/dashboard/earnings`, replaced
+  DemoEarnings) with BalanceCard, TransactionHistory, TipHistory, PurchaseHistory, PayoutHistory, and a
+  PayoutRequestDialog. Every flow shows "Demo Mode — No real payment is processed." Purchase unlock CTA
+  added to `LockedContentGate` (wired in `PostDetail`); paid-post authoring added to `PostComposer`.
+- **Tests**: `supabase/tests/monetization_ledger.sql` (purchase unlock + idempotency, tip, balance
+  derivation, payout request + reservation + eligibility guards, ledger immutability, self-action
+  rejection, buyer/creator/stranger RLS isolation, anon denial). `smoke.sql` extended; `db-validate.sh`
+  + CI run it. Seed adds an `aurora` `purchase` post.
+
+**Local verification:** from-zero rebuild applies; all **eight** SQL suites pass via the DB container;
+183 unit tests pass at ≥95% (money/posts 100%/~99.7%); lint / tsc / build green.
+
+**Next:** Phase 7+ (gated) — e.g. notifications, admin moderation/finance subroutes, real payment
+processor integration behind the existing ledger, refunds/disputes, paid messages. Remote schema
+reconciliation + the `subscriptions` rename remain deferred. Do not start without approval.
+
+---
+
+## Previous Status — Phase 5 COMPLETE (Messaging Foundation)
 
 Built on Phase 4. Local Docker only; remote/push/deploy untouched (config deny-list enforces this).
 

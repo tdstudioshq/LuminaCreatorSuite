@@ -163,6 +163,31 @@ block-aware (no new conversation/message across a block); anon revoked.
 
 **Validation:** `messaging.sql` behavioral suite + smoke extensions; in `db:validate` and CI.
 
+## Phase 6 — Monetization ledger ✅ DONE (foundation, DEMO-ONLY)
+
+**Delivered:** migration `20260518000000_monetization_ledger.sql` — enums `transaction_type` /
+`transaction_status` / `payout_status` / `payout_request_status`; tables `transactions` (append-only,
+immutability trigger, `net = gross − fees` CHECK), `creator_balances` (cached projection),
+`payout_requests`, `payouts`, `tips`, `purchases`, `content_entitlements`; `posts.price_cents`/`currency`
+activating the `purchase` tier. RPCs `recalc_creator_balance`, `has_content_entitlement`,
+`is_current_user_admin`, `create_mock_purchase`, `create_mock_tip`, `request_payout`, `creator_balance`;
+`purchase` wired into `can_view_post` / `feed_creator_posts` / `post_card` + a buyer `posts` policy.
+`cabana-money.ts` gains `evaluatePayoutEligibility` / `evaluatePurchase` / `entitlementFromPurchase`;
+`money-actions.ts` (createMockPurchase, createMockTip, requestPayout, getCreatorBalance, getTransactions,
+getPayoutHistory, getTips, getPurchases, getEntitlements); `use-money.ts` hooks; `components/cabana/earnings/`
+(EarningsDashboard + BalanceCard, TransactionHistory, TipHistory, PurchaseHistory, PayoutHistory,
+PayoutRequestDialog) at real `/dashboard/earnings`; purchase unlock CTA in `LockedContentGate`; paid-post
+authoring in `PostComposer`. Fee model 10% platform + 3% processor (integer cents). Creators read own
+financial rows; buyers read own purchases/entitlements; admins read all; anon revoked; writes via RPCs only.
+
+**Hard constraint:** DEMO ONLY — no payment processor, Stripe, cards, webhooks, KYC, or real payouts. The
+ledger is append-only (reversals are new `refund` rows).
+
+**Deferred (gated):** real processor integration behind the ledger, refunds/disputes UI, admin payout
+approval flow, paid messages, notifications/push.
+
+**Validation:** `monetization_ledger.sql` behavioral suite + smoke extensions; in `db:validate` and CI.
+
 ### Original Phase 5 plan (full scope, for reference)
 
 **Goal:** Real conversations and messages with participant-scoped RLS, Realtime delivery, read state, cursor pagination, and private attachments (with paid-message scaffolding, demo unlock).
