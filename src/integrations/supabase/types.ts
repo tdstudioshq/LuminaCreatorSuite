@@ -28,6 +28,119 @@ export type Database = {
   };
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string;
+          actor_role: Database["public"]["Enums"]["audit_actor_role"];
+          actor_user_id: string | null;
+          after: Json | null;
+          before: Json | null;
+          created_at: string;
+          id: string;
+          ip_address: string | null;
+          reason: string | null;
+          request_id: string | null;
+          target_id: string | null;
+          target_type: string;
+          user_agent: string | null;
+        };
+        Insert: {
+          action: string;
+          actor_role: Database["public"]["Enums"]["audit_actor_role"];
+          actor_user_id?: string | null;
+          after?: Json | null;
+          before?: Json | null;
+          created_at?: string;
+          id?: string;
+          ip_address?: string | null;
+          reason?: string | null;
+          request_id?: string | null;
+          target_id?: string | null;
+          target_type: string;
+          user_agent?: string | null;
+        };
+        Update: {
+          action?: string;
+          actor_role?: Database["public"]["Enums"]["audit_actor_role"];
+          actor_user_id?: string | null;
+          after?: Json | null;
+          before?: Json | null;
+          created_at?: string;
+          id?: string;
+          ip_address?: string | null;
+          reason?: string | null;
+          request_id?: string | null;
+          target_id?: string | null;
+          target_type?: string;
+          user_agent?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_actor_user_id_fkey";
+            columns: ["actor_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      reports: {
+        Row: {
+          assigned_admin_user_id: string | null;
+          created_at: string;
+          details: string | null;
+          id: string;
+          reason: Database["public"]["Enums"]["report_reason"];
+          reporter_user_id: string;
+          resolution: string | null;
+          status: Database["public"]["Enums"]["report_status"];
+          subject_id: string;
+          subject_type: Database["public"]["Enums"]["report_subject_type"];
+          updated_at: string;
+        };
+        Insert: {
+          assigned_admin_user_id?: string | null;
+          created_at?: string;
+          details?: string | null;
+          id?: string;
+          reason: Database["public"]["Enums"]["report_reason"];
+          reporter_user_id: string;
+          resolution?: string | null;
+          status?: Database["public"]["Enums"]["report_status"];
+          subject_id: string;
+          subject_type: Database["public"]["Enums"]["report_subject_type"];
+          updated_at?: string;
+        };
+        Update: {
+          assigned_admin_user_id?: string | null;
+          created_at?: string;
+          details?: string | null;
+          id?: string;
+          reason?: Database["public"]["Enums"]["report_reason"];
+          reporter_user_id?: string;
+          resolution?: string | null;
+          status?: Database["public"]["Enums"]["report_status"];
+          subject_id?: string;
+          subject_type?: Database["public"]["Enums"]["report_subject_type"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "reports_assigned_admin_user_id_fkey";
+            columns: ["assigned_admin_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reports_reporter_user_id_fkey";
+            columns: ["reporter_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       activity_events: {
         Row: {
           actor_id: string | null;
@@ -1787,6 +1900,7 @@ export type Database = {
         | "payout_requested"
         | "system";
       app_role: "admin" | "moderator" | "user";
+      audit_actor_role: "creator" | "moderator" | "admin" | "system";
       comment_status: "visible" | "hidden" | "deleted";
       creator_subscription_status: "trialing" | "active" | "past_due" | "canceled" | "expired";
       message_type: "text" | "system" | "image" | "video" | "paid" | "tip";
@@ -1808,6 +1922,9 @@ export type Database = {
       post_media_kind: "image" | "video" | "audio";
       post_status: "draft" | "scheduled" | "published" | "archived";
       post_visibility: "public" | "followers" | "subscribers" | "purchase";
+      report_reason: "spam" | "harassment" | "impersonation" | "copyright" | "scam" | "other";
+      report_status: "open" | "reviewing" | "resolved" | "dismissed";
+      report_subject_type: "user" | "creator" | "post" | "comment" | "message";
       transaction_status: "pending" | "succeeded" | "failed" | "refunded" | "disputed";
       transaction_type:
         | "creator_subscription"
@@ -1959,6 +2076,7 @@ export const Constants = {
         "system",
       ],
       app_role: ["admin", "moderator", "user"],
+      audit_actor_role: ["creator", "moderator", "admin", "system"],
       comment_status: ["visible", "hidden", "deleted"],
       creator_subscription_status: ["trialing", "active", "past_due", "canceled", "expired"],
       message_type: ["text", "system", "image", "video", "paid", "tip"],
@@ -1981,6 +2099,9 @@ export const Constants = {
       post_media_kind: ["image", "video", "audio"],
       post_status: ["draft", "scheduled", "published", "archived"],
       post_visibility: ["public", "followers", "subscribers", "purchase"],
+      report_reason: ["spam", "harassment", "impersonation", "copyright", "scam", "other"],
+      report_status: ["open", "reviewing", "resolved", "dismissed"],
+      report_subject_type: ["user", "creator", "post", "comment", "message"],
       transaction_status: ["pending", "succeeded", "failed", "refunded", "disputed"],
       transaction_type: [
         "creator_subscription",

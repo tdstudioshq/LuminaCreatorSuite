@@ -45,6 +45,8 @@ import { Route as DashboardLinksRouteImport } from './routes/dashboard.links'
 import { Route as DashboardEarningsRouteImport } from './routes/dashboard.earnings'
 import { Route as DashboardAnalyticsRouteImport } from './routes/dashboard.analytics'
 import { Route as DashboardAiRouteImport } from './routes/dashboard.ai'
+import { Route as AdminReportsRouteImport } from './routes/admin.reports'
+import { Route as AdminAuditRouteImport } from './routes/admin.audit'
 
 const TdRoute = TdRouteImport.update({
   id: '/td',
@@ -226,12 +228,22 @@ const DashboardAiRoute = DashboardAiRouteImport.update({
   path: '/ai',
   getParentRoute: () => DashboardRoute,
 } as any)
+const AdminReportsRoute = AdminReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAuditRoute = AdminAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$username': typeof UsernameRoute
   '/account': typeof AccountRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/dashboard': typeof DashboardRouteWithChildren
   '/demo': typeof DemoRoute
   '/discover': typeof DiscoverRoute
@@ -246,6 +258,8 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/td': typeof TdRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/reports': typeof AdminReportsRoute
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
@@ -269,7 +283,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$username': typeof UsernameRoute
   '/account': typeof AccountRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/demo': typeof DemoRoute
   '/discover': typeof DiscoverRoute
   '/eldondolla': typeof EldondollaRoute
@@ -283,6 +297,8 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/td': typeof TdRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/reports': typeof AdminReportsRoute
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
@@ -307,7 +323,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$username': typeof UsernameRoute
   '/account': typeof AccountRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/dashboard': typeof DashboardRouteWithChildren
   '/demo': typeof DemoRoute
   '/discover': typeof DiscoverRoute
@@ -322,6 +338,8 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/td': typeof TdRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/reports': typeof AdminReportsRoute
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
@@ -362,6 +380,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/td'
+    | '/admin/audit'
+    | '/admin/reports'
     | '/dashboard/ai'
     | '/dashboard/analytics'
     | '/dashboard/earnings'
@@ -399,6 +419,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/td'
+    | '/admin/audit'
+    | '/admin/reports'
     | '/dashboard/ai'
     | '/dashboard/analytics'
     | '/dashboard/earnings'
@@ -437,6 +459,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/td'
+    | '/admin/audit'
+    | '/admin/reports'
     | '/dashboard/ai'
     | '/dashboard/analytics'
     | '/dashboard/earnings'
@@ -461,7 +485,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   UsernameRoute: typeof UsernameRoute
   AccountRoute: typeof AccountRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   DashboardRoute: typeof DashboardRouteWithChildren
   DemoRoute: typeof DemoRoute
   DiscoverRoute: typeof DiscoverRoute
@@ -736,8 +760,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAiRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/admin/reports': {
+      id: '/admin/reports'
+      path: '/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AdminReportsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/audit': {
+      id: '/admin/audit'
+      path: '/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AdminAuditRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
+
+interface AdminRouteChildren {
+  AdminAuditRoute: typeof AdminAuditRoute
+  AdminReportsRoute: typeof AdminReportsRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAuditRoute: AdminAuditRoute,
+  AdminReportsRoute: AdminReportsRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface DashboardRouteChildren {
   DashboardAiRoute: typeof DashboardAiRoute
@@ -791,7 +841,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   UsernameRoute: UsernameRoute,
   AccountRoute: AccountRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   DashboardRoute: DashboardRouteWithChildren,
   DemoRoute: DemoRoute,
   DiscoverRoute: DiscoverRoute,

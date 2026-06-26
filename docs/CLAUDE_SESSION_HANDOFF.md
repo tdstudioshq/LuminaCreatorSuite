@@ -16,7 +16,60 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
-## Latest Status — Phase 7 COMPLETE (Notifications & Activity Foundation)
+## Latest Status — Phase 8 (Slice 1) COMPLETE (Admin Moderation & Audit Foundation)
+
+Built on Phase 7. Local Docker only; remote/push/deploy untouched. **Staff (admin/moderator)
+only.** This is the trust & operations foundation: a real, RLS-enforced moderation queue and an
+append-only audit trail. **NOT in scope this slice:** admin finance views, payout approval,
+notification outbox/delivery, email/push providers, and member-facing "Report" buttons across the
+app (the report INSERT path exists and is RLS-correct so those wire in later with no schema change).
+
+- **Migration** `20260520000000_admin_moderation.sql`: enums `report_subject_type`, `report_reason`,
+  `report_status`, `audit_actor_role`. Tables `reports` (reporter creates/reads own; staff read +
+  triage; polymorphic `subject_type`/`subject_id`, not FK-constrained so reports survive subject
+  deletion) and `audit_logs` (append-only via a BEFORE UPDATE/DELETE `prevent_audit_mutation` trigger
+  permitting only FK-null cascades; no client write grant). Helpers `is_current_user_staff()` (admin
+  OR moderator; wraps the authenticated-revoked `has_role`) + `current_audit_actor_role()`. **Audit
+  generation is at the DB layer**: an AFTER UPDATE trigger `on_report_change_audit` appends an
+  immutable audit row on every report status/assignment change — atomic + uniform across write paths
+  (the Phase 7 pattern). No new RPCs: staff triage via a staff-only UPDATE policy column-scoped to
+  `status`/`assigned_admin_user_id`/`resolution`.
+- **RLS:** reporters read their own reports + create their own; staff read all reports + the audit log
+  and update reports; `audit_logs` is staff-read-only and never client-written; anon fully revoked on
+  both tables.
+- **Pure module** `cabana-moderation.ts` (+ tests, in the 95% coverage set): `validateReportInput`,
+  `normalizeResolution`, the `canTransitionReport`/`allowedTransitions` status state machine,
+  `mapReport`/`mapAuditLog`, queue helpers (`countReportsByStatus`, `sortReportsForQueue`,
+  `filterReportsByStatus`, `countActiveReports`), display labels, and `buildAuditEntry` (mirrors the
+  SQL trigger). Added to the vitest coverage include list.
+- **Server actions** `moderation-actions.ts`: getReports, getReportDetail, getAuditLogs, createReport,
+  assignReport, updateReportStatus (transition-validated). **Hooks** `use-moderation.ts`: useReports,
+  useReportDetail, useAuditLogs, useAssignReport, useUpdateReportStatus, useCreateReport.
+- **UI**: `components/cabana/moderation/` — `StaffGate`, `ModerationShell`, `ReportQueue`,
+  `ReportRow`, `ReportStatusBadge`, `ReportDetail`, `ModerationActionDialog`, `AuditLogTable`. New
+  URL-backed subroutes `/admin/reports` + `/admin/audit` (noindex). The existing `admin.tsx` demo tabs
+  are untouched except for two nav cards in the Flagged tab linking to the live routes.
+- **Tests**: `supabase/tests/admin_moderation.sql` (report create under reporter RLS, reporter/staff/
+  stranger read isolation, forged-report denial, staff triage → 3 audit rows, moderator-is-staff,
+  non-staff update no-op, audit immutability UPDATE/DELETE blocked, anon denial). `smoke.sql` extended
+  (tables, enums, `is_current_user_staff`, trigger, RLS, anon/audit-write denial); `db-validate.sh` +
+  CI run the new suite. Seed adds a demo member + two demo reports so `/admin/reports` renders locally.
+
+**Local verification:** lint clean (only pre-existing shadcn react-refresh warnings), `tsc` clean,
+production build green, **219 unit tests pass** at ≥95% (moderation module ~100%). `bun run db:validate`
+requires Docker (not available in this sandbox) — CI runs the from-zero rebuild + all **ten** SQL
+suites on a Docker-enabled runner.
+
+**Next:** Phase 8 remaining slices (gated) — member-facing report buttons on post/comment/message/
+profile surfaces; admin finance subroutes (read-only ledger views + payout approval over the Phase 6
+tables); notification outbox processor + a real email/push provider (constraint currently forbids);
+optional full migration of the legacy `admin.tsx` demo tabs to URL-backed subroutes. Remote schema
+reconciliation + the `subscriptions`→`platform_subscriptions` rename remain deferred. Do not start
+without approval.
+
+---
+
+## Previous Status — Phase 7 COMPLETE (Notifications & Activity Foundation)
 
 Built on Phase 6. Local Docker only; remote/push/deploy untouched. **Internal only — NO email/push
 provider** (no Resend, Firebase, Expo, web push). This is the in-app event/outbox foundation; the

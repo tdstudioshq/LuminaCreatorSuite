@@ -18,7 +18,8 @@ declare
     'conversations','conversation_participants','messages','message_read_receipts',
     'transactions','creator_balances','payouts','payout_requests',
     'tips','purchases','content_entitlements',
-    'notifications','activity_events','notification_preferences','notification_outbox'
+    'notifications','activity_events','notification_preferences','notification_outbox',
+    'reports','audit_logs'
   ];
   t text;
 begin
@@ -83,6 +84,19 @@ begin
   end if;
   if not exists (select 1 from pg_type where typname = 'outbox_status') then
     raise exception 'MISSING ENUM: outbox_status';
+  end if;
+  -- Phase 8 enums
+  if not exists (select 1 from pg_type where typname = 'report_subject_type') then
+    raise exception 'MISSING ENUM: report_subject_type';
+  end if;
+  if not exists (select 1 from pg_type where typname = 'report_reason') then
+    raise exception 'MISSING ENUM: report_reason';
+  end if;
+  if not exists (select 1 from pg_type where typname = 'report_status') then
+    raise exception 'MISSING ENUM: report_status';
+  end if;
+  if not exists (select 1 from pg_type where typname = 'audit_actor_role') then
+    raise exception 'MISSING ENUM: audit_actor_role';
   end if;
 
   -- Phase 2B: profiles.account_type column (NOT NULL, default creator)
@@ -198,6 +212,18 @@ begin
   if to_regprocedure('public.notif_display_name(uuid)') is null then
     raise exception 'MISSING FUNCTION: notif_display_name';
   end if;
+  -- Phase 8 moderation helpers + audit trigger
+  if to_regprocedure('public.is_current_user_staff()') is null then
+    raise exception 'MISSING FUNCTION: is_current_user_staff';
+  end if;
+  if to_regprocedure('public.on_report_change_audit()') is null then
+    raise exception 'MISSING FUNCTION: on_report_change_audit';
+  end if;
+  if not exists (
+    select 1 from pg_trigger where tgname = 'audit_on_report_change' and not tgisinternal
+  ) then
+    raise exception 'MISSING TRIGGER: audit_on_report_change';
+  end if;
   if to_regprocedure('public.on_follow_notify()') is null then
     raise exception 'MISSING FUNCTION: on_follow_notify';
   end if;
@@ -302,6 +328,13 @@ begin
   if not (select relrowsecurity from pg_class where oid = 'public.notification_outbox'::regclass) then
     raise exception 'RLS NOT ENABLED: notification_outbox';
   end if;
+  -- Phase 8 moderation tables must have RLS enabled
+  if not (select relrowsecurity from pg_class where oid = 'public.reports'::regclass) then
+    raise exception 'RLS NOT ENABLED: reports';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.audit_logs'::regclass) then
+    raise exception 'RLS NOT ENABLED: audit_logs';
+  end if;
   -- messages must NOT be readable by anon (no grant)
   if exists (
     select 1 from information_schema.role_table_grants
@@ -337,6 +370,33 @@ begin
   ) then
     raise exception 'SECURITY: anon has privileges on a Phase 7 notification table';
   end if;
+  -- Phase 8 moderation tables must NOT be accessible by anon (no grant)
+  if exists (
+    select 1 from information_schema.role_table_grants
+    where table_schema = 'public'
+      and table_name in ('reports','audit_logs')
+      and grantee = 'anon'
+  ) then
+    raise exception 'SECURITY: anon has privileges on a Phase 8 moderation table';
+  end if;
+  -- audit_logs must NOT have any client write grant (system/trigger-written only)
+  if exists (
+    select 1 from information_schema.role_table_grants
+    where table_schema = 'public' and table_name = 'audit_logs'
+      and grantee in ('anon','authenticated')
+      and privilege_type in ('INSERT','UPDATE','DELETE')
+  ) then
+    raise exception 'SECURITY: a client role has write privileges on audit_logs';
+  end if;
+  -- reports must NOT have a public (USING true) SELECT policy
+  if exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'reports'
+      and cmd = 'SELECT' and qual = 'true'
+  ) then
+    raise exception 'SECURITY: reports has a public SELECT policy';
+  end if;
+
   -- notification_outbox must NOT be readable by ordinary users (admin-only policy)
   if exists (
     select 1 from pg_policies

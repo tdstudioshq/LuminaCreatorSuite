@@ -21,6 +21,8 @@ import {
   XCircle,
   Crown,
   LayoutDashboard,
+  ClipboardList,
+  ScrollText,
 } from "lucide-react";
 import { useHasRole } from "@/lib/cabana-roles";
 
@@ -743,7 +745,44 @@ function Flagged() {
   };
   return (
     <div>
-      <PanelTitle title="Flagged content & accounts" sub="38 open · 12 resolved this week" />
+      <div className="mb-6 grid gap-3 sm:grid-cols-2">
+        <Link
+          to="/admin/reports"
+          className="group glass rounded-2xl p-5 flex items-center justify-between gap-3 hover:border-foreground/20 border border-transparent transition"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-iridescent flex items-center justify-center shadow-glow-sm">
+              <ClipboardList className="w-4 h-4 text-background" />
+            </div>
+            <div>
+              <div className="font-semibold">Moderation queue</div>
+              <div className="text-xs text-muted-foreground">
+                Real, RLS-scoped reports · triage with audit
+              </div>
+            </div>
+          </div>
+          <ArrowUpRight className="w-4 h-4 text-muted-foreground transition group-hover:translate-x-0.5" />
+        </Link>
+        <Link
+          to="/admin/audit"
+          className="group glass rounded-2xl p-5 flex items-center justify-between gap-3 hover:border-foreground/20 border border-transparent transition"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl glass flex items-center justify-center">
+              <ScrollText className="w-4 h-4 text-foreground" />
+            </div>
+            <div>
+              <div className="font-semibold">Audit log</div>
+              <div className="text-xs text-muted-foreground">Append-only action trail</div>
+            </div>
+          </div>
+          <ArrowUpRight className="w-4 h-4 text-muted-foreground transition group-hover:translate-x-0.5" />
+        </Link>
+      </div>
+      <PanelTitle
+        title="Flagged content & accounts"
+        sub="Demo preview — the live queue is under Moderation queue above"
+      />
       <div className="grid lg:grid-cols-2 gap-4">
         {flags.map((f, i) => (
           <motion.div
