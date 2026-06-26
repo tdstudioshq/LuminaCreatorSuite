@@ -16,7 +16,56 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
-## Latest Status — Phase 6 COMPLETE (Monetization Ledger Foundation)
+## Latest Status — Phase 7 COMPLETE (Notifications & Activity Foundation)
+
+Built on Phase 6. Local Docker only; remote/push/deploy untouched. **Internal only — NO email/push
+provider** (no Resend, Firebase, Expo, web push). This is the in-app event/outbox foundation; the
+`notification_outbox` is an inert future-delivery queue.
+
+**Scope delivered:** in-app notifications, unread badges, a canonical activity log, per-user
+preferences, an inert outbox, and live Realtime delivery. Event generation is implemented at the
+**database trigger layer** (safest, atomic, uniform across direct-insert + RPC write paths) — no
+Phase 2–6 action files were modified.
+
+- **Migration** `20260519000000_notifications_activity.sql`: enums `notification_type`, `activity_type`,
+  `notification_channel`, `outbox_status`. Tables `notifications` (system-written; `dedupe_key` NOT NULL
+  UNIQUE → idempotent generation; clients flip only `read_at`), `activity_events` (append-only canonical
+  log + `metadata` jsonb), `notification_preferences` (in-app default on; email/push placeholders off),
+  `notification_outbox` (inert; admin-only). Helper `emit_notification` (SECURITY DEFINER: logs activity,
+  inserts an idempotent notification when the recipient is eligible — not self, not blocked, in-app on —
+  and one outbox row per enabled future channel) + `notif_display_name` / `notif_is_blocked`. AFTER INSERT
+  triggers on `follows`, `post_likes`, `post_comments` (visible only), `post_saves`, `creator_subscriptions`,
+  `tips`, `purchases`, `messages` (per recipient participant; skips system/deleted), `payout_requests`
+  (activity + self-notification). `notifications` added to the `supabase_realtime` publication.
+- **RLS:** users read only their own notifications/activity and manage only their own preferences; updates
+  are column-scoped to `read_at`; `notification_outbox` is admin-only (`is_current_user_admin`); anon fully
+  revoked; no client INSERT/DELETE on notifications.
+- **Pure module** `cabana-notifications.ts` (+ tests, ~100%): `mapNotification`/`mapActivityEvent`/
+  `mapPreferences`, `formatNotification`, `activityLabel`, `countUnread`, `groupNotificationsByDay`,
+  `evaluatePreference`, `isOutboxEligible`, `notificationDedupeKey` (mirrors the SQL key scheme). Added to
+  the vitest coverage include list.
+- **Server actions** `notification-actions.ts`: getNotifications, getUnreadNotificationCount,
+  getActivityFeed, getNotificationPreferences, markNotificationRead, markAllNotificationsRead,
+  updateNotificationPreferences. **Hooks** `use-notifications.ts` with a recipient-filtered Realtime channel
+  (live list + unread; safe unmount cleanup).
+- **UI**: `components/cabana/notifications/` — NotificationsCenter (grouped, mark-read/mark-all),
+  NotificationBadge (live, in the sidebar), ActivityFeed, NotificationSettings, NotificationsDashboard
+  (real `/dashboard/notifications`, replaced the demo), MemberNotificationsPage (auth-gated `/notifications`).
+- **Tests**: `supabase/tests/notifications.sql` (event generation from follow/like/comment/message/payout,
+  unread, mark-read + mark-all under RLS, preferences, outbox creation, idempotency/no-duplicate,
+  self-suppression, recipient isolation, outbox admin-only, anon denial). `smoke.sql` extended; `db-validate.sh`
+  - CI run it.
+
+**Local verification:** from-zero rebuild applies; all **nine** SQL suites pass via the DB container;
+200 unit tests pass at ≥95% (notifications module ~100%); lint / tsc / build green.
+
+**Next:** Phase 8+ (gated) — outbox processor + a real email/push provider (Resend/Firebase/Expo/web push),
+notification batching/digests, admin moderation/finance subroutes, reports/audit logs. Remote schema
+reconciliation + the `subscriptions` rename remain deferred. Do not start without approval.
+
+---
+
+## Previous Status — Phase 6 COMPLETE (Monetization Ledger Foundation)
 
 Built on Phase 5. Local Docker only; remote/push/deploy untouched. **DEMO ONLY — no payment
 processor, Stripe, cards, webhooks, KYC, or real payouts.** Every financial event is written by a
@@ -55,7 +104,7 @@ admin payout approval UI.
 - **Tests**: `supabase/tests/monetization_ledger.sql` (purchase unlock + idempotency, tip, balance
   derivation, payout request + reservation + eligibility guards, ledger immutability, self-action
   rejection, buyer/creator/stranger RLS isolation, anon denial). `smoke.sql` extended; `db-validate.sh`
-  + CI run it. Seed adds an `aurora` `purchase` post.
+  - CI run it. Seed adds an `aurora` `purchase` post.
 
 **Local verification:** from-zero rebuild applies; all **eight** SQL suites pass via the DB container;
 183 unit tests pass at ≥95% (money/posts 100%/~99.7%); lint / tsc / build green.

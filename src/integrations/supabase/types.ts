@@ -28,6 +28,190 @@ export type Database = {
   };
   public: {
     Tables: {
+      activity_events: {
+        Row: {
+          actor_id: string | null;
+          created_at: string;
+          entity_id: string | null;
+          entity_type: string | null;
+          id: string;
+          metadata: Json;
+          recipient_id: string | null;
+          type: Database["public"]["Enums"]["activity_type"];
+        };
+        Insert: {
+          actor_id?: string | null;
+          created_at?: string;
+          entity_id?: string | null;
+          entity_type?: string | null;
+          id?: string;
+          metadata?: Json;
+          recipient_id?: string | null;
+          type: Database["public"]["Enums"]["activity_type"];
+        };
+        Update: {
+          actor_id?: string | null;
+          created_at?: string;
+          entity_id?: string | null;
+          entity_type?: string | null;
+          id?: string;
+          metadata?: Json;
+          recipient_id?: string | null;
+          type?: Database["public"]["Enums"]["activity_type"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "activity_events_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "activity_events_recipient_id_fkey";
+            columns: ["recipient_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      notifications: {
+        Row: {
+          actor_id: string | null;
+          body: string | null;
+          created_at: string;
+          dedupe_key: string;
+          entity_id: string | null;
+          entity_type: string | null;
+          id: string;
+          read_at: string | null;
+          recipient_id: string;
+          title: string;
+          type: Database["public"]["Enums"]["notification_type"];
+        };
+        Insert: {
+          actor_id?: string | null;
+          body?: string | null;
+          created_at?: string;
+          dedupe_key: string;
+          entity_id?: string | null;
+          entity_type?: string | null;
+          id?: string;
+          read_at?: string | null;
+          recipient_id: string;
+          title: string;
+          type: Database["public"]["Enums"]["notification_type"];
+        };
+        Update: {
+          actor_id?: string | null;
+          body?: string | null;
+          created_at?: string;
+          dedupe_key?: string;
+          entity_id?: string | null;
+          entity_type?: string | null;
+          id?: string;
+          read_at?: string | null;
+          recipient_id?: string;
+          title?: string;
+          type?: Database["public"]["Enums"]["notification_type"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey";
+            columns: ["recipient_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      notification_outbox: {
+        Row: {
+          attempts: number;
+          channel: Database["public"]["Enums"]["notification_channel"];
+          created_at: string;
+          id: string;
+          last_error: string | null;
+          notification_id: string;
+          processed_at: string | null;
+          scheduled_for: string;
+          status: Database["public"]["Enums"]["outbox_status"];
+        };
+        Insert: {
+          attempts?: number;
+          channel: Database["public"]["Enums"]["notification_channel"];
+          created_at?: string;
+          id?: string;
+          last_error?: string | null;
+          notification_id: string;
+          processed_at?: string | null;
+          scheduled_for?: string;
+          status?: Database["public"]["Enums"]["outbox_status"];
+        };
+        Update: {
+          attempts?: number;
+          channel?: Database["public"]["Enums"]["notification_channel"];
+          created_at?: string;
+          id?: string;
+          last_error?: string | null;
+          notification_id?: string;
+          processed_at?: string | null;
+          scheduled_for?: string;
+          status?: Database["public"]["Enums"]["outbox_status"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notification_outbox_notification_id_fkey";
+            columns: ["notification_id"];
+            isOneToOne: false;
+            referencedRelation: "notifications";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      notification_preferences: {
+        Row: {
+          created_at: string;
+          email_enabled: boolean;
+          in_app_enabled: boolean;
+          push_enabled: boolean;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          email_enabled?: boolean;
+          in_app_enabled?: boolean;
+          push_enabled?: boolean;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          email_enabled?: boolean;
+          in_app_enabled?: boolean;
+          push_enabled?: boolean;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       content_entitlements: {
         Row: {
           created_at: string;
@@ -1591,10 +1775,34 @@ export type Database = {
     };
     Enums: {
       account_type: "creator" | "member";
+      activity_type:
+        | "new_follower"
+        | "post_liked"
+        | "post_commented"
+        | "post_saved"
+        | "new_subscriber"
+        | "tip_received"
+        | "purchase_made"
+        | "message_received"
+        | "payout_requested"
+        | "system";
       app_role: "admin" | "moderator" | "user";
       comment_status: "visible" | "hidden" | "deleted";
       creator_subscription_status: "trialing" | "active" | "past_due" | "canceled" | "expired";
       message_type: "text" | "system" | "image" | "video" | "paid" | "tip";
+      notification_channel: "in_app" | "email" | "push";
+      notification_type:
+        | "new_follower"
+        | "post_liked"
+        | "post_commented"
+        | "post_saved"
+        | "new_subscriber"
+        | "tip_received"
+        | "purchase_made"
+        | "message_received"
+        | "payout_requested"
+        | "system";
+      outbox_status: "pending" | "sent" | "failed" | "skipped" | "canceled";
       payout_request_status: "requested" | "approved" | "rejected" | "paid";
       payout_status: "queued" | "processing" | "paid" | "failed" | "canceled";
       post_media_kind: "image" | "video" | "audio";
@@ -1738,10 +1946,36 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["creator", "member"],
+      activity_type: [
+        "new_follower",
+        "post_liked",
+        "post_commented",
+        "post_saved",
+        "new_subscriber",
+        "tip_received",
+        "purchase_made",
+        "message_received",
+        "payout_requested",
+        "system",
+      ],
       app_role: ["admin", "moderator", "user"],
       comment_status: ["visible", "hidden", "deleted"],
       creator_subscription_status: ["trialing", "active", "past_due", "canceled", "expired"],
       message_type: ["text", "system", "image", "video", "paid", "tip"],
+      notification_channel: ["in_app", "email", "push"],
+      notification_type: [
+        "new_follower",
+        "post_liked",
+        "post_commented",
+        "post_saved",
+        "new_subscriber",
+        "tip_received",
+        "purchase_made",
+        "message_received",
+        "payout_requested",
+        "system",
+      ],
+      outbox_status: ["pending", "sent", "failed", "skipped", "canceled"],
       payout_request_status: ["requested", "approved", "rejected", "paid"],
       payout_status: ["queued", "processing", "paid", "failed", "canceled"],
       post_media_kind: ["image", "video", "audio"],

@@ -27,6 +27,7 @@ export default defineConfig({
         "src/lib/cabana-engagement.ts",
         "src/lib/cabana-subscriptions.ts",
         "src/lib/cabana-messaging.ts",
+        "src/lib/cabana-notifications.ts",
       ],
       thresholds: {
         lines: 95,

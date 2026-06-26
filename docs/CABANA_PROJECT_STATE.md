@@ -1,7 +1,7 @@
 # CABANA — Project State (Engineering Checkpoint)
 
 > Canonical high-level engineering snapshot.
-> Branch at capture: `feat/phase-6-monetization-ledger` (through Phase 6 — monetization ledger, demo-only).
+> Branch at capture: `feat/phase-7-notifications-activity` (through Phase 7 — notifications & activity, internal only).
 > Demo clock / "today" in code: **June 25, 2026**.
 > Audience: a brand-new engineer who needs to understand CABANA end-to-end in under 15 minutes.
 >
@@ -752,7 +752,23 @@ own financial rows; buyers read own purchases/entitlements; admins read all; ano
 Behavioral suite `monetization_ledger.sql`. **No payment processor, cards, webhooks, KYC, or real payouts.**
 
 **Deferred (still gated):** `reports` / `audit_logs` (Group F), URL-backed admin moderation/finance
-subroutes, refunds/disputes UI, admin payout approval, paid messages, notifications.
+subroutes, refunds/disputes UI, admin payout approval, paid messages.
+
+## Phase 7 — Notifications & activity ✅ DONE (foundation, internal only)
+
+Delivered: migration `20260519000000_notifications_activity.sql` — `notifications` (system-written;
+`dedupe_key` unique → idempotent), `activity_events` (append-only canonical log), `notification_preferences`
+(in-app on; email/push placeholders), `notification_outbox` (inert future delivery queue, admin-only). Event
+generation at the DB layer: SECURITY DEFINER `emit_notification` invoked by AFTER INSERT triggers on
+`follows` / `post_likes` / `post_comments` / `post_saves` / `creator_subscriptions` / `tips` / `purchases` /
+`messages` / `payout_requests` (atomic, idempotent, no edits to existing actions). `notifications` published
+to Supabase Realtime (RLS-filtered to recipient). `cabana-notifications.ts` (pure), `notification-actions.ts`,
+`use-notifications.ts`, and the notifications UI (`/dashboard/notifications` + auth-gated `/notifications`,
+live sidebar badge). Users read/manage only their own rows; outbox admin-only; anon revoked. Behavioral
+suite `notifications.sql`. **No email/push provider — internal foundation only.**
+
+**Deferred (still gated):** outbox processor + real email/push provider (Resend/Firebase/Expo/web push),
+digests/batching, deep-link routing, `reports` / `audit_logs`, admin moderation/finance subroutes.
 
 ## Production launch (gated, post-demo)
 

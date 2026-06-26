@@ -180,22 +180,47 @@ for live delivery, receipts, and inbox ordering; supabase-js auto-reconnects.
 SECURITY DEFINER RPCs that record integer-cent amounts with a `mock_*` reference. **No payment processor,
 cards, webhooks, or real money.** Reads are creator-scoped except `getEntitlements` (caller-scoped).
 
-| Action                                       | Contract                                                                                  |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `createMockPurchase({postId})`               | [auth] unlock a `purchase` post; idempotent; records transaction + purchase + entitlement |
-| `createMockTip({username,amountCents,note?})`| [auth] tip a creator (min $1); rejects self → `{ok}`                                       |
-| `requestPayout({amountCents,note?})`         | [creator] request a mock payout (min $10, ≤ available) → refreshed balance                 |
-| `getCreatorBalance()`                        | [creator] → balance projection (pending/available/lifetime/withdrawn), recomputed on read |
-| `getTransactions()`                          | [creator] → up to 100 ledger transactions received, newest first                          |
-| `getPayoutHistory()`                         | [creator] → mock payout history                                                            |
-| `getTips()`                                  | [creator] → tips received                                                                  |
-| `getPurchases()`                             | [creator] → sales (unlocks of own content)                                                |
-| `getEntitlements()`                          | [auth] → the caller's own permanent content entitlements                                   |
+| Action                                        | Contract                                                                                  |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `createMockPurchase({postId})`                | [auth] unlock a `purchase` post; idempotent; records transaction + purchase + entitlement |
+| `createMockTip({username,amountCents,note?})` | [auth] tip a creator (min $1); rejects self → `{ok}`                                      |
+| `requestPayout({amountCents,note?})`          | [creator] request a mock payout (min $10, ≤ available) → refreshed balance                |
+| `getCreatorBalance()`                         | [creator] → balance projection (pending/available/lifetime/withdrawn), recomputed on read |
+| `getTransactions()`                           | [creator] → up to 100 ledger transactions received, newest first                          |
+| `getPayoutHistory()`                          | [creator] → mock payout history                                                           |
+| `getTips()`                                   | [creator] → tips received                                                                 |
+| `getPurchases()`                              | [creator] → sales (unlocks of own content)                                                |
+| `getEntitlements()`                           | [auth] → the caller's own permanent content entitlements                                  |
 
 Fee model = 10% platform + 3% processor (rounded; creator net is the remainder), mirroring `cabana-money`.
 Hooks in `use-money.ts`: `useBalance`, `useTransactions`, `usePayouts`, `usePurchases`, `useTips`,
 `useEntitlements`, `useRequestPayout`, `useSendTip`, `usePurchaseUnlock`. Pure validation helpers
 (`evaluatePayoutEligibility`, `evaluatePurchase`, `entitlementFromPurchase`) live in `cabana-money.ts`.
+
+## 2i. Implemented Notification Actions (T2 — Phase 7, internal only)
+
+`src/lib/notification-actions.ts`. All run under the caller's RLS (`requireSupabaseAuth`): a user reads
+only their own notifications/activity and manages only their own preferences. **Notifications are
+SYSTEM-WRITTEN** by the Phase 7 DB triggers (`emit_notification`) — there is no create action; clients may
+only flip `read_at`. No email/push provider exists (the outbox is inert and admin-only).
+
+| Action                                                 | Contract                                                         |
+| ------------------------------------------------------ | ---------------------------------------------------------------- |
+| `getNotifications()`                                   | [auth] → the caller's notifications, newest first (≤50)          |
+| `getUnreadNotificationCount()`                         | [auth] → count of the caller's unread notifications              |
+| `getActivityFeed()`                                    | [auth] → activity events about/by the caller, newest first (≤50) |
+| `getNotificationPreferences()`                         | [auth] → the caller's prefs (defaults if no row)                 |
+| `markNotificationRead({notificationId})`               | [auth] set `read_at` on the caller's own notification            |
+| `markAllNotificationsRead()`                           | [auth] set `read_at` on all of the caller's unread notifications |
+| `updateNotificationPreferences({inApp?,email?,push?})` | [auth] upsert the caller's preferences → updated prefs           |
+
+Hooks in `use-notifications.ts`: `useNotifications`, `useUnreadNotificationCount`, `useActivityFeed`,
+`useNotificationPreferences`, `useMarkNotificationRead`, `useMarkAllNotificationsRead`,
+`useUpdateNotificationPreferences`. **Realtime:** `useNotifications` / `useUnreadNotificationCount`
+subscribe to `postgres_changes` on `notifications` filtered to the recipient (RLS-filtered) for live list +
+unread updates; the channel is removed on unmount. Pure helpers (`formatNotification`,
+`groupNotificationsByDay`, `countUnread`, `evaluatePreference`, `isOutboxEligible`, `notificationDedupeKey`,
+`activityLabel`) live in `cabana-notifications.ts`.
 
 ## 3. Planned Server Actions (T2)
 
