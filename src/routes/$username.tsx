@@ -10,6 +10,7 @@ import { comingSoon } from "@/lib/coming-soon";
 import { useFollow } from "@/lib/use-relationships";
 import { useCreatorFeed } from "@/lib/use-posts";
 import { PostCard } from "@/components/cabana/posts/PostCard";
+import { CreatorSubscribePanel } from "@/components/cabana/subscriptions/CreatorSubscribePanel";
 
 export const Route = createFileRoute("/$username")({
   component: CreatorProfileRoute,
@@ -230,6 +231,9 @@ export function CreatorProfile({ username }: { username: string }) {
           onUnlock={() => void handleFollow()}
           unlockPending={relationship.pending}
         />
+
+        {/* SUBSCRIBE (demo) */}
+        <CreatorSubscribePanel username={username} />
 
         {/* LINKS */}
         {links.length > 0 && (

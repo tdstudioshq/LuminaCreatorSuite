@@ -61,21 +61,21 @@
 
 ### Creator Studio (`/dashboard/*`, client auth gate)
 
-| Route                      | File                                         | State                                     |
-| -------------------------- | -------------------------------------------- | ----------------------------------------- |
-| `/dashboard`               | dashboard.tsx (layout) + dashboard.index.tsx | ✅ overview                               |
-| `/dashboard/profile`       | dashboard.profile.tsx                        | ✅                                        |
-| `/dashboard/links`         | dashboard.links.tsx                          | ✅                                        |
-| `/dashboard/storefront`    | dashboard.storefront.tsx                     | ✅                                        |
-| `/dashboard/analytics`     | dashboard.analytics.tsx                      | ✅                                        |
-| `/dashboard/media-kit`     | dashboard.media-kit.tsx                      | 🟡 hardcoded                              |
-| `/dashboard/ai`            | dashboard.ai.tsx                             | 🟡 simulated                              |
-| `/dashboard/settings`      | dashboard.settings.tsx                       | 🟡 hardcoded                              |
-| `/dashboard/posts`         | dashboard.posts.tsx                          | ✅ real composer + post manager (Phase 3) |
-| `/dashboard/subscribers`   | dashboard.subscribers.tsx                    | 🟡 FoundationPage                         |
-| `/dashboard/messages`      | dashboard.messages.tsx                       | 🟡 FoundationPage                         |
-| `/dashboard/earnings`      | dashboard.earnings.tsx                       | 🟡 FoundationPage                         |
-| `/dashboard/notifications` | dashboard.notifications.tsx                  | 🟡 FoundationPage                         |
+| Route                      | File                                         | State                                                  |
+| -------------------------- | -------------------------------------------- | ------------------------------------------------------ |
+| `/dashboard`               | dashboard.tsx (layout) + dashboard.index.tsx | ✅ overview                                            |
+| `/dashboard/profile`       | dashboard.profile.tsx                        | ✅                                                     |
+| `/dashboard/links`         | dashboard.links.tsx                          | ✅                                                     |
+| `/dashboard/storefront`    | dashboard.storefront.tsx                     | ✅                                                     |
+| `/dashboard/analytics`     | dashboard.analytics.tsx                      | ✅                                                     |
+| `/dashboard/media-kit`     | dashboard.media-kit.tsx                      | 🟡 hardcoded                                           |
+| `/dashboard/ai`            | dashboard.ai.tsx                             | 🟡 simulated                                           |
+| `/dashboard/settings`      | dashboard.settings.tsx                       | 🟡 hardcoded                                           |
+| `/dashboard/posts`         | dashboard.posts.tsx                          | ✅ real composer + post manager (Phase 3)              |
+| `/dashboard/subscribers`   | dashboard.subscribers.tsx                    | ✅ real tier manager + subscriber list (Phase 4, demo) |
+| `/dashboard/messages`      | dashboard.messages.tsx                       | 🟡 FoundationPage                                      |
+| `/dashboard/earnings`      | dashboard.earnings.tsx                       | 🟡 FoundationPage                                      |
+| `/dashboard/notifications` | dashboard.notifications.tsx                  | 🟡 FoundationPage                                      |
 
 ### Member foundation (public placeholders — must not render private data)
 

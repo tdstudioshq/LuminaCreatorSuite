@@ -139,6 +139,30 @@ system. No monetization, messaging, notifications, or real-time.
 viewability gating, block enforcement (both directions), creator hiding, author soft-delete, anonymous
 visible-comment reads on public posts, and anonymous write denial. Runs in `db:validate` and CI.
 
+### Creator subscriptions migration (Phase 4, DEMO-ONLY)
+
+`supabase/migrations/20260516000000_creator_subscriptions.sql` adds fan-to-creator subscriptions and
+wires the `subscribers` post tier to a real entitlement. **No real money** — prices are integer-cent demo
+values and references are `mock_*`. The existing `subscriptions` table is **not** renamed.
+
+- **`creator_subscription_status`** enum (`trialing`/`active`/`past_due`/`canceled`/`expired`).
+- **`creator_subscription_tiers`** — creator-defined tiers (name, `price_cents`, currency, `is_active`).
+  RLS: public reads ACTIVE tiers; owner manages via `is_current_user_creator`.
+- **`creator_subscriptions`** — member↔creator, tier, status, period, `mock_provider_reference`. A partial
+  unique index enforces at most one live (`trialing`/`active`) row per pair. RLS: member reads own; creator
+  reads subs to own profile; **writes only through the SECURITY DEFINER RPCs** (no direct DML grant); anon
+  revoked.
+- **Entitlement** — `is_active_subscriber(creator_profile_id)` is added to `can_view_post`,
+  `feed_creator_posts`, and `post_card`; subscriber posts unlock for active subscribers and appear as locked
+  stubs to others. A posts SELECT policy lets subscribers read subscriber posts directly too.
+- **RPCs** — `subscribe_to_creator(username, tier_id)` (copies the tier price, stamps a `mock_*` ref, no
+  charge; idempotent re-activation), `cancel_creator_subscription(username)`,
+  `creator_subscription_state(username)`, `creator_subscribers_list(cursor,limit)`.
+
+**Validation:** `supabase/tests/creator_subscriptions.sql` covers tier RLS, demo subscribe/cancel, the
+unique live pair, subscriber entitlement on posts + feed locking, self-subscribe rejection, direct-write
+denial, creator subscriber visibility, and anonymous denial. Runs in `db:validate` and CI.
+
 ## 2. Target Production Schema
 
 New tables grouped by dependency. Group letters match the build roadmap (`CABANA_BUILD_ROADMAP.md` §5).

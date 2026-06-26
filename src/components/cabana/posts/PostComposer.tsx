@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Globe, ImagePlus, Loader2, Users, X } from "lucide-react";
+import { Crown, Globe, ImagePlus, Loader2, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import type { PostVisibility } from "@/lib/cabana-posts";
 import { CAPTION_MAX, IMAGE_MIME_ALLOWLIST, MEDIA_PER_POST_MAX } from "@/lib/cabana-posts";
@@ -8,6 +8,7 @@ import { useCreatePost, usePublishPost, useUploadPostMedia } from "@/lib/use-pos
 const VISIBILITY_OPTIONS: { value: PostVisibility; label: string; icon: typeof Globe }[] = [
   { value: "public", label: "Public", icon: Globe },
   { value: "followers", label: "Followers", icon: Users },
+  { value: "subscribers", label: "Subscribers", icon: Crown },
 ];
 
 export function PostComposer() {

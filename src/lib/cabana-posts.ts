@@ -26,8 +26,12 @@ type PostMediaRow = Database["public"]["Tables"]["post_media"]["Row"];
 export const CAPTION_MAX = 2000;
 export const MEDIA_PER_POST_MAX = 10;
 
-/** Visibility values a creator may actually publish under in Phase 3. */
-export const WRITABLE_VISIBILITIES: readonly PostVisibility[] = ["public", "followers"] as const;
+/** Visibility values a creator may publish under (Phase 4 adds `subscribers`). */
+export const WRITABLE_VISIBILITIES: readonly PostVisibility[] = [
+  "public",
+  "followers",
+  "subscribers",
+] as const;
 
 /** Media kinds accepted by the composer in Phase 3 (image-only). */
 export const WRITABLE_MEDIA_KINDS: readonly PostMediaKind[] = ["image"] as const;
@@ -120,16 +124,16 @@ export function normalizeCaption(raw: unknown): string {
 }
 
 /**
- * Resolve a writable post visibility. Only `public` and `followers` are
- * supported in Phase 3; `subscribers`/`purchase` raise a clear "not available
- * yet" error so the UI can guide the creator without silently downgrading.
+ * Resolve a writable post visibility. `public`, `followers`, and `subscribers`
+ * are supported; `purchase` (paid per-post unlock) needs the Phase 6 ledger and
+ * raises a clear "not available yet" error so the UI can guide the creator.
  */
 export function normalizePostVisibility(raw: unknown): PostVisibility {
-  if (raw === "public" || raw === "followers") return raw;
-  if (raw === "subscribers" || raw === "purchase") {
-    throw new Error("Subscriber and paid posts are not available yet.");
+  if (raw === "public" || raw === "followers" || raw === "subscribers") return raw;
+  if (raw === "purchase") {
+    throw new Error("Paid-unlock posts are not available yet.");
   }
-  throw new Error("Visibility must be either 'public' or 'followers'.");
+  throw new Error("Visibility must be 'public', 'followers', or 'subscribers'.");
 }
 
 /** Validate the caption + visibility for a new or edited post. */
