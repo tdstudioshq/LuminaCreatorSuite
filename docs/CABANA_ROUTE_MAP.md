@@ -16,7 +16,7 @@
   uses RLS-scoped server actions, but no server route loaders guard pages yet. Hardening this remains
   a security item (see `CABANA_TECH_DEBT.md`).
 
-## 2. Existing Routes (34 route files)
+## 2. Existing Routes (35 route files)
 
 ### Public / marketing
 
@@ -41,11 +41,12 @@
 
 ### Public creator surface
 
-| Route         | File           | Protection | State                                                               |
-| ------------- | -------------- | ---------- | ------------------------------------------------------------------- |
-| `/$username`  | $username.tsx  | Public     | ✅ dynamic creator profile; authenticated Follow/Following persists |
-| `/td`         | td.tsx         | Public     | 🟡 bespoke static microsite                                         |
-| `/eldondolla` | eldondolla.tsx | Public     | 🟡 bespoke static microsite                                         |
+| Route           | File             | Protection              | State                                                                                    |
+| --------------- | ---------------- | ----------------------- | ---------------------------------------------------------------------------------------- |
+| `/$username`    | $username.tsx    | Public                  | ✅ dynamic creator profile; Follow persists; shows public posts + locked follower teases |
+| `/post/$postId` | post.$postId.tsx | Public (guest-callable) | ✅ post detail (locked-aware) + comments/likes/saves (Phase 3.2)                         |
+| `/td`           | td.tsx           | Public                  | 🟡 bespoke static microsite                                                              |
+| `/eldondolla`   | eldondolla.tsx   | Public                  | 🟡 bespoke static microsite                                                              |
 
 ### Member account (Phase 2B)
 
@@ -60,30 +61,30 @@
 
 ### Creator Studio (`/dashboard/*`, client auth gate)
 
-| Route                      | File                                         | State             |
-| -------------------------- | -------------------------------------------- | ----------------- |
-| `/dashboard`               | dashboard.tsx (layout) + dashboard.index.tsx | ✅ overview       |
-| `/dashboard/profile`       | dashboard.profile.tsx                        | ✅                |
-| `/dashboard/links`         | dashboard.links.tsx                          | ✅                |
-| `/dashboard/storefront`    | dashboard.storefront.tsx                     | ✅                |
-| `/dashboard/analytics`     | dashboard.analytics.tsx                      | ✅                |
-| `/dashboard/media-kit`     | dashboard.media-kit.tsx                      | 🟡 hardcoded      |
-| `/dashboard/ai`            | dashboard.ai.tsx                             | 🟡 simulated      |
-| `/dashboard/settings`      | dashboard.settings.tsx                       | 🟡 hardcoded      |
-| `/dashboard/posts`         | dashboard.posts.tsx                          | 🟡 FoundationPage |
-| `/dashboard/subscribers`   | dashboard.subscribers.tsx                    | 🟡 FoundationPage |
-| `/dashboard/messages`      | dashboard.messages.tsx                       | 🟡 FoundationPage |
-| `/dashboard/earnings`      | dashboard.earnings.tsx                       | 🟡 FoundationPage |
-| `/dashboard/notifications` | dashboard.notifications.tsx                  | 🟡 FoundationPage |
+| Route                      | File                                         | State                                     |
+| -------------------------- | -------------------------------------------- | ----------------------------------------- |
+| `/dashboard`               | dashboard.tsx (layout) + dashboard.index.tsx | ✅ overview                               |
+| `/dashboard/profile`       | dashboard.profile.tsx                        | ✅                                        |
+| `/dashboard/links`         | dashboard.links.tsx                          | ✅                                        |
+| `/dashboard/storefront`    | dashboard.storefront.tsx                     | ✅                                        |
+| `/dashboard/analytics`     | dashboard.analytics.tsx                      | ✅                                        |
+| `/dashboard/media-kit`     | dashboard.media-kit.tsx                      | 🟡 hardcoded                              |
+| `/dashboard/ai`            | dashboard.ai.tsx                             | 🟡 simulated                              |
+| `/dashboard/settings`      | dashboard.settings.tsx                       | 🟡 hardcoded                              |
+| `/dashboard/posts`         | dashboard.posts.tsx                          | ✅ real composer + post manager (Phase 3) |
+| `/dashboard/subscribers`   | dashboard.subscribers.tsx                    | 🟡 FoundationPage                         |
+| `/dashboard/messages`      | dashboard.messages.tsx                       | 🟡 FoundationPage                         |
+| `/dashboard/earnings`      | dashboard.earnings.tsx                       | 🟡 FoundationPage                         |
+| `/dashboard/notifications` | dashboard.notifications.tsx                  | 🟡 FoundationPage                         |
 
 ### Member foundation (public placeholders — must not render private data)
 
-| Route            | File              | Protection today   | Target               |
-| ---------------- | ----------------- | ------------------ | -------------------- |
-| `/feed`          | feed.tsx          | Public placeholder | Member-auth (P2)     |
-| `/discover`      | discover.tsx      | Public placeholder | Public + member (P2) |
-| `/messages`      | messages.tsx      | Public placeholder | Member-auth (P4)     |
-| `/notifications` | notifications.tsx | Public placeholder | Member-auth (P9)     |
+| Route            | File              | Protection today                               | Target               |
+| ---------------- | ----------------- | ---------------------------------------------- | -------------------- |
+| `/feed`          | feed.tsx          | ✅ real home feed (signed-in; guests prompted) | Member-auth (P2)     |
+| `/discover`      | discover.tsx      | Public placeholder                             | Public + member (P2) |
+| `/messages`      | messages.tsx      | Public placeholder                             | Member-auth (P4)     |
+| `/notifications` | notifications.tsx | Public placeholder                             | Member-auth (P9)     |
 
 ### Admin
 

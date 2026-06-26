@@ -97,6 +97,48 @@ feeds, messaging, notifications, subscriptions, or payments.
 creator RLS, cross-user denial, self-follow rejection, anonymous base-table/RPC denial, safe-view
 columns/counts, and protected follow/unfollow behavior. It runs in `db:validate` and CI.
 
+### Posts & feed migration (Phase 3)
+
+`supabase/migrations/20260514000000_posts_feed.sql` adds creator publishing with public/followers
+visibility and private media.
+
+- **`posts`** — `creator_profile_id` FK, `caption`, `visibility` (`post_visibility`), `status`
+  (`post_status`), `published_at`/`scheduled_at`. RLS: owner full CRUD via `is_current_user_creator`;
+  anyone reads published public posts; followers read published followers posts via
+  `is_following_creator`. `subscribers`/`purchase` rows are owner-only.
+- **`post_media`** — image metadata (`owner_user_id`, `kind` `post_media_kind`, `storage_path`, dims,
+  `position`). **Owner-only** SELECT; all viewer access flows through signed URLs.
+- **Helpers/RPCs** — `is_following_creator`, `can_view_post`; ID-free `feed_creator_posts` (followers
+  posts returned to non-followers as locked stubs) and `feed_home_posts`. `is_following_creator` /
+  `is_current_user_creator` grants extended to `anon` (posts SELECT policies are OR-evaluated for
+  anonymous readers).
+- **Storage** — private `post-media` bucket (`public = false`), owner-scoped object policies;
+  authorization-gated signed URLs issued by the `getPostMediaUrls` server action.
+
+**Validation:** `supabase/tests/posts_feed.sql` (owner CRUD, anon public read, follower gating, locked
+stubs, no draft/subscriber leakage, `can_view_post`, owner-only media, private bucket).
+
+### Engagement migration (Phase 3.2)
+
+`supabase/migrations/20260515000000_engagement.sql` adds comments, likes, and saves on top of the post
+system. No monetization, messaging, notifications, or real-time.
+
+- **`post_comments`** — `post_id`/`author_id` FKs, `body` (1–2000 chars), `status` (`comment_status`:
+  `visible`/`hidden`/`deleted`), `updated_at` trigger. Soft-deletable; no hard-delete policy.
+- **`post_likes`** / **`post_saves`** — unique (`post_id`, `user_id`); strictly private to the actor;
+  anonymous access revoked.
+- **RLS** — engagement requires `can_view_post(post_id)` and is denied across a block via
+  `is_engagement_blocked`. Read visible comments on viewable posts (anon → public only); authors read
+  their own; post owners read all on their posts. Authors edit/soft-delete own visible comments; post
+  owners may hide.
+- **Helpers/RPCs** — `is_current_user_post_owner`, `is_engagement_blocked`; ID-free
+  `post_engagement_state` (counts + caller's like/save/can-engage), `post_comments_list` (safe author
+  identity), `post_card` (single locked-aware post for the detail page).
+
+**Validation:** `supabase/tests/engagement.sql` covers comment/like/save RLS, like & save uniqueness,
+viewability gating, block enforcement (both directions), creator hiding, author soft-delete, anonymous
+visible-comment reads on public posts, and anonymous write denial. Runs in `db:validate` and CI.
+
 ## 2. Target Production Schema
 
 New tables grouped by dependency. Group letters match the build roadmap (`CABANA_BUILD_ROADMAP.md` §5).

@@ -28,6 +28,7 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as UsernameRouteImport } from './routes/$username'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as PostPostIdRouteImport } from './routes/post.$postId'
 import { Route as FeaturesAiRouteImport } from './routes/features.ai'
 import { Route as DocsSystemRouteImport } from './routes/docs.system'
 import { Route as DocsDataModelRouteImport } from './routes/docs.data-model'
@@ -139,6 +140,11 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashboardRoute,
 } as any)
+const PostPostIdRoute = PostPostIdRouteImport.update({
+  id: '/post/$postId',
+  path: '/post/$postId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FeaturesAiRoute = FeaturesAiRouteImport.update({
   id: '/features/ai',
   path: '/features/ai',
@@ -249,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/docs/data-model': typeof DocsDataModelRoute
   '/docs/system': typeof DocsSystemRoute
   '/features/ai': typeof FeaturesAiRoute
+  '/post/$postId': typeof PostPostIdRoute
   '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRoutesByTo {
@@ -284,6 +291,7 @@ export interface FileRoutesByTo {
   '/docs/data-model': typeof DocsDataModelRoute
   '/docs/system': typeof DocsSystemRoute
   '/features/ai': typeof FeaturesAiRoute
+  '/post/$postId': typeof PostPostIdRoute
   '/dashboard': typeof DashboardIndexRoute
 }
 export interface FileRoutesById {
@@ -321,6 +329,7 @@ export interface FileRoutesById {
   '/docs/data-model': typeof DocsDataModelRoute
   '/docs/system': typeof DocsSystemRoute
   '/features/ai': typeof FeaturesAiRoute
+  '/post/$postId': typeof PostPostIdRoute
   '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRouteTypes {
@@ -359,6 +368,7 @@ export interface FileRouteTypes {
     | '/docs/data-model'
     | '/docs/system'
     | '/features/ai'
+    | '/post/$postId'
     | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -394,6 +404,7 @@ export interface FileRouteTypes {
     | '/docs/data-model'
     | '/docs/system'
     | '/features/ai'
+    | '/post/$postId'
     | '/dashboard'
   id:
     | '__root__'
@@ -430,6 +441,7 @@ export interface FileRouteTypes {
     | '/docs/data-model'
     | '/docs/system'
     | '/features/ai'
+    | '/post/$postId'
     | '/dashboard/'
   fileRoutesById: FileRoutesById
 }
@@ -455,6 +467,7 @@ export interface RootRouteChildren {
   DocsDataModelRoute: typeof DocsDataModelRoute
   DocsSystemRoute: typeof DocsSystemRoute
   FeaturesAiRoute: typeof FeaturesAiRoute
+  PostPostIdRoute: typeof PostPostIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -591,6 +604,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRoute
+    }
+    '/post/$postId': {
+      id: '/post/$postId'
+      path: '/post/$postId'
+      fullPath: '/post/$postId'
+      preLoaderRoute: typeof PostPostIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/features/ai': {
       id: '/features/ai'
@@ -758,6 +778,7 @@ const rootRouteChildren: RootRouteChildren = {
   DocsDataModelRoute: DocsDataModelRoute,
   DocsSystemRoute: DocsSystemRoute,
   FeaturesAiRoute: FeaturesAiRoute,
+  PostPostIdRoute: PostPostIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

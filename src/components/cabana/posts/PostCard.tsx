@@ -4,6 +4,7 @@ import type { FeedPost } from "@/lib/cabana-posts";
 import { PostVisibilityBadge } from "./PostVisibilityBadge";
 import { PostMediaGallery } from "./PostMediaGallery";
 import { LockedContentGate } from "./LockedContentGate";
+import { EngagementBar } from "./EngagementBar";
 
 export function PostCard({
   post,
@@ -57,6 +58,7 @@ export function PostCard({
             </p>
           )}
           {post.media.length > 0 && <PostMediaGallery postId={post.postId} />}
+          <EngagementBar postId={post.postId} />
         </>
       )}
     </motion.article>

@@ -260,6 +260,87 @@ export type Database = {
         };
         Relationships: [];
       };
+      post_comments: {
+        Row: {
+          author_id: string;
+          body: string;
+          created_at: string;
+          id: string;
+          post_id: string;
+          status: Database["public"]["Enums"]["comment_status"];
+          updated_at: string;
+        };
+        Insert: {
+          author_id: string;
+          body: string;
+          created_at?: string;
+          id?: string;
+          post_id: string;
+          status?: Database["public"]["Enums"]["comment_status"];
+          updated_at?: string;
+        };
+        Update: {
+          author_id?: string;
+          body?: string;
+          created_at?: string;
+          id?: string;
+          post_id?: string;
+          status?: Database["public"]["Enums"]["comment_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "post_comments_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "post_comments_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "posts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      post_likes: {
+        Row: {
+          created_at: string;
+          id: string;
+          post_id: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          post_id: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          post_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "post_likes_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "posts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "post_likes_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       post_media: {
         Row: {
           created_at: string;
@@ -316,6 +397,42 @@ export type Database = {
             columns: ["post_id"];
             isOneToOne: false;
             referencedRelation: "posts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      post_saves: {
+        Row: {
+          created_at: string;
+          id: string;
+          post_id: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          post_id: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          post_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "post_saves_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "posts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "post_saves_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -619,9 +736,50 @@ export type Database = {
         Args: { _creator_profile_id: string };
         Returns: boolean;
       };
+      is_current_user_post_owner: {
+        Args: { _post_id: string };
+        Returns: boolean;
+      };
+      is_engagement_blocked: { Args: { _post_id: string }; Returns: boolean };
       is_following_creator: {
         Args: { _creator_profile_id: string };
         Returns: boolean;
+      };
+      post_card: {
+        Args: { _post_id: string };
+        Returns: {
+          avatar_url: string;
+          caption: string;
+          display_name: string;
+          locked: boolean;
+          media: Json;
+          post_id: string;
+          published_at: string;
+          username: string;
+          visibility: Database["public"]["Enums"]["post_visibility"];
+        }[];
+      };
+      post_comments_list: {
+        Args: { _cursor?: string; _limit?: number; _post_id: string };
+        Returns: {
+          author_avatar_url: string;
+          author_display_name: string;
+          author_username: string;
+          body: string;
+          comment_id: string;
+          created_at: string;
+          mine: boolean;
+        }[];
+      };
+      post_engagement_state: {
+        Args: { _post_id: string };
+        Returns: {
+          can_engage: boolean;
+          comment_count: number;
+          like_count: number;
+          liked_by_me: boolean;
+          saved_by_me: boolean;
+        }[];
       };
       relationship_follow_creator: {
         Args: { _username: string };
@@ -646,6 +804,7 @@ export type Database = {
     Enums: {
       account_type: "creator" | "member";
       app_role: "admin" | "moderator" | "user";
+      comment_status: "visible" | "hidden" | "deleted";
       post_media_kind: "image" | "video" | "audio";
       post_status: "draft" | "scheduled" | "published" | "archived";
       post_visibility: "public" | "followers" | "subscribers" | "purchase";
@@ -779,6 +938,7 @@ export const Constants = {
     Enums: {
       account_type: ["creator", "member"],
       app_role: ["admin", "moderator", "user"],
+      comment_status: ["visible", "hidden", "deleted"],
       post_media_kind: ["image", "video", "audio"],
       post_status: ["draft", "scheduled", "published", "archived"],
       post_visibility: ["public", "followers", "subscribers", "purchase"],
