@@ -11,6 +11,7 @@ import { useFollow } from "@/lib/use-relationships";
 import { useCreatorFeed } from "@/lib/use-posts";
 import { PostCard } from "@/components/cabana/posts/PostCard";
 import { CreatorSubscribePanel } from "@/components/cabana/subscriptions/CreatorSubscribePanel";
+import { useStartConversationWithUsername } from "@/lib/use-messaging";
 
 export const Route = createFileRoute("/$username")({
   component: CreatorProfileRoute,
@@ -42,6 +43,7 @@ function CreatorProfileRoute() {
 export function CreatorProfile({ username }: { username: string }) {
   const navigate = useNavigate();
   const relationship = useFollow(username);
+  const startConversation = useStartConversationWithUsername();
   const { data, isLoading } = useCreatorByHandle(username);
   const profileId = data?.profile.id;
 
@@ -87,6 +89,18 @@ export function CreatorProfile({ username }: { username: string }) {
       await relationship.toggle();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Couldn’t update follow status.");
+    }
+  };
+  const handleMessage = async () => {
+    if (!relationship.signedIn) {
+      navigate({ to: "/login", search: { redirect: `/${username}` } as never });
+      return;
+    }
+    try {
+      const { conversationId } = await startConversation.mutateAsync(username);
+      navigate({ to: "/messages/$conversationId", params: { conversationId } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn’t start a conversation.");
     }
   };
 
@@ -216,8 +230,9 @@ export function CreatorProfile({ username }: { username: string }) {
                 !relationship.pending && <Sparkles className="w-4 h-4" />}
             </button>
             <button
-              onClick={() => comingSoon("Direct messaging")}
-              className="btn-ghost !px-4 flex items-center justify-center"
+              onClick={() => void handleMessage()}
+              disabled={startConversation.isPending || relationship.data?.isSelf}
+              className="btn-ghost !px-4 flex items-center justify-center disabled:opacity-50"
               aria-label="Message creator"
             >
               <Mail className="w-4 h-4" />

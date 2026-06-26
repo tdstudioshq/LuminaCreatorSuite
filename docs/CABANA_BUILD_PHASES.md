@@ -146,7 +146,24 @@ the `purchase` post-unlock visibility, and the `subscriptions`→`platform_subsc
 
 ---
 
-## Phase 5 — Messaging
+## Phase 5 — Messaging ✅ DONE (foundation)
+
+**Delivered (messaging foundation):** migration `20260517000000_messaging.sql` — `message_type` enum;
+`conversations`, `conversation_participants`, `messages` (soft-delete), `message_read_receipts`;
+SECURITY DEFINER participant/block helpers; RPCs `create_direct_conversation` /
+`start_conversation_with_username` / `list_conversations` / `conversation_header` /
+`conversation_messages` / `mark_conversation_read` / `unread_message_count`; **Supabase Realtime**
+publication. `cabana-messaging.ts` (+ tests), `messaging-actions.ts`, `use-messaging.ts` (live messages/
+receipts/inbox); `Inbox`, `ConversationView`, `MessageBubble`, `MessageComposer`; real `/messages` +
+`/messages/$conversationId`; `/$username` Message button opens a conversation. Participant-scoped RLS;
+block-aware (no new conversation/message across a block); anon revoked.
+
+**Deferred:** paid messages, tips, attachments (image/video), notifications/push (Phase 6 / later). The
+`message_type` enum reserves `image`/`video`/`paid`/`tip` for those.
+
+**Validation:** `messaging.sql` behavioral suite + smoke extensions; in `db:validate` and CI.
+
+### Original Phase 5 plan (full scope, for reference)
 
 **Goal:** Real conversations and messages with participant-scoped RLS, Realtime delivery, read state, cursor pagination, and private attachments (with paid-message scaffolding, demo unlock).
 

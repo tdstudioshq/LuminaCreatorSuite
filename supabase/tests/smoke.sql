@@ -14,7 +14,8 @@ declare
     'member_profiles','follows','blocks',
     'posts','post_media',
     'post_comments','post_likes','post_saves',
-    'creator_subscription_tiers','creator_subscriptions'
+    'creator_subscription_tiers','creator_subscriptions',
+    'conversations','conversation_participants','messages','message_read_receipts'
   ];
   t text;
 begin
@@ -49,6 +50,10 @@ begin
   -- Phase 4 enum
   if not exists (select 1 from pg_type where typname = 'creator_subscription_status') then
     raise exception 'MISSING ENUM: creator_subscription_status';
+  end if;
+  -- Phase 5 enum
+  if not exists (select 1 from pg_type where typname = 'message_type') then
+    raise exception 'MISSING ENUM: message_type';
   end if;
 
   -- Phase 2B: profiles.account_type column (NOT NULL, default creator)
@@ -122,6 +127,22 @@ begin
   if to_regprocedure('public.creator_subscription_state(text)') is null then
     raise exception 'MISSING FUNCTION: creator_subscription_state';
   end if;
+  -- Phase 5 messaging RPCs + helpers
+  if to_regprocedure('public.create_direct_conversation(uuid)') is null then
+    raise exception 'MISSING FUNCTION: create_direct_conversation';
+  end if;
+  if to_regprocedure('public.list_conversations()') is null then
+    raise exception 'MISSING FUNCTION: list_conversations';
+  end if;
+  if to_regprocedure('public.conversation_messages(uuid, timestamptz, integer)') is null then
+    raise exception 'MISSING FUNCTION: conversation_messages';
+  end if;
+  if to_regprocedure('public.is_conversation_participant(uuid)') is null then
+    raise exception 'MISSING FUNCTION: is_conversation_participant';
+  end if;
+  if to_regprocedure('public.unread_message_count()') is null then
+    raise exception 'MISSING FUNCTION: unread_message_count';
+  end if;
 
   -- Signup trigger on auth.users
   if not exists (
@@ -163,6 +184,20 @@ begin
   end if;
   if not (select relrowsecurity from pg_class where oid = 'public.creator_subscriptions'::regclass) then
     raise exception 'RLS NOT ENABLED: creator_subscriptions';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.conversations'::regclass) then
+    raise exception 'RLS NOT ENABLED: conversations';
+  end if;
+  if not (select relrowsecurity from pg_class where oid = 'public.messages'::regclass) then
+    raise exception 'RLS NOT ENABLED: messages';
+  end if;
+  -- messages must NOT be readable by anon (no grant)
+  if exists (
+    select 1 from information_schema.role_table_grants
+    where table_schema = 'public' and table_name = 'messages'
+      and grantee = 'anon' and privilege_type = 'SELECT'
+  ) then
+    raise exception 'SECURITY: anon has SELECT on messages';
   end if;
   -- creator_subscriptions must NOT be readable by anon (no grant)
   if exists (
