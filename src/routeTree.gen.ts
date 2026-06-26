@@ -46,6 +46,7 @@ import { Route as DashboardEarningsRouteImport } from './routes/dashboard.earnin
 import { Route as DashboardAnalyticsRouteImport } from './routes/dashboard.analytics'
 import { Route as DashboardAiRouteImport } from './routes/dashboard.ai'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
+import { Route as AdminPayoutsRouteImport } from './routes/admin.payouts'
 import { Route as AdminLedgerRouteImport } from './routes/admin.ledger'
 import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
 import { Route as AdminAuditRouteImport } from './routes/admin.audit'
@@ -236,6 +237,11 @@ const AdminReportsRoute = AdminReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPayoutsRoute = AdminPayoutsRouteImport.update({
+  id: '/payouts',
+  path: '/payouts',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLedgerRoute = AdminLedgerRouteImport.update({
   id: '/ledger',
   path: '/ledger',
@@ -280,6 +286,7 @@ export interface FileRoutesByFullPath {
   '/admin/audit': typeof AdminAuditRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
+  '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
@@ -322,6 +329,7 @@ export interface FileRoutesByTo {
   '/admin/audit': typeof AdminAuditRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
+  '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
@@ -366,6 +374,7 @@ export interface FileRoutesById {
   '/admin/audit': typeof AdminAuditRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
+  '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
@@ -411,6 +420,7 @@ export interface FileRouteTypes {
     | '/admin/audit'
     | '/admin/finance'
     | '/admin/ledger'
+    | '/admin/payouts'
     | '/admin/reports'
     | '/dashboard/ai'
     | '/dashboard/analytics'
@@ -453,6 +463,7 @@ export interface FileRouteTypes {
     | '/admin/audit'
     | '/admin/finance'
     | '/admin/ledger'
+    | '/admin/payouts'
     | '/admin/reports'
     | '/dashboard/ai'
     | '/dashboard/analytics'
@@ -496,6 +507,7 @@ export interface FileRouteTypes {
     | '/admin/audit'
     | '/admin/finance'
     | '/admin/ledger'
+    | '/admin/payouts'
     | '/admin/reports'
     | '/dashboard/ai'
     | '/dashboard/analytics'
@@ -804,6 +816,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminReportsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/payouts': {
+      id: '/admin/payouts'
+      path: '/payouts'
+      fullPath: '/admin/payouts'
+      preLoaderRoute: typeof AdminPayoutsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/ledger': {
       id: '/admin/ledger'
       path: '/ledger'
@@ -851,6 +870,7 @@ interface AdminRouteChildren {
   AdminAuditRoute: typeof AdminAuditRoute
   AdminFinanceRoute: typeof AdminFinanceRoute
   AdminLedgerRoute: typeof AdminLedgerRouteWithChildren
+  AdminPayoutsRoute: typeof AdminPayoutsRoute
   AdminReportsRoute: typeof AdminReportsRoute
 }
 
@@ -858,6 +878,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAuditRoute: AdminAuditRoute,
   AdminFinanceRoute: AdminFinanceRoute,
   AdminLedgerRoute: AdminLedgerRouteWithChildren,
+  AdminPayoutsRoute: AdminPayoutsRoute,
   AdminReportsRoute: AdminReportsRoute,
 }
 
