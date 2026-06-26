@@ -34,3 +34,18 @@ values
   ('00000000-0000-4000-c000-000000000001', '00000000-0000-4000-a000-000000000001', 'Signed vinyl', '$48', 'Physical', 'https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?auto=format&fit=crop&w=600&q=80', 312, 0),
   ('00000000-0000-4000-c000-000000000002', '00000000-0000-4000-a000-000000000001', 'Studio presets', '$24', 'Download', 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80', 184, 1)
 on conflict (id) do nothing;
+
+-- A published Phase 6 `purchase` post so the (demo) unlock flow has something to
+-- buy on a fresh instance. A signed-in member can unlock it via create_mock_purchase.
+insert into public.posts (id, creator_profile_id, caption, visibility, status, published_at, price_cents, currency)
+values (
+  '00000000-0000-4000-d000-000000000001',
+  '00000000-0000-4000-a000-000000000001',
+  'Unreleased acoustic session — unlock to listen.',
+  'purchase',
+  'published',
+  now(),
+  900,
+  'USD'
+)
+on conflict (id) do nothing;

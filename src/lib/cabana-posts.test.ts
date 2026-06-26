@@ -8,7 +8,9 @@ import {
   mapPostMedia,
   normalizeCaption,
   normalizeNewPost,
+  normalizePostCurrency,
   normalizePostMediaInput,
+  normalizePostPriceCents,
   normalizePostVisibility,
   resolvePublishPatch,
 } from "./cabana-posts";
@@ -38,14 +40,11 @@ describe("normalizeCaption", () => {
 });
 
 describe("normalizePostVisibility", () => {
-  it("accepts public, followers, and subscribers", () => {
+  it("accepts all four tiers (Phase 6 adds purchase)", () => {
     expect(normalizePostVisibility("public")).toBe("public");
     expect(normalizePostVisibility("followers")).toBe("followers");
     expect(normalizePostVisibility("subscribers")).toBe("subscribers");
-  });
-
-  it("rejects purchase with a not-available message", () => {
-    expect(() => normalizePostVisibility("purchase")).toThrow(/not available yet/i);
+    expect(normalizePostVisibility("purchase")).toBe("purchase");
   });
 
   it("rejects unknown values", () => {
@@ -54,16 +53,65 @@ describe("normalizePostVisibility", () => {
   });
 });
 
+describe("normalizePostCurrency", () => {
+  it("defaults to USD and uppercases valid codes", () => {
+    expect(normalizePostCurrency(null)).toBe("USD");
+    expect(normalizePostCurrency("")).toBe("USD");
+    expect(normalizePostCurrency("eur")).toBe("EUR");
+  });
+
+  it("rejects malformed codes", () => {
+    expect(() => normalizePostCurrency("US")).toThrow(/3-letter/i);
+    expect(() => normalizePostCurrency(42)).toThrow(/3-letter/i);
+  });
+});
+
+describe("normalizePostPriceCents", () => {
+  it("accepts a positive integer number of cents", () => {
+    expect(normalizePostPriceCents(900)).toBe(900);
+  });
+
+  it("rejects non-integers, zero/negatives, and oversized prices", () => {
+    expect(() => normalizePostPriceCents(9.99)).toThrow(/whole number of cents/i);
+    expect(() => normalizePostPriceCents(0)).toThrow(/above zero/i);
+    expect(() => normalizePostPriceCents(-5)).toThrow(/above zero/i);
+    expect(() => normalizePostPriceCents(100_000_001)).toThrow(/too large/i);
+  });
+});
+
 describe("normalizeNewPost", () => {
-  it("normalizes caption and visibility together", () => {
+  it("normalizes caption + visibility and forces a null price for free posts", () => {
     expect(normalizeNewPost({ caption: "  hi ", visibility: "followers" })).toEqual({
       caption: "hi",
       visibility: "followers",
+      priceCents: null,
+      currency: "USD",
     });
   });
 
+  it("requires a positive price for a purchase post", () => {
+    expect(normalizeNewPost({ caption: "x", visibility: "purchase", priceCents: 1500 })).toEqual({
+      caption: "x",
+      visibility: "purchase",
+      priceCents: 1500,
+      currency: "USD",
+    });
+    expect(() => normalizeNewPost({ caption: "x", visibility: "purchase" })).toThrow(
+      /whole number of cents/i,
+    );
+    expect(() => normalizeNewPost({ caption: "x", visibility: "purchase", priceCents: 0 })).toThrow(
+      /above zero/i,
+    );
+  });
+
+  it("ignores a stray price on a non-purchase post", () => {
+    expect(
+      normalizeNewPost({ caption: "x", visibility: "public", priceCents: 999 }).priceCents,
+    ).toBeNull();
+  });
+
   it("propagates visibility errors", () => {
-    expect(() => normalizeNewPost({ caption: "hi", visibility: "purchase" })).toThrow();
+    expect(() => normalizeNewPost({ caption: "hi", visibility: "everyone" })).toThrow();
   });
 });
 
@@ -179,7 +227,9 @@ describe("mapPost / mapPostMedia", () => {
         id: "p1",
         creator_profile_id: "c1",
         caption: "hi",
-        visibility: "public",
+        visibility: "purchase",
+        price_cents: 1500,
+        currency: "USD",
         status: "published",
         published_at: "2026-06-25T00:00:00Z",
         scheduled_at: null,
@@ -190,7 +240,9 @@ describe("mapPost / mapPostMedia", () => {
       id: "p1",
       creatorProfileId: "c1",
       caption: "hi",
-      visibility: "public",
+      visibility: "purchase",
+      priceCents: 1500,
+      currency: "USD",
       status: "published",
       publishedAt: "2026-06-25T00:00:00Z",
       scheduledAt: null,

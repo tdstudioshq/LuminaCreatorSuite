@@ -202,6 +202,7 @@ export interface CreatorBalance {
   availableCents: number;
   lifetimeGrossCents: number;
   lifetimeFeesCents: number;
+  lifetimeNetCents: number;
   lifetimePaidOutCents: number;
   updatedAt: ISODateString;
 }

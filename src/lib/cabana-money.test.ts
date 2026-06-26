@@ -11,9 +11,13 @@ import {
   centsToDollars,
   deriveCreatorBalance,
   dollarsToCents,
+  entitlementFromPurchase,
+  evaluatePayoutEligibility,
+  evaluatePurchase,
   formatMoney,
   DEFAULT_PLATFORM_FEE_RATE,
   DEFAULT_PROCESSOR_FEE_RATE,
+  MIN_PAYOUT_CENTS,
 } from "@/lib/cabana-money";
 import { makePayout, makeTransaction } from "@/test/factories";
 
@@ -286,5 +290,88 @@ describe("formatMoney", () => {
   it("rejects non-integer cents", () => {
     expect(() => formatMoney(10.5)).toThrow(RangeError);
     expect(() => formatMoney(Number.NaN)).toThrow(RangeError);
+  });
+});
+
+describe("evaluatePayoutEligibility", () => {
+  it("defaults the minimum to $10 (1000 cents)", () => {
+    expect(MIN_PAYOUT_CENTS).toBe(1000);
+    expect(evaluatePayoutEligibility(5000, 2000)).toEqual({
+      eligible: true,
+      reason: "eligible",
+      minimumCents: 1000,
+    });
+  });
+
+  it("rejects invalid amounts (non-integer, zero, negative, non-finite)", () => {
+    expect(evaluatePayoutEligibility(5000, 0).reason).toBe("invalid_amount");
+    expect(evaluatePayoutEligibility(5000, -1).reason).toBe("invalid_amount");
+    expect(evaluatePayoutEligibility(5000, 10.5).reason).toBe("invalid_amount");
+    expect(evaluatePayoutEligibility(5000, Number.NaN).reason).toBe("invalid_amount");
+  });
+
+  it("rejects amounts below the minimum", () => {
+    const r = evaluatePayoutEligibility(5000, 500);
+    expect(r.eligible).toBe(false);
+    expect(r.reason).toBe("below_minimum");
+  });
+
+  it("rejects amounts above the available balance", () => {
+    expect(evaluatePayoutEligibility(1500, 2000).reason).toBe("exceeds_available");
+  });
+
+  it("honors a custom minimum", () => {
+    expect(evaluatePayoutEligibility(5000, 1500, 2000).reason).toBe("below_minimum");
+    expect(evaluatePayoutEligibility(5000, 2500, 2000).eligible).toBe(true);
+  });
+});
+
+describe("evaluatePurchase", () => {
+  it("returns a fee breakdown for a purchasable post", () => {
+    const decision = evaluatePurchase({ visibility: "purchase", priceCents: 1900 });
+    expect(decision).toEqual({
+      purchasable: true,
+      reason: "purchasable",
+      breakdown: breakdownPayment(1900),
+    });
+  });
+
+  it("blocks the owner from buying their own post", () => {
+    expect(evaluatePurchase({ visibility: "purchase", priceCents: 1900, isOwner: true })).toEqual({
+      purchasable: false,
+      reason: "owner",
+    });
+  });
+
+  it("does not re-charge an existing entitlement", () => {
+    expect(
+      evaluatePurchase({ visibility: "purchase", priceCents: 1900, alreadyOwned: true }),
+    ).toEqual({ purchasable: false, reason: "already_owned" });
+  });
+
+  it("rejects non-purchase visibilities", () => {
+    expect(evaluatePurchase({ visibility: "public", priceCents: 1900 }).reason).toBe(
+      "not_purchasable",
+    );
+  });
+
+  it("rejects purchase posts without a positive price", () => {
+    expect(evaluatePurchase({ visibility: "purchase", priceCents: null }).reason).toBe("free");
+    expect(evaluatePurchase({ visibility: "purchase", priceCents: 0 }).reason).toBe("free");
+  });
+});
+
+describe("entitlementFromPurchase", () => {
+  it("builds a permanent purchase entitlement record", () => {
+    expect(entitlementFromPurchase("u1", "p1", "pur1")).toEqual({
+      userId: "u1",
+      postId: "p1",
+      source: "purchase",
+      purchaseId: "pur1",
+    });
+  });
+
+  it("defaults purchaseId to null", () => {
+    expect(entitlementFromPurchase("u1", "p1").purchaseId).toBeNull();
   });
 });

@@ -75,7 +75,7 @@
 | `/dashboard/posts`         | dashboard.posts.tsx                          | ✅ real composer + post manager (Phase 3)              |
 | `/dashboard/subscribers`   | dashboard.subscribers.tsx                    | ✅ real tier manager + subscriber list (Phase 4, demo) |
 | `/dashboard/messages`      | dashboard.messages.tsx                       | 🟡 FoundationPage                                      |
-| `/dashboard/earnings`      | dashboard.earnings.tsx                       | 🟡 FoundationPage                                      |
+| `/dashboard/earnings`      | dashboard.earnings.tsx                       | ✅ real earnings dashboard — balance, ledger, tips, sales, payouts (Phase 6, demo) |
 | `/dashboard/notifications` | dashboard.notifications.tsx                  | 🟡 FoundationPage                                      |
 
 ### Member foundation (public placeholders — must not render private data)

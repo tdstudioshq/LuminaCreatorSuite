@@ -1,8 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { GlobalNav } from "@/components/cabana/GlobalNav";
 import { useCabana } from "@/lib/cabana-store";
 import { usePost } from "@/lib/use-engagement";
+import { usePurchaseUnlock } from "@/lib/use-money";
 import { PostCard } from "./PostCard";
 import { CommentComposer } from "./CommentComposer";
 import { CommentList } from "./CommentList";
@@ -10,8 +12,18 @@ import { CommentList } from "./CommentList";
 export function PostDetail({ postId }: { postId: string }) {
   const { data: post, isLoading, isError } = usePost(postId);
   const { profile } = useCabana();
+  const purchaseUnlock = usePurchaseUnlock();
   const isOwner =
     !!profile?.handle && !!post && profile.handle.toLowerCase() === post.username.toLowerCase();
+
+  const onUnlock =
+    post && post.locked && post.visibility === "purchase"
+      ? () =>
+          purchaseUnlock.mutate(post.postId, {
+            onSuccess: () => toast.success("Unlocked (demo) — no real payment was processed."),
+            onError: (e) => toast.error(e instanceof Error ? e.message : "Could not unlock."),
+          })
+      : undefined;
 
   return (
     <div className="relative min-h-screen overflow-x-hidden px-4 pb-24 pt-32 sm:px-6">
@@ -37,7 +49,7 @@ export function PostDetail({ postId }: { postId: string }) {
           </div>
         ) : (
           <div className="space-y-5">
-            <PostCard post={post} />
+            <PostCard post={post} onUnlock={onUnlock} unlockPending={purchaseUnlock.isPending} />
             {!post.locked && (
               <section className="space-y-3">
                 <h2 className="text-sm font-medium text-muted-foreground">Comments</h2>

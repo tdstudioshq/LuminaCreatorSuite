@@ -12,7 +12,7 @@
  * side effects. It is fully unit-testable.
  */
 
-import type { TransactionType } from "@/lib/cabana-types";
+import type { ContentVisibility, TransactionType } from "@/lib/cabana-types";
 
 // ───────────────────────────── Fee model ─────────────────────────────
 /** Default platform (CABANA) fee rate applied to gross. Mirrors demo data. */
@@ -247,4 +247,108 @@ export function formatMoney(cents: number, currency = "USD"): string {
     return `${sign}${symbol}${groupedDollars}.${fraction}`;
   }
   return `${sign}${groupedDollars}.${fraction} ${currency}`;
+}
+
+// ───────────────────────────── Payout eligibility ─────────────────────────────
+/**
+ * Default minimum (demo) payout, in integer cents ($10). Mirrors the SQL
+ * `request_payout` guard so client and server agree on what is requestable.
+ */
+export const MIN_PAYOUT_CENTS = 1000;
+
+export type PayoutEligibilityReason =
+  | "eligible"
+  | "invalid_amount"
+  | "below_minimum"
+  | "exceeds_available";
+
+export interface PayoutEligibility {
+  eligible: boolean;
+  reason: PayoutEligibilityReason;
+  minimumCents: number;
+}
+
+/**
+ * Decide whether a creator may request a payout of `amountCents` against an
+ * `availableCents` balance. Pure mirror of the server-side check; the UI uses it
+ * to validate before calling, and to message *why* a request is blocked.
+ */
+export function evaluatePayoutEligibility(
+  availableCents: number,
+  amountCents: number,
+  minimumCents: number = MIN_PAYOUT_CENTS,
+): PayoutEligibility {
+  if (!Number.isFinite(amountCents) || !Number.isInteger(amountCents) || amountCents <= 0) {
+    return { eligible: false, reason: "invalid_amount", minimumCents };
+  }
+  if (amountCents < minimumCents) {
+    return { eligible: false, reason: "below_minimum", minimumCents };
+  }
+  if (amountCents > availableCents) {
+    return { eligible: false, reason: "exceeds_available", minimumCents };
+  }
+  return { eligible: true, reason: "eligible", minimumCents };
+}
+
+// ───────────────────────────── Purchase validation ────────────────────────────
+export type PurchaseDecisionReason =
+  | "purchasable"
+  | "owner"
+  | "already_owned"
+  | "not_purchasable"
+  | "free";
+
+export interface PurchaseCandidate {
+  visibility: ContentVisibility;
+  priceCents: number | null;
+  isOwner?: boolean;
+  alreadyOwned?: boolean;
+  rates?: Partial<FeeRates>;
+}
+
+export type PurchaseDecision =
+  | { purchasable: true; reason: "purchasable"; breakdown: FeeBreakdown }
+  | { purchasable: false; reason: Exclude<PurchaseDecisionReason, "purchasable"> };
+
+/**
+ * Decide whether a viewer may unlock a `purchase` post and, if so, the fee
+ * breakdown that the (mock) charge would record. Order: the owner never buys
+ * their own post; an existing entitlement is not re-charged; only `purchase`
+ * content with a positive price is purchasable.
+ */
+export function evaluatePurchase(candidate: PurchaseCandidate): PurchaseDecision {
+  if (candidate.isOwner) return { purchasable: false, reason: "owner" };
+  if (candidate.alreadyOwned) return { purchasable: false, reason: "already_owned" };
+  if (candidate.visibility !== "purchase") return { purchasable: false, reason: "not_purchasable" };
+  if (candidate.priceCents == null || candidate.priceCents <= 0) {
+    return { purchasable: false, reason: "free" };
+  }
+  return {
+    purchasable: true,
+    reason: "purchasable",
+    breakdown: breakdownPayment(candidate.priceCents, candidate.rates),
+  };
+}
+
+// ───────────────────────────── Entitlement generation ─────────────────────────
+export type EntitlementSource = "purchase" | "subscription" | "grant";
+
+export interface EntitlementRecord {
+  userId: string;
+  postId: string;
+  source: EntitlementSource;
+  purchaseId: string | null;
+}
+
+/**
+ * Build the permanent entitlement record a (mock) purchase grants. Pure shape
+ * builder mirroring the `content_entitlements` row the server RPC writes — kept
+ * here so the access-record contract is testable without a database.
+ */
+export function entitlementFromPurchase(
+  userId: string,
+  postId: string,
+  purchaseId: string | null = null,
+): EntitlementRecord {
+  return { userId, postId, source: "purchase", purchaseId };
 }
