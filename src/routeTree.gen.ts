@@ -38,6 +38,7 @@ import { Route as DashboardStorefrontRouteImport } from './routes/dashboard.stor
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as DashboardPostsRouteImport } from './routes/dashboard.posts'
+import { Route as DashboardPerformanceRouteImport } from './routes/dashboard.performance'
 import { Route as DashboardNotificationsRouteImport } from './routes/dashboard.notifications'
 import { Route as DashboardMessagesRouteImport } from './routes/dashboard.messages'
 import { Route as DashboardMediaKitRouteImport } from './routes/dashboard.media-kit'
@@ -198,6 +199,11 @@ const DashboardPostsRoute = DashboardPostsRouteImport.update({
   path: '/posts',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardPerformanceRoute = DashboardPerformanceRouteImport.update({
+  id: '/performance',
+  path: '/performance',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardNotificationsRoute = DashboardNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
@@ -302,6 +308,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/media-kit': typeof DashboardMediaKitRoute
   '/dashboard/messages': typeof DashboardMessagesRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
+  '/dashboard/performance': typeof DashboardPerformanceRoute
   '/dashboard/posts': typeof DashboardPostsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
@@ -346,6 +353,7 @@ export interface FileRoutesByTo {
   '/dashboard/media-kit': typeof DashboardMediaKitRoute
   '/dashboard/messages': typeof DashboardMessagesRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
+  '/dashboard/performance': typeof DashboardPerformanceRoute
   '/dashboard/posts': typeof DashboardPostsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
@@ -392,6 +400,7 @@ export interface FileRoutesById {
   '/dashboard/media-kit': typeof DashboardMediaKitRoute
   '/dashboard/messages': typeof DashboardMessagesRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
+  '/dashboard/performance': typeof DashboardPerformanceRoute
   '/dashboard/posts': typeof DashboardPostsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
@@ -439,6 +448,7 @@ export interface FileRouteTypes {
     | '/dashboard/media-kit'
     | '/dashboard/messages'
     | '/dashboard/notifications'
+    | '/dashboard/performance'
     | '/dashboard/posts'
     | '/dashboard/profile'
     | '/dashboard/settings'
@@ -483,6 +493,7 @@ export interface FileRouteTypes {
     | '/dashboard/media-kit'
     | '/dashboard/messages'
     | '/dashboard/notifications'
+    | '/dashboard/performance'
     | '/dashboard/posts'
     | '/dashboard/profile'
     | '/dashboard/settings'
@@ -528,6 +539,7 @@ export interface FileRouteTypes {
     | '/dashboard/media-kit'
     | '/dashboard/messages'
     | '/dashboard/notifications'
+    | '/dashboard/performance'
     | '/dashboard/posts'
     | '/dashboard/profile'
     | '/dashboard/settings'
@@ -772,6 +784,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardPostsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/performance': {
+      id: '/dashboard/performance'
+      path: '/performance'
+      fullPath: '/dashboard/performance'
+      preLoaderRoute: typeof DashboardPerformanceRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/notifications': {
       id: '/dashboard/notifications'
       path: '/notifications'
@@ -912,6 +931,7 @@ interface DashboardRouteChildren {
   DashboardMediaKitRoute: typeof DashboardMediaKitRoute
   DashboardMessagesRoute: typeof DashboardMessagesRoute
   DashboardNotificationsRoute: typeof DashboardNotificationsRoute
+  DashboardPerformanceRoute: typeof DashboardPerformanceRoute
   DashboardPostsRoute: typeof DashboardPostsRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
@@ -929,6 +949,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardMediaKitRoute: DashboardMediaKitRoute,
   DashboardMessagesRoute: DashboardMessagesRoute,
   DashboardNotificationsRoute: DashboardNotificationsRoute,
+  DashboardPerformanceRoute: DashboardPerformanceRoute,
   DashboardPostsRoute: DashboardPostsRoute,
   DashboardProfileRoute: DashboardProfileRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,

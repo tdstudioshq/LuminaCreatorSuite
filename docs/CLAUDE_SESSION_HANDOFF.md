@@ -16,7 +16,55 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
-## Latest Status — Phase 11A COMPLETE (Creator Dashboard Foundation)
+## Latest Status — Phase 11B COMPLETE (Creator Analytics)
+
+Built on Phase 11A. Extends the creator dashboard with revenue / subscriber / content / engagement
+analytics over **existing data**. One small additive migration was genuinely necessary (see below);
+revenue and subscriber analytics needed no schema change.
+
+- **Migration** `20260524000000_creator_analytics.sql` (additive — ONE function, no table/column/
+  enum/RLS/trigger change): the SECURITY DEFINER, creator-scoped `creator_content_analytics(_limit)`
+  RPC returns the CALLER'S OWN posts with like / comment / save totals. It exists because `post_likes`
+  and `post_saves` are private under RLS (only the actor reads their own row), so a creator cannot
+  aggregate likes/saves on their own posts through the base tables — and the spec requires "most
+  saved posts" / saves KPIs. It exposes only aggregate counts (never who liked/saved), privacy-
+  consistent with `post_engagement_state`. Granted to `authenticated`; `anon`/`public` revoked.
+  Mirrored in generated `types.ts`; smoke asserts the function; behavioral test
+  `supabase/tests/creator_analytics.sql` (own-posts + correct counts, visible-comments-only,
+  creator↔creator isolation, anon denial) wired into `db-validate.sh` + CI.
+- **Pure module** `src/lib/cabana-creator-analytics.ts` (in the 95% gate; **named with the `creator-`
+  prefix because `cabana-analytics.ts` already exists — it is the link-in-bio event tracker**):
+  UTC-deterministic `revenueDailySeries`/`revenueMonthlySeries`/`revenueTotalCents`/`seriesTrend`,
+  `subscriberStats`/`subscriberGrowthSeries`, `rankPosts`/`engagementTotals`/`engagementRatePerPost`/
+  `buildEngagementKpis`, range helpers, and the `buildCreatorAnalytics` assembler. Reuses the ledger
+  settled-net rule (succeeded adds net, refund subtracts) without re-deriving fees/balances
+  (`cabana-money`/`cabana-finance`/`cabana-dashboard` still own those).
+- **Server action** `analytics-actions.ts`: one thin RLS-scoped GET `getCreatorAnalytics` (caller's
+  RLS, never service role) gathering transactions + the creator's `creator_subscriptions` rows +
+  `creator_content_analytics` posts. **Hook** `use-analytics.ts`: `useCreatorAnalytics` fetches the
+  bundle ONCE; the page applies the date range through the pure pipeline (no re-fetch on range change).
+- **UI** `src/components/cabana/dashboard/analytics/` (recharts — already a dependency):
+  `AnalyticsDashboard` (loading / empty / error), `DateRangeFilter` (7d/30d/90d/all), `RevenueAnalytics`
+  (daily area + 12-month bars + trend), `SubscriberAnalytics` (growth line + active/new/canceled),
+  `ContentAnalytics` (top liked/commented/saved), `EngagementSummary` (likes/comments/saves/rate KPIs).
+- **Route + nav:** new **`/dashboard/performance`** ("Performance", `LineChart` icon, after Earnings).
+  **Additive** — the legacy link-in-bio `/dashboard/analytics` (page-view/click analytics) is untouched
+  per the no-replace-routes constraint, hence the distinct name. The Phase 11A QuickActions "Analytics"
+  card now points here (the prior "Coming soon" placeholder).
+
+**Out of scope (deferred):** audience insights / demographics / geography / devices / exports /
+reports / goals / milestones (11C/11D), notification providers (9C).
+
+**Verification:** lint clean (pre-existing shadcn warnings only), `tsc` clean, build green (emits the
+`dashboard.performance` chunk), **332 unit tests pass** at 99.52% stmts / 95.75% branch / 100% funcs /
+100% lines (≥95% gate; both analytics modules at 100%). `bun run db:validate` needs Docker (not in this
+sandbox) — CI's from-zero rebuild runs the new `creator_analytics.sql` + smoke assertions.
+
+**Next:** Phase 11C — Audience insights (gated; do not start without approval).
+
+---
+
+## Previous Status — Phase 11A COMPLETE (Creator Dashboard Foundation)
 
 Built on everything through Phase 10B. **Frontend + read-only aggregation only — NO schema change,
 no new migration, no DB write path.** A production-quality creator business dashboard that reuses the
