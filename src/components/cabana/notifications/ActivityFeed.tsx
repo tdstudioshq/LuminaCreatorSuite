@@ -10,7 +10,7 @@ import { NotificationIcon } from "./notification-icons";
  * helper using each event's metadata.
  */
 export function ActivityFeed() {
-  const { data, isLoading } = useActivityFeed();
+  const { data, isError, error, isLoading, refetch } = useActivityFeed();
   const items = data ?? [];
 
   return (
@@ -24,6 +24,12 @@ export function ActivityFeed() {
         <div className="flex justify-center py-12 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
+      ) : isError ? (
+        <SectionError
+          title="Couldn't load activity"
+          description={error instanceof Error ? error.message : "Please try again."}
+          onRetry={() => void refetch()}
+        />
       ) : items.length === 0 ? (
         <p className="px-6 py-12 text-center text-sm text-muted-foreground">No activity yet.</p>
       ) : (
@@ -53,5 +59,25 @@ export function ActivityFeed() {
         </ul>
       )}
     </section>
+  );
+}
+
+function SectionError({
+  title,
+  description,
+  onRetry,
+}: {
+  title: string;
+  description: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="px-6 py-12 text-center">
+      <p className="text-sm font-medium">{title}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+      <button onClick={onRetry} className="btn-ghost mt-4 !px-3 !py-2 text-xs">
+        Try again
+      </button>
+    </div>
   );
 }

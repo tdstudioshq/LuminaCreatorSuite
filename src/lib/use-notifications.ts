@@ -19,6 +19,7 @@ import {
   getUnreadNotificationCount,
   markAllNotificationsRead,
   markNotificationRead,
+  markNotificationUnread,
   updateNotificationPreferences,
 } from "@/lib/notification-actions";
 
@@ -112,6 +113,14 @@ export function useMarkNotificationRead() {
   const invalidate = useInvalidateNotifications();
   return useMutation({
     mutationFn: (notificationId: string) => markNotificationRead({ data: { notificationId } }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useMarkNotificationUnread() {
+  const invalidate = useInvalidateNotifications();
+  return useMutation({
+    mutationFn: (notificationId: string) => markNotificationUnread({ data: { notificationId } }),
     onSuccess: invalidate,
   });
 }

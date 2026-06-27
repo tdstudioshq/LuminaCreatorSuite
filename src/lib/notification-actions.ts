@@ -112,6 +112,22 @@ export const markNotificationRead = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Mark a single notification unread again (supported by the notifications table). */
+export const markNotificationUnread = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseToken, requireSupabaseAuth])
+  .inputValidator((raw: { notificationId?: unknown }) => ({
+    notificationId: uuid(raw?.notificationId, "notification id"),
+  }))
+  .handler(async ({ context, data }): Promise<{ ok: true }> => {
+    const { supabase } = context;
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read_at: null })
+      .eq("id", data.notificationId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 /** Mark all of the caller's unread notifications read. */
 export const markAllNotificationsRead = createServerFn({ method: "POST" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
