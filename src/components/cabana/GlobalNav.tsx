@@ -6,6 +6,7 @@ import { useCabanaUser } from "@/lib/cabana-auth";
 
 const LINKS = [
   { to: "/", label: "Platform" },
+  { to: "/discover", label: "Discover" },
   { to: "/features/ai", label: "AI" },
   { to: "/pricing", label: "Pricing" },
   { to: "/onboarding", label: "Onboarding" },
