@@ -16,7 +16,51 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
-## Latest Status — Phase 9A COMPLETE (Notification Delivery Engine)
+## Latest Status — Phase 11A COMPLETE (Creator Dashboard Foundation)
+
+Built on everything through Phase 10B. **Frontend + read-only aggregation only — NO schema change,
+no new migration, no DB write path.** A production-quality creator business dashboard that reuses the
+existing finance (Phase 6/8C), subscription (Phase 4), and notification (Phase 7/9) infrastructure;
+nothing is re-derived.
+
+- **Pure module** `src/lib/cabana-dashboard.ts` (added to the 95% coverage gate): repository-injected
+  aggregation that turns RLS-scoped creator data into the dashboard view model — `monthlyRevenueCents`,
+  `summarizePendingPayouts`, `buildRecentEarnings`, `summarizeSubscribers` (active/total/new + growth),
+  `buildRecentActivity`, `buildKpiCards`, and the `buildCreatorDashboard` assembler. Reuses
+  `cabana-money` (balance is derived there, surfaced by `creator_balance`; we only read its fields),
+  `cabana-finance` (`transactionTypeLabel`), and `cabana-notifications` (`mapNotification` /
+  `resolveNotificationTarget`). KPIs: total + monthly revenue, available balance, pending payouts,
+  active/total/new subscribers. Money stays integer cents; everything labeled **Demo Mode**.
+- **Server action** `src/lib/dashboard-actions.ts`: one thin RLS-scoped GET `getCreatorDashboard`
+  (`attachSupabaseToken` + `requireSupabaseAuth`, caller's RLS, never service role). Gathers the
+  creator's own balance (RPC `creator_balance`), `transactions`, `payouts`, `creator_subscriptions`
+  rows + `creator_subscribers_list` identities, and recent `notifications`, all in parallel; returns
+  empty/zeroed collections for accounts with no creator profile or no activity (renders empty state,
+  never errors). **Hook** `src/lib/use-dashboard.ts`: `useCreatorDashboard` maps the bundle through
+  the pure aggregator at fetch time.
+- **UI** `src/components/cabana/dashboard/overview/`: `CreatorDashboard` (page with loading / empty /
+  error states), `KpiCards` (+skeleton), `RevenueSummary`, `SubscriberSummary`, `RecentActivity`,
+  `QuickActions` (create post / subscriptions / payouts / analytics-placeholder / settings). Uses the
+  existing glass/iridescent/`btn-ghost` design system and `date-fns` relative times.
+- **Route + nav:** new **`/dashboard/home`** (`src/routes/dashboard.home.tsx`, noindex), added as the
+  first sidebar item ("Home", `Gauge` icon) in `Sidebar.tsx`. **Additive on purpose** — the existing
+  `/dashboard` "Overview" (link-in-bio `DashHome` analytics) is untouched to respect the
+  "do not remove/replace existing routes" constraint. Recommend promoting `/dashboard/home` to the
+  `/dashboard` index in a follow-up once reviewed.
+
+**Out of scope (deferred, per Phase 11 plan):** analytics charts (11B), audience insights (11C),
+business tools (11D), notification providers (9C), messaging/discovery/AI work.
+
+**Verification:** `bun run lint` clean (only pre-existing shadcn react-refresh warnings), `bunx tsc
+--noEmit` clean, `bun run build` green (emits the `dashboard.home` chunk), **308 unit tests pass** at
+99.66% stmts / 95.96% branch / 100% funcs / 100% lines (≥95% gate; `cabana-dashboard` at 100%). No
+schema touched, so `bun run db:validate` is not required this phase.
+
+**Next:** Phase 11B — Analytics charts (gated; do not start without approval).
+
+---
+
+## Previous Status — Phase 9A COMPLETE (Notification Delivery Engine)
 
 Built on Phase 8C. Local Docker only; remote/push/deploy untouched. **Backend only — NO UI and NO
 email/push/SMS providers** (providers are Phase 9C). Activates the previously-inert Phase 7
