@@ -5,6 +5,7 @@ import {
   BellRing,
   Eye,
   FileText,
+  Gauge,
   LayoutDashboard,
   Link2,
   LogOut,
@@ -23,6 +24,7 @@ import { cabanaAuth, useCabanaUser } from "@/lib/cabana-auth";
 import { NotificationBadge } from "@/components/cabana/notifications/NotificationBadge";
 
 const items = [
+  { to: "/dashboard/home", label: "Home", icon: Gauge },
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
   { to: "/dashboard/profile", label: "Profile", icon: User },
   { to: "/dashboard/posts", label: "Posts", icon: Newspaper },

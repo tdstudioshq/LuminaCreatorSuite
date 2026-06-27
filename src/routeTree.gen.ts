@@ -42,6 +42,7 @@ import { Route as DashboardNotificationsRouteImport } from './routes/dashboard.n
 import { Route as DashboardMessagesRouteImport } from './routes/dashboard.messages'
 import { Route as DashboardMediaKitRouteImport } from './routes/dashboard.media-kit'
 import { Route as DashboardLinksRouteImport } from './routes/dashboard.links'
+import { Route as DashboardHomeRouteImport } from './routes/dashboard.home'
 import { Route as DashboardEarningsRouteImport } from './routes/dashboard.earnings'
 import { Route as DashboardAnalyticsRouteImport } from './routes/dashboard.analytics'
 import { Route as DashboardAiRouteImport } from './routes/dashboard.ai'
@@ -217,6 +218,11 @@ const DashboardLinksRoute = DashboardLinksRouteImport.update({
   path: '/links',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardHomeRoute = DashboardHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardEarningsRoute = DashboardEarningsRouteImport.update({
   id: '/earnings',
   path: '/earnings',
@@ -291,6 +297,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
+  '/dashboard/home': typeof DashboardHomeRoute
   '/dashboard/links': typeof DashboardLinksRoute
   '/dashboard/media-kit': typeof DashboardMediaKitRoute
   '/dashboard/messages': typeof DashboardMessagesRoute
@@ -334,6 +341,7 @@ export interface FileRoutesByTo {
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
+  '/dashboard/home': typeof DashboardHomeRoute
   '/dashboard/links': typeof DashboardLinksRoute
   '/dashboard/media-kit': typeof DashboardMediaKitRoute
   '/dashboard/messages': typeof DashboardMessagesRoute
@@ -379,6 +387,7 @@ export interface FileRoutesById {
   '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
+  '/dashboard/home': typeof DashboardHomeRoute
   '/dashboard/links': typeof DashboardLinksRoute
   '/dashboard/media-kit': typeof DashboardMediaKitRoute
   '/dashboard/messages': typeof DashboardMessagesRoute
@@ -425,6 +434,7 @@ export interface FileRouteTypes {
     | '/dashboard/ai'
     | '/dashboard/analytics'
     | '/dashboard/earnings'
+    | '/dashboard/home'
     | '/dashboard/links'
     | '/dashboard/media-kit'
     | '/dashboard/messages'
@@ -468,6 +478,7 @@ export interface FileRouteTypes {
     | '/dashboard/ai'
     | '/dashboard/analytics'
     | '/dashboard/earnings'
+    | '/dashboard/home'
     | '/dashboard/links'
     | '/dashboard/media-kit'
     | '/dashboard/messages'
@@ -512,6 +523,7 @@ export interface FileRouteTypes {
     | '/dashboard/ai'
     | '/dashboard/analytics'
     | '/dashboard/earnings'
+    | '/dashboard/home'
     | '/dashboard/links'
     | '/dashboard/media-kit'
     | '/dashboard/messages'
@@ -788,6 +800,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardLinksRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/home': {
+      id: '/dashboard/home'
+      path: '/home'
+      fullPath: '/dashboard/home'
+      preLoaderRoute: typeof DashboardHomeRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/earnings': {
       id: '/dashboard/earnings'
       path: '/earnings'
@@ -888,6 +907,7 @@ interface DashboardRouteChildren {
   DashboardAiRoute: typeof DashboardAiRoute
   DashboardAnalyticsRoute: typeof DashboardAnalyticsRoute
   DashboardEarningsRoute: typeof DashboardEarningsRoute
+  DashboardHomeRoute: typeof DashboardHomeRoute
   DashboardLinksRoute: typeof DashboardLinksRoute
   DashboardMediaKitRoute: typeof DashboardMediaKitRoute
   DashboardMessagesRoute: typeof DashboardMessagesRoute
@@ -904,6 +924,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAiRoute: DashboardAiRoute,
   DashboardAnalyticsRoute: DashboardAnalyticsRoute,
   DashboardEarningsRoute: DashboardEarningsRoute,
+  DashboardHomeRoute: DashboardHomeRoute,
   DashboardLinksRoute: DashboardLinksRoute,
   DashboardMediaKitRoute: DashboardMediaKitRoute,
   DashboardMessagesRoute: DashboardMessagesRoute,
