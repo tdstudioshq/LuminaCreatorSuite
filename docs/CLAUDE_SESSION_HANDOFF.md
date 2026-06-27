@@ -16,7 +16,48 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
-## Latest Status — Phase 8C COMPLETE (Admin Finance & Operations)
+## Latest Status — Phase 9A COMPLETE (Notification Delivery Engine)
+
+Built on Phase 8C. Local Docker only; remote/push/deploy untouched. **Backend only — NO UI and NO
+email/push/SMS providers** (providers are Phase 9C). Activates the previously-inert Phase 7
+`notification_outbox` with a worker-safe processor, retry/backoff scheduling, dead-lettering, and
+queue monitoring — reuse-first, with the smallest possible schema change.
+
+- **Reuse, no table change:** the outbox already had `attempts`, `last_error`, `scheduled_for`,
+  `processed_at`, the `(status, scheduled_for)` index, and the `outbox_status` enum
+  (`pending`/`sent`/`failed`/`skipped`/`canceled`). A retry stays `pending` (`attempts++`, future
+  `scheduled_for`); a dead-letter is terminal `failed`. No table/column/enum/RLS change.
+- **Migration** `20260523000000_notification_engine.sql` (additive — ONE function): the SECURITY
+  DEFINER, admin-gated `process_notification_outbox(_batch_size, _max_attempts, _result)`. It claims
+  due `pending` rows with `FOR UPDATE SKIP LOCKED` (concurrency-safe, idempotent — only `pending`
+  rows are touched, so no double-delivery), applies the outcome, recomputes nothing else, and returns
+  a jsonb `{processed, delivered, retried, dead_lettered}`. A function is required because the atomic
+  claim can't be expressed via the client query builder.
+- **No-provider seam:** with no transport yet, `_result` SIMULATES the delivery outcome so the
+  retry/dead-letter machinery is real and testable — `delivered` → `sent`; `transient_failure` →
+  retry with exponential backoff (60s·2^(n−1), capped 1h) until `_max_attempts`, then dead-letter;
+  `permanent_failure` → immediate dead-letter. Default `delivered` drains/activates the queue. Phase
+  9C replaces the simulation with real per-channel provider calls.
+- **Pure** `cabana-notification-engine.ts` (in the 95% gate): `resolveOutboxOutcome` (mirrored
+  verbatim by the RPC), `computeBackoffSeconds`/`nextRetryAt`, `isDue`/`selectDueBatch`,
+  `summarizeOutbox`, mappers, labels. **Server actions** `notification-engine-actions.ts`:
+  `processOutbox` (RPC bridge) + `getOutboxStats` (admin-RLS queue snapshot). No UI/hooks this phase.
+- **Tests:** `cabana-notification-engine` unit tests (261 total, ≥95%); behavioral
+  `supabase/tests/notification_engine.sql` (deliver, idempotency, transient retry + backoff
+  scheduling, dead-letter at cap, permanent dead-letter, batch limit, invalid-arg + non-admin + anon
+  denial); `smoke.sql` asserts the new function; `db-validate.sh` + CI run the suite.
+
+**Verification:** lint clean (pre-existing shadcn warnings only), `tsc` clean, build green, **261
+unit tests pass** at ≥95%. `bun run db:validate` needs Docker (not in this sandbox) — CI runs the
+from-zero rebuild + all SQL suites (incl. `notification_engine.sql`).
+
+**Next:** Phase 9B — User Notification Center (in-app list, read/unread, badge counts, preferences UI)
+over the Phase 7 read surface; then Phase 9C — Provider Integrations (email/push abstractions + real
+delivery, replacing the `_result` simulation). Gated; do not start without approval.
+
+---
+
+## Previous Status — Phase 8C COMPLETE (Admin Finance & Operations)
 
 Built on Phase 8B over the Phase 6 ledger. Local Docker only; remote/push/deploy untouched.
 Admin-only finance back office, delivered as two reviewable slices.

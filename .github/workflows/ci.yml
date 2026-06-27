@@ -113,6 +113,11 @@ jobs:
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
             -v ON_ERROR_STOP=1 -f supabase/tests/admin_payouts.sql
 
+      - name: Behavioral checks (notification engine + retry + dead-letter + RLS)
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 -f supabase/tests/notification_engine.sql
+
       - name: Stop Supabase
         if: always()
         run: supabase stop || true

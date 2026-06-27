@@ -1876,6 +1876,10 @@ export type Database = {
         Args: { _payout_request_id: string; _action: string; _note?: string };
         Returns: undefined;
       };
+      process_notification_outbox: {
+        Args: { _batch_size?: number; _max_attempts?: number; _result?: string };
+        Returns: Json;
+      };
       request_payout: {
         Args: { _amount_cents: number; _note?: string };
         Returns: undefined;

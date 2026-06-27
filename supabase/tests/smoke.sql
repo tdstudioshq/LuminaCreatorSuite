@@ -225,6 +225,9 @@ begin
   if to_regprocedure('public.admin_review_payout(uuid, text, text)') is null then
     raise exception 'MISSING FUNCTION: admin_review_payout';
   end if;
+  if to_regprocedure('public.process_notification_outbox(integer, integer, text)') is null then
+    raise exception 'MISSING FUNCTION: process_notification_outbox';
+  end if;
   if to_regprocedure('public.recalc_creator_balance(uuid, text)') is null then
     raise exception 'MISSING FUNCTION: recalc_creator_balance';
   end if;
