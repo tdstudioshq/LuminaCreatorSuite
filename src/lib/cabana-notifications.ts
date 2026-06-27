@@ -58,7 +58,25 @@ export type NotificationGroup = {
   items: NotificationItem[];
 };
 
+export type NotificationTarget = {
+  href: string;
+  label: string;
+};
+
 const DAY_MS = 86_400_000;
+
+const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
+  new_follower: "Follower",
+  post_liked: "Post liked",
+  post_commented: "Comment",
+  post_saved: "Saved",
+  new_subscriber: "Subscriber",
+  tip_received: "Tip",
+  purchase_made: "Sale",
+  message_received: "Message",
+  payout_requested: "Payout",
+  system: "System",
+};
 
 // ─────────────────────────────── Mappers ────────────────────────────────────
 
@@ -100,6 +118,10 @@ export function mapPreferences(row: PreferencesRow | null | undefined): Notifica
     emailEnabled: row.email_enabled,
     pushEnabled: row.push_enabled,
   };
+}
+
+export function notificationTypeLabel(type: NotificationType): string {
+  return NOTIFICATION_TYPE_LABELS[type] ?? "Notification";
 }
 
 export function defaultPreferences(): NotificationPreferences {
@@ -182,6 +204,39 @@ const ACTIVITY_LABELS: Record<ActivityType, string> = {
 /** Short category label for an activity-feed row. */
 export function activityLabel(type: ActivityType): string {
   return ACTIVITY_LABELS[type] ?? "Activity";
+}
+
+/**
+ * Resolve the best in-app destination for a notification, when one exists.
+ * This intentionally stays conservative: only targets that can be linked with
+ * data already present on the row are exposed.
+ */
+export function resolveNotificationTarget(
+  item: Pick<NotificationItem, "type" | "entityType" | "entityId">,
+): NotificationTarget | null {
+  const entityId = item.entityId?.trim();
+  switch (item.type) {
+    case "post_liked":
+    case "post_commented":
+    case "post_saved":
+    case "purchase_made":
+      return entityId && item.entityType === "post"
+        ? { href: `/post/${entityId}`, label: "Open post" }
+        : null;
+    case "message_received":
+      return entityId && item.entityType === "conversation"
+        ? { href: `/messages/${entityId}`, label: "Open conversation" }
+        : null;
+    case "new_follower":
+    case "new_subscriber":
+      return { href: "/dashboard/subscribers", label: "View subscribers" };
+    case "tip_received":
+    case "payout_requested":
+      return { href: "/dashboard/earnings", label: "View earnings" };
+    case "system":
+    default:
+      return null;
+  }
 }
 
 // ─────────────────────────────── Unread + grouping ──────────────────────────

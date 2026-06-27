@@ -11,7 +11,9 @@ import {
   mapActivityEvent,
   mapNotification,
   mapPreferences,
+  notificationTypeLabel,
   notificationDedupeKey,
+  resolveNotificationTarget,
   type NotificationItem,
 } from "@/lib/cabana-notifications";
 
@@ -177,6 +179,14 @@ describe("activityLabel", () => {
   });
 });
 
+describe("notificationTypeLabel", () => {
+  it("maps notification types to compact labels", () => {
+    expect(notificationTypeLabel("new_follower")).toBe("Follower");
+    expect(notificationTypeLabel("post_commented")).toBe("Comment");
+    expect(notificationTypeLabel("payout_requested")).toBe("Payout");
+  });
+});
+
 describe("countUnread", () => {
   it("counts only unread items", () => {
     expect(countUnread([item({ isRead: false }), item({ isRead: true }), item()])).toBe(2);
@@ -233,5 +243,54 @@ describe("notificationDedupeKey", () => {
     expect(notificationDedupeKey("new_follower", "c1", "u2")).toBe("new_follower:c1:u2");
     expect(notificationDedupeKey("post_commented", "cmt-1")).toBe("post_commented:cmt-1");
     expect(notificationDedupeKey("tip_received", 42)).toBe("tip_received:42");
+  });
+});
+
+describe("resolveNotificationTarget", () => {
+  it("routes post and message notifications to their entity detail pages", () => {
+    expect(
+      resolveNotificationTarget({
+        type: "post_liked",
+        entityType: "post",
+        entityId: "post-1",
+      }),
+    ).toEqual({ href: "/post/post-1", label: "Open post" });
+    expect(
+      resolveNotificationTarget({
+        type: "message_received",
+        entityType: "conversation",
+        entityId: "conv-1",
+      }),
+    ).toEqual({ href: "/messages/conv-1", label: "Open conversation" });
+  });
+
+  it("routes creator and payout notifications to dashboard surfaces", () => {
+    expect(
+      resolveNotificationTarget({
+        type: "new_subscriber",
+        entityType: "creator",
+        entityId: "creator-1",
+      }),
+    ).toEqual({ href: "/dashboard/subscribers", label: "View subscribers" });
+    expect(
+      resolveNotificationTarget({
+        type: "tip_received",
+        entityType: "tip",
+        entityId: "tip-1",
+      }),
+    ).toEqual({ href: "/dashboard/earnings", label: "View earnings" });
+  });
+
+  it("returns null when no safe destination exists", () => {
+    expect(resolveNotificationTarget({ type: "system", entityType: null, entityId: null })).toBe(
+      null,
+    );
+    expect(
+      resolveNotificationTarget({
+        type: "post_saved",
+        entityType: "post",
+        entityId: null,
+      }),
+    ).toBeNull();
   });
 });

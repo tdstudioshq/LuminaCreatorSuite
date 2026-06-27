@@ -26,7 +26,7 @@ const ROWS: { field: Field; label: string; hint: string; placeholder?: boolean }
 /** Per-user notification preferences. Email/push are placeholder channels: they
  *  only enqueue inert outbox rows — there is no delivery provider. */
 export function NotificationSettings() {
-  const { data: prefs, isLoading } = useNotificationPreferences();
+  const { data: prefs, isError, error, isLoading, refetch } = useNotificationPreferences();
   const update = useUpdateNotificationPreferences();
 
   return (
@@ -38,10 +38,22 @@ export function NotificationSettings() {
         </p>
       </div>
 
-      {isLoading || !prefs ? (
+      {isLoading ? (
         <div className="flex justify-center py-6 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
+      ) : isError ? (
+        <SectionError
+          title="Couldn't load preferences"
+          description={error instanceof Error ? error.message : "Please try again."}
+          onRetry={() => void refetch()}
+        />
+      ) : !prefs ? (
+        <SectionError
+          title="No preference data"
+          description="Your notification settings could not be loaded."
+          onRetry={() => void refetch()}
+        />
       ) : (
         <ul className="space-y-2">
           {ROWS.map((row) => (
@@ -98,5 +110,25 @@ function Toggle({
         }`}
       />
     </button>
+  );
+}
+
+function SectionError({
+  title,
+  description,
+  onRetry,
+}: {
+  title: string;
+  description: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="rounded-2xl bg-foreground/[0.03] px-4 py-6 text-center">
+      <p className="text-sm font-medium">{title}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+      <button onClick={onRetry} className="btn-ghost mt-4 !px-3 !py-2 text-xs">
+        Try again
+      </button>
+    </div>
   );
 }
