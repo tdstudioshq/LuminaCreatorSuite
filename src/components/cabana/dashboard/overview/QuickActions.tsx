@@ -36,11 +36,10 @@ const ACTIONS: QuickAction[] = [
     icon: WalletCards,
   },
   {
-    to: "/dashboard/analytics",
+    to: "/dashboard/performance",
     label: "Analytics",
-    description: "Coming soon",
+    description: "Revenue & engagement",
     icon: BarChart3,
-    badge: "Soon",
   },
   {
     to: "/dashboard/settings",

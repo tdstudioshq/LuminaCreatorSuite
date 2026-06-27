@@ -34,6 +34,7 @@ export default defineConfig({
         "src/lib/cabana-notification-engine.ts",
         "src/lib/cabana-discovery.ts",
         "src/lib/cabana-dashboard.ts",
+        "src/lib/cabana-creator-analytics.ts",
       ],
       thresholds: {
         lines: 95,

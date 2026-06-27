@@ -1703,6 +1703,20 @@ export type Database = {
           pending_cents: number;
         }[];
       };
+      creator_content_analytics: {
+        Args: { _limit?: number };
+        Returns: {
+          caption: string;
+          comment_count: number;
+          created_at: string;
+          like_count: number;
+          post_id: string;
+          published_at: string;
+          save_count: number;
+          status: Database["public"]["Enums"]["post_status"];
+          visibility: Database["public"]["Enums"]["post_visibility"];
+        }[];
+      };
       creator_subscribers_list: {
         Args: { _cursor?: string; _limit?: number };
         Returns: {

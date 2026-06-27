@@ -228,6 +228,9 @@ begin
   if to_regprocedure('public.process_notification_outbox(integer, integer, text)') is null then
     raise exception 'MISSING FUNCTION: process_notification_outbox';
   end if;
+  if to_regprocedure('public.creator_content_analytics(integer)') is null then
+    raise exception 'MISSING FUNCTION: creator_content_analytics';
+  end if;
   if to_regprocedure('public.recalc_creator_balance(uuid, text)') is null then
     raise exception 'MISSING FUNCTION: recalc_creator_balance';
   end if;
