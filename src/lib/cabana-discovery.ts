@@ -35,15 +35,36 @@ export type DiscoveryPostCandidate = {
   updatedAt: string;
   likeCount: number;
   commentCount: number;
+  saveCount: number;
   savedByMe: boolean;
   canEngage: boolean;
 };
 
+export type DiscoveryTimeWindow = "24h" | "7d" | "30d" | "all";
+
+export type DiscoverySuggestionReasonKind =
+  | "because_you_follow"
+  | "followed_by_network"
+  | "subscription_activity"
+  | "recently_active"
+  | "popular_creator";
+
+export type DiscoverySuggestionReason = {
+  kind: DiscoverySuggestionReasonKind;
+  label: string;
+};
+
+export type DiscoverySuggestedCreator = {
+  creator: DiscoveryCreator;
+  reason: DiscoverySuggestionReason;
+};
+
 export type DiscoverySnapshot = {
+  timeWindow: DiscoveryTimeWindow;
   featuredCreators: DiscoveryCreator[];
   trendingCreators: DiscoveryCreator[];
   recentlyActiveCreators: DiscoveryCreator[];
-  suggestedCreators: DiscoveryCreator[];
+  suggestedCreators: DiscoverySuggestedCreator[];
   trendingPosts: FeedPost[];
   explorePosts: FeedPost[];
 };
@@ -61,11 +82,20 @@ export type DiscoveryCreatorRankMode = "featured" | "trending" | "recent" | "sug
 
 export type DiscoveryPostRankMode = "trending" | "recent" | "search";
 
+export type DiscoveryCreatorPostSignals = {
+  likeCount: number;
+  commentCount: number;
+  saveCount: number;
+  latestPostAt: string | null;
+};
+
 export type CreatorRankOptions = {
   mode?: DiscoveryCreatorRankMode;
   query?: string;
   interestTokens?: readonly string[];
   excludedProfileIds?: readonly string[];
+  postSignals?: Readonly<Record<string, DiscoveryCreatorPostSignals>>;
+  timeWindow?: DiscoveryTimeWindow;
   nowMs?: number;
   limit?: number;
 };
@@ -76,29 +106,87 @@ export type PostRankOptions = {
   interestTokens?: readonly string[];
   boostProfileIds?: readonly string[];
   excludedPostIds?: readonly string[];
+  timeWindow?: DiscoveryTimeWindow;
   nowMs?: number;
   limit?: number;
 };
 
+export type SuggestedCreatorReasonOptions = {
+  followedCreators?: readonly DiscoveryCreator[];
+  subscribedCreators?: readonly DiscoveryCreator[];
+  followedByNetworkCounts?: Readonly<Record<string, number>>;
+  subscriptionActivityCounts?: Readonly<Record<string, number>>;
+  postSignals?: Readonly<Record<string, DiscoveryCreatorPostSignals>>;
+  nowMs?: number;
+};
+
+export const DISCOVERY_TIME_WINDOWS: readonly DiscoveryTimeWindow[] = ["24h", "7d", "30d", "all"];
+
 const DEFAULT_LIMIT = 6;
 const DAY_MS = 86_400_000;
 const TOKEN_SPLIT = /[^a-z0-9]+/g;
+const DISCOVERY_STOP_TOKENS = new Set([
+  "and",
+  "creator",
+  "for",
+  "from",
+  "that",
+  "the",
+  "this",
+  "with",
+]);
 
 const CREATOR_MODE_WEIGHTS: Record<
   DiscoveryCreatorRankMode,
   {
     popularity: number;
+    engagement: number;
     verified: number;
     recency: number;
     freshness: number;
     match: number;
   }
 > = {
-  featured: { popularity: 1.4, verified: 1.4, recency: 0.8, freshness: 0.4, match: 0.6 },
-  trending: { popularity: 1.6, verified: 1.0, recency: 1.2, freshness: 0.2, match: 0.3 },
-  recent: { popularity: 0.5, verified: 0.3, recency: 1.7, freshness: 1.4, match: 0.1 },
-  suggested: { popularity: 0.8, verified: 0.5, recency: 0.9, freshness: 1.1, match: 1.8 },
-  search: { popularity: 0.1, verified: 0.1, recency: 0.1, freshness: 0.05, match: 6 },
+  featured: {
+    popularity: 1.4,
+    engagement: 0.8,
+    verified: 1.4,
+    recency: 0.8,
+    freshness: 0.4,
+    match: 0.6,
+  },
+  trending: {
+    popularity: 1.6,
+    engagement: 1.8,
+    verified: 1.0,
+    recency: 1.2,
+    freshness: 0.2,
+    match: 0.3,
+  },
+  recent: {
+    popularity: 0.5,
+    engagement: 0.4,
+    verified: 0.3,
+    recency: 1.7,
+    freshness: 1.4,
+    match: 0.1,
+  },
+  suggested: {
+    popularity: 0.8,
+    engagement: 0.6,
+    verified: 0.5,
+    recency: 0.9,
+    freshness: 1.1,
+    match: 1.8,
+  },
+  search: {
+    popularity: 0.1,
+    engagement: 0.05,
+    verified: 0.1,
+    recency: 0.1,
+    freshness: 0.05,
+    match: 6,
+  },
 };
 
 const POST_MODE_WEIGHTS: Record<
@@ -129,7 +217,7 @@ function splitTokens(value: string): string[] {
     .replace(/^#+/, "")
     .split(TOKEN_SPLIT)
     .map((token) => token.trim())
-    .filter((token) => token.length >= 2);
+    .filter((token) => token.length >= 2 && !DISCOVERY_STOP_TOKENS.has(token));
 }
 
 function dedupe<T, K>(items: readonly T[], key: (item: T) => K): T[] {
@@ -170,6 +258,26 @@ function recencyScore(
   return (1 - age / windowMs) * maxScore;
 }
 
+function windowDurationMs(window: DiscoveryTimeWindow): number | null {
+  if (window === "24h") return DAY_MS;
+  if (window === "7d") return 7 * DAY_MS;
+  if (window === "30d") return 30 * DAY_MS;
+  return null;
+}
+
+function isWithinWindow(
+  timestamp: string | null | undefined,
+  window: DiscoveryTimeWindow,
+  nowMs: number,
+): boolean {
+  const duration = windowDurationMs(window);
+  if (duration === null) return true;
+  const time = parseTime(timestamp);
+  if (time === 0) return false;
+  const age = Math.max(0, nowMs - time);
+  return age <= duration;
+}
+
 function tokenOverlapScore(tokens: readonly string[], haystack: string): number {
   if (tokens.length === 0) return 0;
   const text = normalizeText(haystack);
@@ -190,12 +298,34 @@ function creatorPopularityScore(creator: DiscoveryCreator): number {
   return Math.log10(creator.followerCount + 1) * 18 + Math.log10(creator.postCount + 1) * 10;
 }
 
+function creatorEngagementScore(signals: DiscoveryCreatorPostSignals | undefined): number {
+  if (!signals) return 0;
+  return (
+    Math.log10(signals.likeCount + 1) * 12 +
+    Math.log10(signals.commentCount + 1) * 14 +
+    Math.log10(signals.saveCount + 1) * 16
+  );
+}
+
 function creatorFreshnessScore(creator: DiscoveryCreator, nowMs: number): number {
   return recencyScore(creator.createdAt, nowMs, 45, 12);
 }
 
-function creatorActivityScore(creator: DiscoveryCreator, nowMs: number): number {
-  return recencyScore(creator.updatedAt, nowMs, 21, 12);
+function creatorActivityAt(
+  creator: DiscoveryCreator,
+  signals: DiscoveryCreatorPostSignals | undefined,
+): string {
+  const profileTime = parseTime(creator.updatedAt);
+  const postTime = parseTime(signals?.latestPostAt);
+  return postTime > profileTime ? (signals?.latestPostAt ?? creator.updatedAt) : creator.updatedAt;
+}
+
+function creatorActivityScore(
+  creator: DiscoveryCreator,
+  signals: DiscoveryCreatorPostSignals | undefined,
+  nowMs: number,
+): number {
+  return recencyScore(creatorActivityAt(creator, signals), nowMs, 21, 12);
 }
 
 function creatorVerifiedScore(creator: DiscoveryCreator): number {
@@ -218,13 +348,16 @@ function scoreCreator(
   options: Required<Pick<CreatorRankOptions, "mode" | "nowMs">> & {
     queryTokens: readonly string[];
     interestTokens: readonly string[];
+    postSignals: Readonly<Record<string, DiscoveryCreatorPostSignals>>;
   },
 ): number {
   const weights = CREATOR_MODE_WEIGHTS[options.mode];
+  const signals = options.postSignals[creator.profileId];
   return (
     creatorPopularityScore(creator) * weights.popularity +
+    creatorEngagementScore(signals) * weights.engagement +
     creatorVerifiedScore(creator) * weights.verified +
-    creatorActivityScore(creator, options.nowMs) * weights.recency +
+    creatorActivityScore(creator, signals, options.nowMs) * weights.recency +
     creatorFreshnessScore(creator, options.nowMs) * weights.freshness +
     creatorMatchScore(creator, options.queryTokens, options.interestTokens) * weights.match
   );
@@ -235,7 +368,13 @@ function postSearchText(post: DiscoveryPostCandidate): string {
 }
 
 function postEngagementScore(post: DiscoveryPostCandidate): number {
-  return post.likeCount * 4 + post.commentCount * 5 + (post.canEngage ? 1 : 0);
+  return (
+    post.likeCount * 4 +
+    post.commentCount * 5 +
+    post.saveCount * 6 +
+    (post.savedByMe ? 3 : 0) +
+    (post.canEngage ? 1 : 0)
+  );
 }
 
 function postRecencyScore(post: DiscoveryPostCandidate, nowMs: number): number {
@@ -287,6 +426,14 @@ export function normalizeDiscoveryQuery(raw: unknown): string {
   return normalizeText(raw).replace(/^#+/, "").replace(/\s+/g, " ").trim();
 }
 
+export function normalizeDiscoveryTimeWindow(raw: unknown): DiscoveryTimeWindow {
+  if (raw == null || raw === "") return "7d";
+  if (typeof raw !== "string" || !DISCOVERY_TIME_WINDOWS.includes(raw as DiscoveryTimeWindow)) {
+    throw new Error("Invalid discovery time window.");
+  }
+  return raw as DiscoveryTimeWindow;
+}
+
 export function tokenizeDiscoveryQuery(raw: unknown): string[] {
   const query = normalizeDiscoveryQuery(raw);
   if (!query) return [];
@@ -302,26 +449,59 @@ export function deriveInterestTokens(creators: readonly DiscoveryCreator[]): str
   );
 }
 
+export function summarizeCreatorPostSignals(
+  posts: readonly DiscoveryPostCandidate[],
+): Record<string, DiscoveryCreatorPostSignals> {
+  const signals: Record<string, DiscoveryCreatorPostSignals> = {};
+  for (const post of posts) {
+    const current = signals[post.creatorProfileId] ?? {
+      likeCount: 0,
+      commentCount: 0,
+      saveCount: 0,
+      latestPostAt: null,
+    };
+    const postTime = post.publishedAt ?? post.createdAt;
+    signals[post.creatorProfileId] = {
+      likeCount: current.likeCount + Math.max(0, post.likeCount),
+      commentCount: current.commentCount + Math.max(0, post.commentCount),
+      saveCount: current.saveCount + Math.max(Math.max(0, post.saveCount), post.savedByMe ? 1 : 0),
+      latestPostAt:
+        parseTime(postTime) > parseTime(current.latestPostAt) ? postTime : current.latestPostAt,
+    };
+  }
+  return signals;
+}
+
 export function rankCreatorsForDiscovery(
   creators: readonly DiscoveryCreator[],
   options: CreatorRankOptions = {},
 ): DiscoveryCreator[] {
   const nowMs = options.nowMs ?? Date.now();
   const mode = options.mode ?? "featured";
+  const timeWindow = options.timeWindow ?? "all";
+  const postSignals = options.postSignals ?? {};
   const queryTokens = tokenizeDiscoveryQuery(options.query);
-  const interestTokens = dedupe(options.interestTokens ?? [], (token) =>
-    normalizeText(token),
-  ).filter(Boolean);
+  const interestTokens = dedupe(
+    (options.interestTokens ?? []).map(normalizeText).filter(Boolean),
+    (token) => token,
+  );
   const excluded = new Set((options.excludedProfileIds ?? []).map((id) => id.toLowerCase()));
 
   return [...creators]
     .filter((creator) => !excluded.has(creator.profileId.toLowerCase()))
+    .filter((creator) =>
+      isWithinWindow(creatorActivityAt(creator, postSignals[creator.profileId]), timeWindow, nowMs),
+    )
     .sort((a, b) => {
       const delta =
-        scoreCreator(b, { mode, nowMs, queryTokens, interestTokens }) -
-        scoreCreator(a, { mode, nowMs, queryTokens, interestTokens });
+        scoreCreator(b, { mode, nowMs, queryTokens, interestTokens, postSignals }) -
+        scoreCreator(a, { mode, nowMs, queryTokens, interestTokens, postSignals });
       if (delta !== 0) return delta;
-      return parseTime(b.updatedAt) - parseTime(a.updatedAt);
+      const timeDelta =
+        parseTime(creatorActivityAt(b, postSignals[b.profileId])) -
+        parseTime(creatorActivityAt(a, postSignals[a.profileId]));
+      if (timeDelta !== 0) return timeDelta;
+      return a.profileId.localeCompare(b.profileId);
     })
     .slice(0, clamp(options.limit));
 }
@@ -332,15 +512,18 @@ export function rankPostsForDiscovery(
 ): DiscoveryPostCandidate[] {
   const nowMs = options.nowMs ?? Date.now();
   const mode = options.mode ?? "trending";
+  const timeWindow = options.timeWindow ?? "all";
   const queryTokens = tokenizeDiscoveryQuery(options.query);
-  const interestTokens = dedupe(options.interestTokens ?? [], (token) =>
-    normalizeText(token),
-  ).filter(Boolean);
+  const interestTokens = dedupe(
+    (options.interestTokens ?? []).map(normalizeText).filter(Boolean),
+    (token) => token,
+  );
   const boostProfileIds = new Set((options.boostProfileIds ?? []).map((id) => id.toLowerCase()));
   const excluded = new Set((options.excludedPostIds ?? []).map((id) => id.toLowerCase()));
 
   return [...posts]
     .filter((post) => !excluded.has(post.postId.toLowerCase()))
+    .filter((post) => isWithinWindow(post.publishedAt ?? post.createdAt, timeWindow, nowMs))
     .sort((a, b) => {
       const delta =
         scorePost(b, {
@@ -358,7 +541,10 @@ export function rankPostsForDiscovery(
           boostProfileIds: [...boostProfileIds],
         });
       if (delta !== 0) return delta;
-      return parseTime(b.publishedAt ?? b.createdAt) - parseTime(a.publishedAt ?? a.createdAt);
+      const timeDelta =
+        parseTime(b.publishedAt ?? b.createdAt) - parseTime(a.publishedAt ?? a.createdAt);
+      if (timeDelta !== 0) return timeDelta;
+      return a.postId.localeCompare(b.postId);
     })
     .slice(0, clamp(options.limit));
 }
@@ -369,6 +555,103 @@ export function creatorQueryBoost(creator: DiscoveryCreator, query: string): num
 
 export function postQueryBoost(post: DiscoveryPostCandidate, query: string): number {
   return tokenOverlapScore(tokenizeDiscoveryQuery(query), postSearchText(post));
+}
+
+function bestMatchingCreator(
+  creator: DiscoveryCreator,
+  seeds: readonly DiscoveryCreator[],
+): DiscoveryCreator | null {
+  let best: DiscoveryCreator | null = null;
+  let bestScore = 0;
+  for (const seed of seeds) {
+    const score = tokenOverlapScore(
+      splitTokens(creatorSearchText(seed)),
+      creatorSearchText(creator),
+    );
+    if (
+      score > bestScore ||
+      (score === bestScore && score > 0 && seed.profileId.localeCompare(best?.profileId ?? "") < 0)
+    ) {
+      best = seed;
+      bestScore = score;
+    }
+  }
+  return bestScore > 0 ? best : null;
+}
+
+export function suggestedCreatorReason(
+  creator: DiscoveryCreator,
+  options: SuggestedCreatorReasonOptions = {},
+): DiscoverySuggestionReason {
+  const networkCount = Math.max(
+    0,
+    Math.trunc(options.followedByNetworkCounts?.[creator.profileId] ?? 0),
+  );
+  if (networkCount > 0) {
+    return {
+      kind: "followed_by_network",
+      label: `Followed by ${networkCount} ${networkCount === 1 ? "person" : "people"} you follow`,
+    };
+  }
+
+  const followedMatch = bestMatchingCreator(creator, options.followedCreators ?? []);
+  if (followedMatch) {
+    return {
+      kind: "because_you_follow",
+      label: `Because you follow @${followedMatch.username}`,
+    };
+  }
+
+  const subscriptionCount = Math.max(
+    0,
+    Math.trunc(options.subscriptionActivityCounts?.[creator.profileId] ?? 0),
+  );
+  const subscriptionMatch = bestMatchingCreator(creator, options.subscribedCreators ?? []);
+  if (subscriptionCount > 0 || subscriptionMatch) {
+    return {
+      kind: "subscription_activity",
+      label:
+        subscriptionCount > 0
+          ? "Active subscriber community"
+          : "Similar to creators you subscribe to",
+    };
+  }
+
+  const nowMs = options.nowMs ?? Date.now();
+  if (
+    isWithinWindow(
+      creatorActivityAt(creator, options.postSignals?.[creator.profileId]),
+      "7d",
+      nowMs,
+    )
+  ) {
+    return { kind: "recently_active", label: "Recently active" };
+  }
+
+  return { kind: "popular_creator", label: "Popular creator" };
+}
+
+export function labelSuggestedCreators(
+  creators: readonly DiscoveryCreator[],
+  options: SuggestedCreatorReasonOptions = {},
+): DiscoverySuggestedCreator[] {
+  return creators.map((creator) => ({
+    creator,
+    reason: suggestedCreatorReason(creator, options),
+  }));
+}
+
+export function countDiscoverySearchResults(results: {
+  creators: readonly DiscoveryCreator[];
+  posts: readonly FeedPost[];
+}): {
+  creators: number;
+  posts: number;
+  total: number;
+} {
+  const creators = results.creators.length;
+  const posts = results.posts.length;
+  return { creators, posts, total: creators + posts };
 }
 
 export function interleaveDiscoveryFeed(

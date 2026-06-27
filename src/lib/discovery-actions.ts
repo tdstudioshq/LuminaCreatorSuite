@@ -1,5 +1,5 @@
 // ============================================================================
-// CABANA — protected discovery server actions (Phase 10A)
+// CABANA — discovery server actions (Phases 10A–10B)
 // ----------------------------------------------------------------------------
 // Public explore/search reads that reuse the existing creator/post/engagement
 // tables and RPCs. No schema changes. All heavy logic stays in the pure
@@ -14,13 +14,17 @@ import { isSubscriptionActive } from "@/lib/cabana-entitlements";
 import { mapFeedPost, type FeedPost } from "@/lib/cabana-posts";
 import {
   deriveInterestTokens,
+  labelSuggestedCreators,
   normalizeDiscoveryQuery,
+  normalizeDiscoveryTimeWindow,
   rankCreatorsForDiscovery,
   rankPostsForDiscovery,
+  summarizeCreatorPostSignals,
   type DiscoveryCreator,
   type DiscoveryPostCandidate,
   type DiscoverySearchResults,
   type DiscoverySnapshot,
+  type DiscoveryTimeWindow,
 } from "@/lib/cabana-discovery";
 
 type Db = SupabaseClient<Database>;
@@ -37,6 +41,7 @@ const POST_SELECT =
 const MAX_CREATOR_ROWS = 200;
 const MAX_POST_ROWS = 80;
 const MAX_SEARCH_RESULTS = 12;
+const MAX_EXPLORE_POSTS = 18;
 
 function first<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -112,8 +117,16 @@ async function fetchCreatorCandidates(supabase: Db): Promise<DiscoveryCreator[]>
   );
 }
 
-async function fetchSeedCreators(supabase: Db, userId: string | null): Promise<DiscoveryCreator[]> {
-  if (!userId) return [];
+type DiscoveryViewerSignals = {
+  followedProfileIds: string[];
+  subscribedProfileIds: string[];
+};
+
+async function fetchViewerSignals(
+  supabase: Db,
+  userId: string | null,
+): Promise<DiscoveryViewerSignals> {
+  if (!userId) return { followedProfileIds: [], subscribedProfileIds: [] };
 
   const [followsRes, subscriptionsRes] = await Promise.all([
     supabase.from("follows").select("following_creator_id").eq("follower_id", userId),
@@ -137,16 +150,12 @@ async function fetchSeedCreators(supabase: Db, userId: string | null): Promise<D
       ),
     )
     .map((row) => row.creator_profile_id);
-  const followIds = (followsRes.data ?? []).map((row) => row.following_creator_id);
-  const seedIds = [...new Set([...followIds, ...subscribedIds])];
-  if (seedIds.length === 0) return [];
-
-  const { data: creatorRows, error } = await supabase
-    .from("creator_profiles")
-    .select(CREATOR_SELECT)
-    .in("id", seedIds);
-  if (error) throw new Error(error.message);
-  return mapCreatorRows((creatorRows ?? []) as CreatorRow[], []);
+  return {
+    followedProfileIds: [
+      ...new Set((followsRes.data ?? []).map((row) => row.following_creator_id)),
+    ],
+    subscribedProfileIds: [...new Set(subscribedIds)],
+  };
 }
 
 async function fetchPostCandidates(
@@ -174,6 +183,9 @@ async function fetchPostCandidates(
       return {
         likeCount: toNumber(state?.like_count),
         commentCount: toNumber(state?.comment_count),
+        // Saves are private by design. The existing RPC exposes only the
+        // viewer's own save state, which is still a deterministic ranking signal.
+        saveCount: 0,
         savedByMe: state?.saved_by_me === true,
         canEngage: state?.can_engage !== false,
       };
@@ -192,8 +204,12 @@ async function fetchPostCandidates(
   }));
 }
 
-async function hydratePosts(supabase: Db, postIds: readonly string[]): Promise<FeedPost[]> {
-  const uniqueIds = [...new Set(postIds)].slice(0, MAX_SEARCH_RESULTS);
+async function hydratePosts(
+  supabase: Db,
+  postIds: readonly string[],
+  limit = MAX_SEARCH_RESULTS,
+): Promise<FeedPost[]> {
+  const uniqueIds = [...new Set(postIds)].slice(0, limit);
   const hydrated = await Promise.all(
     uniqueIds.map(async (postId) => {
       const { data, error } = await supabase.rpc("post_card", { _post_id: postId });
@@ -208,44 +224,77 @@ async function hydratePosts(supabase: Db, postIds: readonly string[]): Promise<F
 async function getDiscoverySnapshotForUser(
   supabase: Db,
   userId: string | null,
+  timeWindow: DiscoveryTimeWindow,
 ): Promise<DiscoverySnapshot> {
-  const [creators, seedCreators, postCandidates] = await Promise.all([
+  const [creators, viewerSignals, postCandidates] = await Promise.all([
     fetchCreatorCandidates(supabase),
-    fetchSeedCreators(supabase, userId),
+    fetchViewerSignals(supabase, userId),
     fetchPostCandidates(supabase),
   ]);
 
+  const followedIds = new Set(viewerSignals.followedProfileIds);
+  const subscribedIds = new Set(viewerSignals.subscribedProfileIds);
+  const followedCreators = creators.filter((creator) => followedIds.has(creator.profileId));
+  const subscribedCreators = creators.filter((creator) => subscribedIds.has(creator.profileId));
+  const seedCreators = mergeCreators(followedCreators, subscribedCreators);
   const interestTokens = deriveInterestTokens(seedCreators);
   const excludedProfileIds = seedCreators.map((creator) => creator.profileId);
-  const featuredCreators = rankCreatorsForDiscovery(creators, { mode: "featured", limit: 6 });
-  const trendingCreators = rankCreatorsForDiscovery(creators, { mode: "trending", limit: 6 });
-  const recentlyActiveCreators = rankCreatorsForDiscovery(creators, { mode: "recent", limit: 6 });
-  const suggestedCreators = rankCreatorsForDiscovery(creators, {
-    mode: "suggested",
-    interestTokens,
-    excludedProfileIds,
+  const postSignals = summarizeCreatorPostSignals(postCandidates);
+  const nowMs = Date.now();
+  const featuredCreators = rankCreatorsForDiscovery(creators, {
+    mode: "featured",
+    postSignals,
+    nowMs,
     limit: 6,
   });
+  const trendingCreators = rankCreatorsForDiscovery(creators, {
+    mode: "trending",
+    postSignals,
+    timeWindow,
+    nowMs,
+    limit: 6,
+  });
+  const recentlyActiveCreators = rankCreatorsForDiscovery(creators, {
+    mode: "recent",
+    postSignals,
+    nowMs,
+    limit: 6,
+  });
+  const suggestedCreators = labelSuggestedCreators(
+    rankCreatorsForDiscovery(creators, {
+      mode: "suggested",
+      interestTokens,
+      excludedProfileIds,
+      postSignals,
+      nowMs,
+      limit: 6,
+    }),
+    { followedCreators, subscribedCreators, postSignals, nowMs },
+  );
 
   const trendingPostIds = rankPostsForDiscovery(postCandidates, {
     mode: "trending",
     interestTokens,
     boostProfileIds: excludedProfileIds,
+    timeWindow,
+    nowMs,
     limit: 8,
   }).map((post) => post.postId);
   const explorePostIds = rankPostsForDiscovery(postCandidates, {
     mode: "recent",
     interestTokens,
     boostProfileIds: excludedProfileIds,
-    limit: 6,
+    nowMs,
+    limit: MAX_EXPLORE_POSTS,
   }).map((post) => post.postId);
 
   const [trendingPosts, explorePosts] = await Promise.all([
     hydratePosts(supabase, trendingPostIds),
-    hydratePosts(supabase, explorePostIds),
+    hydratePosts(supabase, explorePostIds, MAX_EXPLORE_POSTS),
   ]);
 
   return {
+    timeWindow,
     featuredCreators,
     trendingCreators,
     recentlyActiveCreators,
@@ -354,6 +403,7 @@ async function getSearchResultsForQuery(
         updatedAt: post.updated_at,
         likeCount: toNumber(state?.like_count),
         commentCount: toNumber(state?.comment_count),
+        saveCount: 0,
         savedByMe: state?.saved_by_me === true,
         canEngage: state?.can_engage !== false,
       } satisfies DiscoveryPostCandidate;
@@ -373,8 +423,15 @@ async function getSearchResultsForQuery(
 
 export const getDiscoverySnapshot = createServerFn({ method: "GET" })
   .middleware([attachSupabaseToken, optionalSupabaseAuth])
-  .handler(async ({ context }): Promise<DiscoverySnapshot> => {
-    return getDiscoverySnapshotForUser(context.supabase as Db, context.userId ?? null);
+  .inputValidator((raw: { timeWindow?: unknown }) => ({
+    timeWindow: normalizeDiscoveryTimeWindow(raw?.timeWindow),
+  }))
+  .handler(async ({ context, data }): Promise<DiscoverySnapshot> => {
+    return getDiscoverySnapshotForUser(
+      context.supabase as Db,
+      context.userId ?? null,
+      data.timeWindow,
+    );
   });
 
 export const getDiscoverySearchResults = createServerFn({ method: "GET" })
