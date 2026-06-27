@@ -17,32 +17,59 @@ import { GlobalNav } from "@/components/cabana/GlobalNav";
 import { PostCard } from "@/components/cabana/posts/PostCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebouncedField } from "@/hooks/use-debounced-callback";
 import type { FeedPost } from "@/lib/cabana-posts";
 import {
+  countDiscoverySearchResults,
+  DISCOVERY_TIME_WINDOWS,
   interleaveDiscoveryFeed,
   type DiscoveryCreator,
   type DiscoveryFeedItem,
+  type DiscoverySuggestedCreator,
+  type DiscoveryTimeWindow,
 } from "@/lib/cabana-discovery";
 import { useDiscoverySearch, useDiscoverySnapshot } from "@/lib/use-discovery";
 
+const INITIAL_EXPLORE_ITEMS = 8;
+const EXPLORE_PAGE_SIZE = 6;
+const COMPACT_NUMBER_FORMATTER = new Intl.NumberFormat("en", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
 export function DiscoveryPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [timeWindow, setTimeWindow] = useState<DiscoveryTimeWindow>("7d");
+  const [visibleExploreItems, setVisibleExploreItems] = useState(INITIAL_EXPLORE_ITEMS);
   const [searchInput, onSearchInputChange] = useDebouncedField(searchTerm, setSearchTerm, 300);
-  const snapshot = useDiscoverySnapshot();
+  const snapshot = useDiscoverySnapshot(timeWindow);
   const search = useDiscoverySearch(searchTerm);
   const hasQuery = searchTerm.trim().length > 0;
-  const mixedFeed = useMemo(
+  const allMixedFeed = useMemo(
     () =>
       interleaveDiscoveryFeed(
         snapshot.data?.explorePosts ?? [],
         snapshot.data?.featuredCreators ?? [],
-        8,
+        50,
       ),
     [snapshot.data],
   );
+  const mixedFeed = allMixedFeed.slice(0, visibleExploreItems);
+  const hasMoreExploreItems = mixedFeed.length < allMixedFeed.length;
+  const rankedWindow = snapshot.data?.timeWindow ?? timeWindow;
+
+  const handleWindowChange = (nextWindow: DiscoveryTimeWindow) => {
+    setTimeWindow(nextWindow);
+    setVisibleExploreItems(INITIAL_EXPLORE_ITEMS);
+  };
+
+  const clearSearch = () => {
+    onSearchInputChange("");
+    setSearchTerm("");
+  };
 
   return (
     <div className="relative min-h-screen overflow-x-hidden px-4 pb-24 pt-32 sm:px-6">
@@ -87,12 +114,13 @@ export function DiscoveryPage() {
               value={searchInput}
               onChange={(event) => onSearchInputChange(event.target.value)}
               placeholder="Search creators, usernames, posts, or #hashtags"
+              aria-label="Search creators and posts"
               className="h-11 rounded-2xl border-border/60 bg-background/40 pl-10 pr-20"
             />
             {searchInput.length > 0 && (
               <button
                 type="button"
-                onClick={() => setSearchTerm("")}
+                onClick={clearSearch}
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
               >
                 Clear
@@ -139,7 +167,11 @@ export function DiscoveryPage() {
           />
         ) : (
           <>
-            <DiscoveryMixedFeed items={mixedFeed} />
+            <DiscoveryMixedFeed
+              items={mixedFeed}
+              hasMore={hasMoreExploreItems}
+              onLoadMore={() => setVisibleExploreItems((current) => current + EXPLORE_PAGE_SIZE)}
+            />
             <CreatorsSection
               title="Featured creators"
               description="A curated starting point built from popularity, verification, and freshness."
@@ -147,16 +179,21 @@ export function DiscoveryPage() {
               badge="Featured"
               icon={Sparkles}
             />
+            <TrendingWindowPicker
+              value={timeWindow}
+              isUpdating={snapshot.isFetching}
+              onChange={handleWindowChange}
+            />
             <PostsSection
               title="Trending posts"
-              description="Recent posts with the strongest engagement momentum."
+              description={`Posts with the strongest engagement momentum in the ${timeWindowLabel(rankedWindow).toLowerCase()}.`}
               posts={snapshot.data?.trendingPosts ?? []}
               badge="Trending"
               icon={TrendingUp}
             />
             <CreatorsSection
               title="Trending creators"
-              description="Creators with strong momentum across followers, posts, and recent activity."
+              description={`Creators with strong momentum in the ${timeWindowLabel(rankedWindow).toLowerCase()}.`}
               creators={snapshot.data?.trendingCreators ?? []}
               badge="Trending"
               icon={TrendingUp}
@@ -168,13 +205,7 @@ export function DiscoveryPage() {
               badge="Recent"
               icon={Clock3}
             />
-            <CreatorsSection
-              title="Suggested creators"
-              description="Deterministic recommendations based on your existing follows and subscriptions."
-              creators={snapshot.data?.suggestedCreators ?? []}
-              badge="Suggested"
-              icon={UserPlus}
-            />
+            <SuggestedCreatorsSection suggestions={snapshot.data?.suggestedCreators ?? []} />
           </>
         )}
       </div>
@@ -201,7 +232,7 @@ function SearchResultsPanel({
   error: unknown;
   onRetry: () => void;
 }) {
-  const total = creators.length + posts.length;
+  const counts = countDiscoverySearchResults({ creators, posts });
   return (
     <section className="space-y-4">
       <div className="flex items-end justify-between gap-3">
@@ -213,7 +244,7 @@ function SearchResultsPanel({
           <p className="text-sm text-muted-foreground">
             {isFetching && !isLoading
               ? "Updating results…"
-              : `${total} matches across creators and posts`}
+              : `${counts.total} ${counts.total === 1 ? "match" : "matches"} · ${counts.creators} creators · ${counts.posts} posts`}
           </p>
         </div>
       </div>
@@ -226,36 +257,41 @@ function SearchResultsPanel({
           description={error instanceof Error ? error.message : "Please try again."}
           onRetry={onRetry}
         />
-      ) : total === 0 ? (
+      ) : counts.total === 0 ? (
         <EmptyResultsState query={query} />
       ) : (
         <div className="space-y-6">
-          {creators.length > 0 && (
-            <CreatorsSection
-              title="Creators"
-              description="Public creators that match your search."
-              creators={creators}
-              badge="Matches"
-              icon={Users}
-              compact
-            />
-          )}
-          {posts.length > 0 && (
-            <PostsSection
-              title="Posts"
-              description="Public post captions that match your search."
-              posts={posts}
-              badge="Matches"
-              icon={Search}
-            />
-          )}
+          <CreatorsSection
+            title={`Creators (${counts.creators})`}
+            description="Public creators matching a username, display name, or bio."
+            creators={creators}
+            badge={`${counts.creators} found`}
+            icon={Users}
+            emptyLabel="No creators match this search."
+          />
+          <PostsSection
+            title={`Posts (${counts.posts})`}
+            description="Public posts matching caption text or hashtags."
+            posts={posts}
+            badge={`${counts.posts} found`}
+            icon={Search}
+            emptyLabel="No posts match this search."
+          />
         </div>
       )}
     </section>
   );
 }
 
-function DiscoveryMixedFeed({ items }: { items: DiscoveryFeedItem[] }) {
+function DiscoveryMixedFeed({
+  items,
+  hasMore,
+  onLoadMore,
+}: {
+  items: DiscoveryFeedItem[];
+  hasMore: boolean;
+  onLoadMore: () => void;
+}) {
   return (
     <section className="space-y-4">
       <SectionHeader
@@ -281,6 +317,13 @@ function DiscoveryMixedFeed({ items }: { items: DiscoveryFeedItem[] }) {
           )}
         </div>
       )}
+      {hasMore && (
+        <div className="flex justify-center">
+          <Button type="button" variant="outline" className="rounded-full" onClick={onLoadMore}>
+            Load more
+          </Button>
+        </div>
+      )}
     </section>
   );
 }
@@ -291,14 +334,14 @@ function CreatorsSection({
   creators,
   badge,
   icon,
-  compact = false,
+  emptyLabel,
 }: {
   title: string;
   description: string;
   creators: DiscoveryCreator[];
   badge: string;
   icon: LucideIcon;
-  compact?: boolean;
+  emptyLabel?: string;
 }) {
   return (
     <section className="space-y-4">
@@ -310,18 +353,11 @@ function CreatorsSection({
         icon={icon}
       />
       {creators.length === 0 ? (
-        <InlineEmptyState label={title} />
+        <InlineEmptyState label={emptyLabel ?? `No ${title.toLowerCase()} yet.`} />
       ) : (
-        <div
-          className={`grid gap-4 ${compact ? "md:grid-cols-2 xl:grid-cols-3" : "md:grid-cols-2 xl:grid-cols-3"}`}
-        >
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {creators.map((creator) => (
-            <CreatorCard
-              key={creator.profileId}
-              creator={creator}
-              badge={badge}
-              compact={compact}
-            />
+            <CreatorCard key={creator.profileId} creator={creator} badge={badge} />
           ))}
         </div>
       )}
@@ -335,12 +371,14 @@ function PostsSection({
   posts,
   badge,
   icon,
+  emptyLabel,
 }: {
   title: string;
   description: string;
   posts: readonly FeedPost[];
   badge: string;
   icon: LucideIcon;
+  emptyLabel?: string;
 }) {
   return (
     <section className="space-y-4">
@@ -352,7 +390,7 @@ function PostsSection({
         icon={icon}
       />
       {posts.length === 0 ? (
-        <InlineEmptyState label={title} />
+        <InlineEmptyState label={emptyLabel ?? `No ${title.toLowerCase()} yet.`} />
       ) : (
         <div className="space-y-4">
           {posts.map((post, index) => (
@@ -360,6 +398,80 @@ function PostsSection({
           ))}
         </div>
       )}
+    </section>
+  );
+}
+
+function SuggestedCreatorsSection({ suggestions }: { suggestions: DiscoverySuggestedCreator[] }) {
+  return (
+    <section className="space-y-4">
+      <SectionHeader
+        eyebrow="Suggested"
+        title="Suggested creators"
+        description="Explainable recommendations based on existing follows, subscriptions, activity, and popularity."
+        badge="Suggested"
+        icon={UserPlus}
+      />
+      {suggestions.length === 0 ? (
+        <InlineEmptyState label="No suggested creators yet." />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {suggestions.map(({ creator, reason }) => (
+            <CreatorCard
+              key={creator.profileId}
+              creator={creator}
+              badge="Suggested"
+              recommendationReason={reason.label}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function TrendingWindowPicker({
+  value,
+  isUpdating,
+  onChange,
+}: {
+  value: DiscoveryTimeWindow;
+  isUpdating: boolean;
+  onChange: (window: DiscoveryTimeWindow) => void;
+}) {
+  return (
+    <section className="glass flex flex-col gap-3 rounded-3xl p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="text-sm font-medium">Trending window</p>
+        <p className="text-xs text-muted-foreground">
+          Rank creators and posts using activity inside a deterministic time range.
+        </p>
+      </div>
+      <div
+        role="group"
+        aria-label="Trending time window"
+        className="flex flex-wrap items-center gap-2"
+      >
+        {DISCOVERY_TIME_WINDOWS.map((window) => (
+          <Button
+            key={window}
+            type="button"
+            size="sm"
+            variant={value === window ? "default" : "outline"}
+            aria-pressed={value === window}
+            onClick={() => onChange(window)}
+            className="rounded-full"
+          >
+            {timeWindowLabel(window)}
+          </Button>
+        ))}
+        {isUpdating && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Updating
+          </span>
+        )}
+      </div>
     </section>
   );
 }
@@ -395,16 +507,16 @@ function SectionHeader({
 function CreatorCard({
   creator,
   badge,
-  compact = false,
+  recommendationReason,
 }: {
   creator: DiscoveryCreator;
   badge: string;
-  compact?: boolean;
+  recommendationReason?: string;
 }) {
   const fallback =
     creator.displayName.trim().charAt(0).toUpperCase() || creator.username.charAt(0).toUpperCase();
   const stats = [
-    `${compact ? "Followers" : "Followers"} ${formatCompactNumber(creator.followerCount)}`,
+    `Followers ${formatCompactNumber(creator.followerCount)}`,
     `${formatCompactNumber(creator.postCount)} posts`,
     `Active ${formatDistanceToNow(new Date(creator.updatedAt), { addSuffix: true })}`,
   ];
@@ -439,6 +551,13 @@ function CreatorCard({
       </div>
 
       {creator.bio && <p className="mt-4 line-clamp-3 text-sm text-foreground/85">{creator.bio}</p>}
+
+      {recommendationReason && (
+        <div className="mt-4 inline-flex w-fit items-center gap-1.5 rounded-full bg-iridescent/10 px-3 py-1.5 text-[11px] text-iridescent">
+          <Sparkles className="h-3.5 w-3.5" />
+          {recommendationReason}
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
         {stats.map((item) => (
@@ -592,8 +711,8 @@ function EmptyResultsState({ query }: { query: string }) {
     <section className="glass rounded-3xl p-8 text-center">
       <p className="text-sm font-medium">No results for “{query}”</p>
       <p className="mt-1 text-xs text-muted-foreground">
-        Try a creator handle, display name, or post caption. Hashtags are matched against post
-        captions, not a separate taxonomy.
+        Check the spelling or try a shorter creator name, username, post phrase, or hashtag.
+        Hashtags are matched against post captions; CABANA does not maintain a separate taxonomy.
       </p>
     </section>
   );
@@ -602,7 +721,7 @@ function EmptyResultsState({ query }: { query: string }) {
 function InlineEmptyState({ label }: { label: string }) {
   return (
     <section className="rounded-3xl border border-dashed border-border/60 bg-foreground/[0.02] p-6 text-sm text-muted-foreground">
-      No {label.toLowerCase()} yet.
+      {label}
     </section>
   );
 }
@@ -617,8 +736,12 @@ function StatPill({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
 }
 
 function formatCompactNumber(value: number): string {
-  return new Intl.NumberFormat("en", {
-    notation: "compact",
-    maximumFractionDigits: 1,
-  }).format(value);
+  return COMPACT_NUMBER_FORMATTER.format(value);
+}
+
+function timeWindowLabel(window: DiscoveryTimeWindow): string {
+  if (window === "24h") return "Past 24 hours";
+  if (window === "7d") return "Past 7 days";
+  if (window === "30d") return "Past 30 days";
+  return "All time";
 }

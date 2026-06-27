@@ -1,14 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { getDiscoverySearchResults, getDiscoverySnapshot } from "@/lib/discovery-actions";
-import { normalizeDiscoveryQuery } from "@/lib/cabana-discovery";
+import { normalizeDiscoveryQuery, type DiscoveryTimeWindow } from "@/lib/cabana-discovery";
 
-const discoverySnapshotKey = ["discovery", "snapshot"] as const;
+const discoverySnapshotKey = (timeWindow: DiscoveryTimeWindow) =>
+  ["discovery", "snapshot", timeWindow] as const;
 const discoverySearchKey = (query: string) => ["discovery", "search", query] as const;
 
-export function useDiscoverySnapshot() {
+export function useDiscoverySnapshot(timeWindow: DiscoveryTimeWindow = "7d") {
   return useQuery({
-    queryKey: discoverySnapshotKey,
-    queryFn: () => getDiscoverySnapshot(),
+    queryKey: discoverySnapshotKey(timeWindow),
+    queryFn: () => getDiscoverySnapshot({ data: { timeWindow } }),
+    placeholderData: (previous) => previous,
   });
 }
 
