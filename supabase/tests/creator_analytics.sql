@@ -25,6 +25,7 @@ declare
   v_post_a2 uuid;
   v_post_b1 uuid;
   v_comment uuid;
+  v_comment2 uuid;
   r record;
   cnt int;
   denied boolean;
@@ -54,7 +55,8 @@ begin
     values (v_profile_b, 'b1', 'public', 'published', now()) returning id into v_post_b1;
   reset role;
 
-  -- Fan engages with post_a1: 1 like, 1 save, 1 visible comment + 1 hidden comment.
+  -- Fan engages with post_a1: 1 like, 1 save, 2 visible comments (one will be
+  -- hidden by the creator below; authors may only insert visible comments).
   perform set_config('request.jwt.claims',
     json_build_object('sub', v_fan::text, 'role', 'authenticated')::text, true);
   set local role authenticated;
@@ -62,16 +64,19 @@ begin
   insert into public.post_saves (post_id, user_id) values (v_post_a1, v_fan);
   insert into public.post_comments (post_id, author_id, body)
     values (v_post_a1, v_fan, 'nice') returning id into v_comment;
-  insert into public.post_comments (post_id, author_id, body, status)
-    values (v_post_a1, v_fan, 'hidden one', 'hidden');
+  insert into public.post_comments (post_id, author_id, body)
+    values (v_post_a1, v_fan, 'to be hidden') returning id into v_comment2;
   reset role;
 
   -- -------------------------------------------------------------------------
-  -- Creator A sees both their posts with correct counts; only visible comments.
+  -- Creator A hides one comment, then sees both their posts with correct
+  -- counts; the hidden comment must NOT be counted.
   -- -------------------------------------------------------------------------
   perform set_config('request.jwt.claims',
     json_build_object('sub', v_creator_a::text, 'role', 'authenticated')::text, true);
   set local role authenticated;
+
+  update public.post_comments set status = 'hidden' where id = v_comment2;
 
   select count(*) into cnt from public.creator_content_analytics();
   if cnt <> 2 then raise exception 'creator A expected 2 own posts, got %', cnt; end if;
