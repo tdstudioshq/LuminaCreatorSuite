@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Link2, Store, FileText, BarChart3, Wand2, Filter, Palette } from "lucide-react";
+import { Link2, Store, FileText, BarChart3, UsersRound, Filter, Palette } from "lucide-react";
 
 const features = [
   {
@@ -23,9 +23,9 @@ const features = [
     desc: "Cohort, conversion and revenue insight in one cinematic canvas.",
   },
   {
-    icon: Wand2,
-    title: "AI Generation",
-    desc: "Bios, CTAs, themes and pages generated in your voice.",
+    icon: UsersRound,
+    title: "Fan Subscriptions",
+    desc: "Tiered memberships, exclusive content, and direct fan revenue.",
   },
   {
     icon: Filter,

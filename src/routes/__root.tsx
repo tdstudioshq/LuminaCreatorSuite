@@ -89,14 +89,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Premium creator OS combining bio pages, storefronts, media kits, AI agents and analytics — cinematic, mobile-first.",
+          "Premium creator OS combining bio pages, storefronts, media kits, fan subscriptions and analytics — cinematic, mobile-first.",
       },
       { name: "author", content: "CABANA" },
       { property: "og:title", content: "CABANA" },
       {
         property: "og:description",
         content:
-          "Premium creator OS combining bio pages, storefronts, media kits, AI agents and analytics — cinematic, mobile-first.",
+          "Premium creator OS combining bio pages, storefronts, media kits, fan subscriptions and analytics — cinematic, mobile-first.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -104,7 +104,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "twitter:description",
         content:
-          "Premium creator OS combining bio pages, storefronts, media kits, AI agents and analytics — cinematic, mobile-first.",
+          "Premium creator OS combining bio pages, storefronts, media kits, fan subscriptions and analytics — cinematic, mobile-first.",
       },
       { property: "og:image", content: "https://www.cabanagrp.com/cabana-og.webp" },
       { name: "twitter:image", content: "https://www.cabanagrp.com/cabana-og.webp" },

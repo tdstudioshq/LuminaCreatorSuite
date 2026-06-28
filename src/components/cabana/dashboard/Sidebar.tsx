@@ -18,7 +18,6 @@ import {
   User,
   UsersRound,
   WalletCards,
-  Wand2,
 } from "lucide-react";
 import { useCabana } from "@/lib/cabana-store";
 import { cabanaAuth, useCabanaUser } from "@/lib/cabana-auth";
@@ -38,7 +37,6 @@ const items = [
   { to: "/dashboard/storefront", label: "Storefront", icon: Store },
   { to: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/dashboard/media-kit", label: "Media Kit", icon: FileText },
-  { to: "/dashboard/ai", label: "AI Studio", icon: Wand2 },
   { to: "/dashboard/settings", label: "Settings", icon: SettingsIcon },
 ] as const;
 

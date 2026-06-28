@@ -6,7 +6,6 @@ import { Features } from "@/components/cabana/Features";
 import { BrandShowcase } from "@/components/cabana/BrandShowcase";
 import { CreatorShowcase } from "@/components/cabana/CreatorShowcase";
 import { Analytics } from "@/components/cabana/Analytics";
-import { AISection } from "@/components/cabana/AISection";
 import { Pricing } from "@/components/cabana/Pricing";
 import { FinalCTA } from "@/components/cabana/FinalCTA";
 import { Footer } from "@/components/cabana/Footer";
@@ -40,7 +39,6 @@ function Index() {
         <Features />
         <CreatorShowcase />
         <Analytics />
-        <AISection />
         <BrandShowcase />
         <Pricing />
         <FinalCTA />
