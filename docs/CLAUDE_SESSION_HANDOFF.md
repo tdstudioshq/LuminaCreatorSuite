@@ -624,7 +624,7 @@ CABANA currently includes:
 - Public creator pages at `/$username`.
 - Authenticated creator dashboard.
 - Authenticated member account foundation at `/account`.
-- Demo-only AI Studio, media kit, settings integrations, and admin portal.
+- Demo-only media kit, settings integrations, and admin portal.
 - Luxury dark, glass, chrome, and iridescent CABANA design system.
 
 The application does not yet have production posts/feed, creator subscriptions, messages,

@@ -87,7 +87,7 @@ The live data layer. Tables: `creator_profiles`, `links`, `products`, plus `user
 ### Components
 
 - `src/components/ui/` — shadcn/ui (new-york style, ~46 primitives). Don't reinvent; compose these.
-- `src/components/cabana/` — app feature components: `dashboard/` (DashHome, LinkManager, StoreManager, AnalyticsPage, AIStudio, MediaKit, ProfileEditor, SettingsPanel, Sidebar), `auth/AuthShell`, `foundation/FoundationPage`.
+- `src/components/cabana/` — app feature components: `dashboard/` (DashHome, LinkManager, StoreManager, AnalyticsPage, MediaKit, ProfileEditor, SettingsPanel, Sidebar), `auth/AuthShell`, `foundation/FoundationPage`.
 - `FoundationPage` is the shared "demo foundation / coming soon" presentation for not-yet-built subscription-platform screens. Several screens that once rendered through it are now real (posts, messages, earnings, notifications, feed, discover, dashboard home/analytics); it remains the fallback for any screen not yet built out.
 
 ### Design system
