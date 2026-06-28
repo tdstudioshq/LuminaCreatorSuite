@@ -487,3 +487,91 @@ begin
 
   raise notice 'CABANA smoke checks passed: schema, functions, triggers, RLS, storage, and seed are present.';
 end $$;
+
+-- ============================================================================
+-- Role-based grant coverage (baseline-grants regression guard)
+-- ----------------------------------------------------------------------------
+-- Everything above runs as the migration superuser, which bypasses BOTH table
+-- GRANTs and RLS — so a missing baseline GRANT to anon/authenticated would pass
+-- unnoticed (RLS policies are inert without the underlying table privilege).
+-- The statements below execute as the actual PostgREST roles, so a missing
+-- GRANT raises `42501 permission denied` and, under ON_ERROR_STOP=1, fails CI.
+-- RLS still applies (auth.uid() is null here), so these assert the GRANT, not
+-- row visibility — they succeed whether or not any rows come back.
+-- ============================================================================
+
+-- anon must be able to read the public baseline tables that back `/$username`.
+begin;
+set local role anon;
+select 1 from public.creator_profiles limit 1;
+select 1 from public.links            limit 1;
+select 1 from public.products         limit 1;
+select 1 from public.reserved_handles limit 1;
+rollback;
+
+-- authenticated must be able to read the owner-scoped baseline tables (the
+-- dashboard and SaaS plan reads). We emulate a real signed-in member (the
+-- seeded demo reporter) so the self-row RLS policies resolve the same way they
+-- do for a live request. Zero rows is fine; a missing GRANT (42501) is not.
+-- (user_roles is asserted at the GRANT level below rather than via a live read:
+-- its admin SELECT policy calls the authenticated-revoked has_role(), whose
+-- EXECUTE check fires at plan time regardless of the row filter — a separate,
+-- pre-existing policy issue this grant-regression guard deliberately avoids.)
+begin;
+select set_config(
+  'request.jwt.claims',
+  json_build_object('sub', '00000000-0000-4000-e000-000000000001', 'role', 'authenticated')::text,
+  true
+);
+set local role authenticated;
+select 1 from public.creator_profiles limit 1;
+select 1 from public.links            limit 1;
+select 1 from public.products         limit 1;
+select 1 from public.reserved_handles limit 1;
+select 1 from public.subscriptions    limit 1;
+select 1 from public.analytics_events limit 1;
+rollback;
+
+-- anon must be able to INSERT an analytics event for a real creator profile
+-- (the link-in-bio event-tracking path). Rolled back so the smoke run is clean.
+begin;
+set local role anon;
+insert into public.analytics_events (event_type, profile_id)
+  values ('page_view', '00000000-0000-4000-a000-000000000001');
+rollback;
+
+-- Positive GRANT assertions for the remaining baseline privileges that can't be
+-- exercised by a plain live read here (user_roles, plus the write grants). These
+-- catch a missing-grant regression directly from the catalog.
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.role_table_grants
+    where table_schema = 'public' and table_name = 'user_roles'
+      and grantee = 'authenticated' and privilege_type = 'SELECT'
+  ) then
+    raise exception 'MISSING GRANT: authenticated SELECT on user_roles';
+  end if;
+  if not exists (
+    select 1 from information_schema.role_table_grants
+    where table_schema = 'public' and table_name = 'creator_profiles'
+      and grantee = 'authenticated' and privilege_type = 'INSERT'
+  ) then
+    raise exception 'MISSING GRANT: authenticated INSERT on creator_profiles';
+  end if;
+  if not exists (
+    select 1 from information_schema.role_table_grants
+    where table_schema = 'public' and table_name = 'links'
+      and grantee = 'authenticated' and privilege_type = 'DELETE'
+  ) then
+    raise exception 'MISSING GRANT: authenticated DELETE on links';
+  end if;
+  if not exists (
+    select 1 from information_schema.role_table_grants
+    where table_schema = 'public' and table_name = 'analytics_events'
+      and grantee = 'anon' and privilege_type = 'INSERT'
+  ) then
+    raise exception 'MISSING GRANT: anon INSERT on analytics_events';
+  end if;
+  raise notice 'CABANA role-grant smoke passed: anon/authenticated reach the baseline tables.';
+end $$;

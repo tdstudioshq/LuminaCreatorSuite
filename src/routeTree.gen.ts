@@ -30,7 +30,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as PostPostIdRouteImport } from './routes/post.$postId'
 import { Route as MessagesConversationIdRouteImport } from './routes/messages.$conversationId'
-import { Route as FeaturesAiRouteImport } from './routes/features.ai'
 import { Route as DocsSystemRouteImport } from './routes/docs.system'
 import { Route as DocsDataModelRouteImport } from './routes/docs.data-model'
 import { Route as DashboardSubscribersRouteImport } from './routes/dashboard.subscribers'
@@ -46,7 +45,6 @@ import { Route as DashboardLinksRouteImport } from './routes/dashboard.links'
 import { Route as DashboardHomeRouteImport } from './routes/dashboard.home'
 import { Route as DashboardEarningsRouteImport } from './routes/dashboard.earnings'
 import { Route as DashboardAnalyticsRouteImport } from './routes/dashboard.analytics'
-import { Route as DashboardAiRouteImport } from './routes/dashboard.ai'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminPayoutsRouteImport } from './routes/admin.payouts'
 import { Route as AdminLedgerRouteImport } from './routes/admin.ledger'
@@ -159,11 +157,6 @@ const MessagesConversationIdRoute = MessagesConversationIdRouteImport.update({
   path: '/$conversationId',
   getParentRoute: () => MessagesRoute,
 } as any)
-const FeaturesAiRoute = FeaturesAiRouteImport.update({
-  id: '/features/ai',
-  path: '/features/ai',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DocsSystemRoute = DocsSystemRouteImport.update({
   id: '/docs/system',
   path: '/docs/system',
@@ -239,11 +232,6 @@ const DashboardAnalyticsRoute = DashboardAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardAiRoute = DashboardAiRouteImport.update({
-  id: '/ai',
-  path: '/ai',
-  getParentRoute: () => DashboardRoute,
-} as any)
 const AdminReportsRoute = AdminReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -300,7 +288,6 @@ export interface FileRoutesByFullPath {
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reports': typeof AdminReportsRoute
-  '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
   '/dashboard/home': typeof DashboardHomeRoute
@@ -316,7 +303,6 @@ export interface FileRoutesByFullPath {
   '/dashboard/subscribers': typeof DashboardSubscribersRoute
   '/docs/data-model': typeof DocsDataModelRoute
   '/docs/system': typeof DocsSystemRoute
-  '/features/ai': typeof FeaturesAiRoute
   '/messages/$conversationId': typeof MessagesConversationIdRoute
   '/post/$postId': typeof PostPostIdRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -345,7 +331,6 @@ export interface FileRoutesByTo {
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reports': typeof AdminReportsRoute
-  '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
   '/dashboard/home': typeof DashboardHomeRoute
@@ -361,7 +346,6 @@ export interface FileRoutesByTo {
   '/dashboard/subscribers': typeof DashboardSubscribersRoute
   '/docs/data-model': typeof DocsDataModelRoute
   '/docs/system': typeof DocsSystemRoute
-  '/features/ai': typeof FeaturesAiRoute
   '/messages/$conversationId': typeof MessagesConversationIdRoute
   '/post/$postId': typeof PostPostIdRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -392,7 +376,6 @@ export interface FileRoutesById {
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reports': typeof AdminReportsRoute
-  '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
   '/dashboard/home': typeof DashboardHomeRoute
@@ -408,7 +391,6 @@ export interface FileRoutesById {
   '/dashboard/subscribers': typeof DashboardSubscribersRoute
   '/docs/data-model': typeof DocsDataModelRoute
   '/docs/system': typeof DocsSystemRoute
-  '/features/ai': typeof FeaturesAiRoute
   '/messages/$conversationId': typeof MessagesConversationIdRoute
   '/post/$postId': typeof PostPostIdRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -440,7 +422,6 @@ export interface FileRouteTypes {
     | '/admin/ledger'
     | '/admin/payouts'
     | '/admin/reports'
-    | '/dashboard/ai'
     | '/dashboard/analytics'
     | '/dashboard/earnings'
     | '/dashboard/home'
@@ -456,7 +437,6 @@ export interface FileRouteTypes {
     | '/dashboard/subscribers'
     | '/docs/data-model'
     | '/docs/system'
-    | '/features/ai'
     | '/messages/$conversationId'
     | '/post/$postId'
     | '/dashboard/'
@@ -485,7 +465,6 @@ export interface FileRouteTypes {
     | '/admin/ledger'
     | '/admin/payouts'
     | '/admin/reports'
-    | '/dashboard/ai'
     | '/dashboard/analytics'
     | '/dashboard/earnings'
     | '/dashboard/home'
@@ -501,7 +480,6 @@ export interface FileRouteTypes {
     | '/dashboard/subscribers'
     | '/docs/data-model'
     | '/docs/system'
-    | '/features/ai'
     | '/messages/$conversationId'
     | '/post/$postId'
     | '/dashboard'
@@ -531,7 +509,6 @@ export interface FileRouteTypes {
     | '/admin/ledger'
     | '/admin/payouts'
     | '/admin/reports'
-    | '/dashboard/ai'
     | '/dashboard/analytics'
     | '/dashboard/earnings'
     | '/dashboard/home'
@@ -547,7 +524,6 @@ export interface FileRouteTypes {
     | '/dashboard/subscribers'
     | '/docs/data-model'
     | '/docs/system'
-    | '/features/ai'
     | '/messages/$conversationId'
     | '/post/$postId'
     | '/dashboard/'
@@ -575,7 +551,6 @@ export interface RootRouteChildren {
   TdRoute: typeof TdRoute
   DocsDataModelRoute: typeof DocsDataModelRoute
   DocsSystemRoute: typeof DocsSystemRoute
-  FeaturesAiRoute: typeof FeaturesAiRoute
   PostPostIdRoute: typeof PostPostIdRoute
 }
 
@@ -728,13 +703,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MessagesConversationIdRouteImport
       parentRoute: typeof MessagesRoute
     }
-    '/features/ai': {
-      id: '/features/ai'
-      path: '/features/ai'
-      fullPath: '/features/ai'
-      preLoaderRoute: typeof FeaturesAiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/docs/system': {
       id: '/docs/system'
       path: '/docs/system'
@@ -840,13 +808,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAnalyticsRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/dashboard/ai': {
-      id: '/dashboard/ai'
-      path: '/ai'
-      fullPath: '/dashboard/ai'
-      preLoaderRoute: typeof DashboardAiRouteImport
-      parentRoute: typeof DashboardRoute
-    }
     '/admin/reports': {
       id: '/admin/reports'
       path: '/reports'
@@ -923,7 +884,6 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface DashboardRouteChildren {
-  DashboardAiRoute: typeof DashboardAiRoute
   DashboardAnalyticsRoute: typeof DashboardAnalyticsRoute
   DashboardEarningsRoute: typeof DashboardEarningsRoute
   DashboardHomeRoute: typeof DashboardHomeRoute
@@ -941,7 +901,6 @@ interface DashboardRouteChildren {
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
-  DashboardAiRoute: DashboardAiRoute,
   DashboardAnalyticsRoute: DashboardAnalyticsRoute,
   DashboardEarningsRoute: DashboardEarningsRoute,
   DashboardHomeRoute: DashboardHomeRoute,
@@ -995,7 +954,6 @@ const rootRouteChildren: RootRouteChildren = {
   TdRoute: TdRoute,
   DocsDataModelRoute: DocsDataModelRoute,
   DocsSystemRoute: DocsSystemRoute,
-  FeaturesAiRoute: FeaturesAiRoute,
   PostPostIdRoute: PostPostIdRoute,
 }
 export const routeTree = rootRouteImport

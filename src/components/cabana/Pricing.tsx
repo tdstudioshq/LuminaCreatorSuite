@@ -35,7 +35,7 @@ const tiers = [
     desc: "For elite creators & small teams.",
     features: [
       "Everything in Pro",
-      "AI Studio unlimited",
+      "Unlimited fan subscription tiers",
       "Dedicated designer hours",
       "Manager dashboard",
       "Concierge launch & SLA",

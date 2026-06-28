@@ -12,7 +12,7 @@ export const Route = createFileRoute("/pricing")({
       {
         name: "description",
         content:
-          "Free, Pro, Premium and Agency plans. Bio pages, storefronts, AI agents, analytics — priced for serious creators.",
+          "Free, Pro, Premium and Agency plans. Bio pages, storefronts, fan subscriptions, analytics — priced for serious creators.",
       },
       { property: "og:title", content: "CABANA" },
       {
@@ -54,7 +54,7 @@ const PLANS = [
       "Everything in Atelier",
       "Unlimited smart links",
       "Storefront & digital products",
-      "AI bio + caption agent",
+      "Fan subscriptions & tiers",
       "Advanced analytics",
       "Custom domain",
     ],
@@ -71,7 +71,7 @@ const PLANS = [
     blurb: "The full operating system. Apple-grade polish.",
     features: [
       "Everything in Studio",
-      "All 7 AI agents",
+      "Advanced monetization tools",
       "Premium themes & chrome",
       "Sponsorship-ready media kit",
       "Priority routing engine",
@@ -291,8 +291,8 @@ const COMPARE_ROWS = [
   { feat: "Creator pages", values: ["1", "Unlimited", "Unlimited", "25 seats"] },
   { feat: "Smart links", values: ["8", "Unlimited", "Unlimited", "Unlimited"] },
   { feat: "Storefront", values: [false, true, true, true] },
-  { feat: "AI bio & captions", values: [false, true, true, true] },
-  { feat: "All 7 AI agents", values: [false, false, true, true] },
+  { feat: "Fan subscriptions & tiers", values: [false, true, true, true] },
+  { feat: "Advanced monetization tools", values: [false, false, true, true] },
   { feat: "Premium themes & chrome", values: [false, false, true, true] },
   { feat: "Custom domain", values: [false, true, true, true] },
   { feat: "Sponsorship media kit", values: [false, false, true, true] },
@@ -426,8 +426,8 @@ function FinalCTA() {
           <button className="btn-luxury">
             Start free trial <ArrowUpRight className="w-4 h-4" />
           </button>
-          <Link to="/features/ai" className="btn-ghost">
-            Explore AI
+          <Link to="/" className="btn-ghost">
+            Explore platform
           </Link>
         </div>
       </div>
