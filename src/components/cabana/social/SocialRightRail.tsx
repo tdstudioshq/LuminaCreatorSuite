@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowUpRight, Loader2, Search, Sparkles } from "lucide-react";
 import { useDiscoverySnapshot } from "@/lib/use-discovery";
@@ -12,12 +12,15 @@ import type { DiscoveryCreator } from "@/lib/cabana-discovery";
  */
 export function SocialRightRail({
   searchPlaceholder = "Search posts and creators",
+  contextContent,
 }: {
   searchPlaceholder?: string;
+  contextContent?: ReactNode;
 }) {
   return (
     <div className="space-y-6">
       <RailSearch placeholder={searchPlaceholder} />
+      {contextContent}
       <SuggestedCreators />
       <RailFooter />
     </div>
