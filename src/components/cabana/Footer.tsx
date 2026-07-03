@@ -10,7 +10,6 @@ const FOOTER_GROUPS: { title: string; links: FooterLink[] }[] = [
     links: [
       { label: "Platform", to: "/" },
       { label: "Showcase", to: "/" },
-      { label: "Pricing", to: "/pricing" },
     ],
   },
   {

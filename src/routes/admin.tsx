@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import {
@@ -40,13 +40,23 @@ export const Route = createFileRoute("/admin")({
 type Tab = "overview" | "users" | "verify" | "subs" | "payouts" | "flags" | "featured" | "growth";
 
 function AdminGate() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const navigate = useNavigate();
   const { loading, hasRole, signedIn } = useHasRole("admin");
+
   useEffect(() => {
+    if (pathname !== "/admin") return;
     if (loading) return;
     if (!signedIn) navigate({ to: "/login", search: { redirect: "/admin" } as never });
     else if (!hasRole) navigate({ to: "/dashboard" });
-  }, [loading, hasRole, signedIn, navigate]);
+  }, [pathname, loading, hasRole, signedIn, navigate]);
+
+  // Child routes own their capability gates: moderation permits admin or
+  // moderator, while finance remains admin-only. Render the child outlet here
+  // instead of forcing every nested route through this root admin-only gate.
+  if (pathname !== "/admin") {
+    return <Outlet />;
+  }
   if (loading || !hasRole) {
     return (
       <div className="min-h-screen flex items-center justify-center">

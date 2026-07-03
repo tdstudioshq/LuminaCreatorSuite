@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { GlobalNav } from "@/components/cabana/GlobalNav";
+import { SocialShell } from "@/components/cabana/social/SocialShell";
 import { useCabana } from "@/lib/cabana-store";
 import { usePost } from "@/lib/use-engagement";
 import { usePurchaseUnlock } from "@/lib/use-money";
@@ -26,9 +26,8 @@ export function PostDetail({ postId }: { postId: string }) {
       : undefined;
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden px-4 pb-24 pt-32 sm:px-6">
-      <GlobalNav />
-      <div className="mx-auto max-w-xl">
+    <SocialShell>
+      <div className="mx-auto min-h-screen max-w-2xl border-x border-border/50 px-4 py-6 sm:px-6">
         <Link
           to="/feed"
           className="mb-4 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
@@ -65,7 +64,7 @@ export function PostDetail({ postId }: { postId: string }) {
           </div>
         )}
       </div>
-    </div>
+    </SocialShell>
   );
 }
 

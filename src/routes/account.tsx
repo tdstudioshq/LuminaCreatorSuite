@@ -8,6 +8,7 @@ import {
   MEMBER_DISPLAY_NAME_MAX,
   defaultMemberProfile,
 } from "@/lib/cabana-account";
+import { SocialShell } from "@/components/cabana/social/SocialShell";
 
 export const Route = createFileRoute("/account")({
   head: () => ({
@@ -51,6 +52,7 @@ function AccountPage() {
 }
 
 function MemberAccount({ name, email }: { name: string; email: string }) {
+  const navigate = useNavigate();
   const profileQuery = useMemberProfile();
   const updateProfile = useUpdateMemberProfile();
 
@@ -79,12 +81,8 @@ function MemberAccount({ name, email }: { name: string; email: string }) {
   };
 
   return (
-    <div className="min-h-screen relative">
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-[480px] h-[480px] rounded-full bg-iridescent opacity-20 blur-[120px] animate-float" />
-      </div>
-
-      <main className="mx-auto max-w-2xl px-4 py-10 lg:py-16">
+    <SocialShell>
+      <main className="mx-auto min-h-screen max-w-2xl border-x border-border/50 px-4 py-6 sm:px-6">
         <Link
           to="/discover"
           className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -96,8 +94,7 @@ function MemberAccount({ name, email }: { name: string; email: string }) {
           <p className="eyebrow">Member account</p>
           <h1 className="text-3xl font-semibold text-iridescent">Welcome, {name}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            This is your member foundation. Following creators, your feed, messages, and support are
-            coming in later phases — this page proves the member account model end-to-end.
+            Manage the identity shown across your feed, conversations, and creator relationships.
           </p>
         </header>
 
@@ -188,13 +185,16 @@ function MemberAccount({ name, email }: { name: string; email: string }) {
           </dl>
           <button
             type="button"
-            onClick={() => cabanaAuth.logout()}
+            onClick={async () => {
+              await cabanaAuth.logout();
+              navigate({ to: "/login" });
+            }}
             className="btn-ghost mt-5 text-xs"
           >
             Sign out
           </button>
         </section>
       </main>
-    </div>
+    </SocialShell>
   );
 }

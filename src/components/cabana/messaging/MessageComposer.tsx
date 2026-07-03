@@ -20,25 +20,32 @@ export function MessageComposer({ conversationId }: { conversationId: string }) 
   }
 
   return (
-    <div className="glass flex items-end gap-2 rounded-2xl p-2">
-      <textarea
-        value={body}
-        maxLength={MESSAGE_BODY_MAX}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder="Write a message…"
-        rows={1}
-        className="max-h-32 min-h-[2.25rem] flex-1 resize-none rounded-xl bg-white/5 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/60 focus:ring-1 focus:ring-white/20"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            void submit();
-          }
-        }}
-      />
+    <div className="flex items-end gap-2 rounded-[24px] border border-white/[0.1] bg-white/[0.045] p-2 shadow-[inset_0_1px_0_oklch(1_0_0/0.08),0_18px_55px_-38px_oklch(0_0_0/0.9)] transition-all focus-within:border-primary/35 focus-within:bg-white/[0.06] focus-within:ring-4 focus-within:ring-primary/10">
+      <div className="min-w-0 flex-1">
+        <textarea
+          value={body}
+          maxLength={MESSAGE_BODY_MAX}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Write a message…"
+          rows={1}
+          className="max-h-32 min-h-[2.75rem] w-full resize-none bg-transparent px-3 py-3 text-sm outline-none placeholder:text-muted-foreground/60"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              void submit();
+            }
+          }}
+        />
+        {body.length > MESSAGE_BODY_MAX * 0.9 ? (
+          <p className="px-3 pb-1 text-right text-[10px] text-muted-foreground">
+            {body.length}/{MESSAGE_BODY_MAX}
+          </p>
+        ) : null}
+      </div>
       <button
         onClick={() => void submit()}
         disabled={send.isPending || body.trim().length === 0}
-        className="btn-luxury !px-3 !py-2 text-xs disabled:opacity-50"
+        className="btn-luxury mb-0.5 h-10 w-10 shrink-0 !rounded-full !p-0 text-xs disabled:translate-y-0 disabled:opacity-40"
         aria-label="Send message"
       >
         {send.isPending ? (

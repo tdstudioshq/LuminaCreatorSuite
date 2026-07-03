@@ -39,7 +39,7 @@ export function Hero() {
           <span className="px-2 py-0.5 rounded-full bg-iridescent text-background text-[10px] font-semibold tracking-wider">
             NEW
           </span>
-          <span className="text-muted-foreground">Private beta · invitation only</span>
+          <span className="text-muted-foreground">The creator subscription platform</span>
           <Sparkles className="w-3.5 h-3.5 text-iridescent" />
         </motion.div>
 

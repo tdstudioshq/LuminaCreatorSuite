@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { formatDistanceToNow } from "date-fns";
 import {
   ArrowRight,
@@ -13,8 +13,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { GlobalNav } from "@/components/cabana/GlobalNav";
 import { PostCard } from "@/components/cabana/posts/PostCard";
+import { SocialShell } from "@/components/cabana/social/SocialShell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,10 @@ const COMPACT_NUMBER_FORMATTER = new Intl.NumberFormat("en", {
 });
 
 export function DiscoveryPage() {
-  const [searchTerm, setSearchTerm] = useState("");
+  const routeQuery = useRouterState({
+    select: (state) => new URLSearchParams(state.location.searchStr).get("q")?.trim() ?? "",
+  });
+  const [searchTerm, setSearchTerm] = useState(() => routeQuery);
   const [timeWindow, setTimeWindow] = useState<DiscoveryTimeWindow>("7d");
   const [visibleExploreItems, setVisibleExploreItems] = useState(INITIAL_EXPLORE_ITEMS);
   const [searchInput, onSearchInputChange] = useDebouncedField(searchTerm, setSearchTerm, 300);
@@ -72,9 +75,8 @@ export function DiscoveryPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden px-4 pb-24 pt-32 sm:px-6">
-      <GlobalNav />
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+    <SocialShell rightRail={null}>
+      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 border-x border-border/50 px-4 py-6 sm:px-6 lg:px-8">
         <header className="space-y-3">
           <p className="eyebrow text-muted-foreground">Discovery</p>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -209,7 +211,7 @@ export function DiscoveryPage() {
           </>
         )}
       </div>
-    </div>
+    </SocialShell>
   );
 }
 

@@ -326,6 +326,7 @@ html {
       transform 0.4s var(--ease-luxury),
       box-shadow 0.4s var(--ease-luxury),
       background-position 0.8s var(--ease-luxury);
+    outline: none;
   }
   .btn-luxury:hover {
     transform: translateY(-1px);
@@ -333,6 +334,15 @@ html {
       var(--shadow-glow),
       inset 0 1px 0 oklch(1 0 0 / 0.5);
     background-position: 100% 0;
+  }
+  .btn-luxury:focus-visible {
+    box-shadow:
+      0 0 0 4px oklch(0.78 0.18 280 / 0.18),
+      var(--shadow-glow-sm),
+      inset 0 1px 0 oklch(1 0 0 / 0.5);
+  }
+  .btn-luxury:active {
+    transform: translateY(0) scale(0.98);
   }
 
   .btn-ghost {
@@ -349,11 +359,17 @@ html {
     color: var(--foreground);
     transition:
       background 0.3s var(--ease-luxury),
-      border-color 0.3s var(--ease-luxury);
+      border-color 0.3s var(--ease-luxury),
+      box-shadow 0.3s var(--ease-luxury);
+    outline: none;
   }
   .btn-ghost:hover {
     background: oklch(1 0 0 / 0.08);
     border-color: oklch(1 0 0 / 0.18);
+  }
+  .btn-ghost:focus-visible {
+    border-color: oklch(0.78 0.18 280 / 0.55);
+    box-shadow: 0 0 0 4px oklch(0.78 0.18 280 / 0.12);
   }
 
   .field-luxury {

@@ -70,13 +70,7 @@ export function DashSidebar() {
 
       <div className="mt-3 p-4 rounded-2xl glass border border-border">
         <div className="text-xs text-muted-foreground mb-1">Plan</div>
-        <div className="font-display font-semibold mb-2 capitalize">{plan}</div>
-        <Link
-          to="/pricing"
-          className="block w-full text-center text-xs py-2 rounded-lg bg-foreground/10 hover:bg-foreground/15 transition-colors"
-        >
-          Upgrade
-        </Link>
+        <div className="font-display font-semibold capitalize">{plan}</div>
       </div>
 
       <AccountCard />

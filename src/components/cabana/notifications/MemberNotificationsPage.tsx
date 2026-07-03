@@ -1,6 +1,6 @@
 import { Bell, Loader2 } from "lucide-react";
-import { GlobalNav } from "@/components/cabana/GlobalNav";
 import { FoundationPage } from "@/components/cabana/foundation/FoundationPage";
+import { SocialShell } from "@/components/cabana/social/SocialShell";
 import { useAuthSession } from "@/lib/cabana-auth";
 import { NotificationsCenter } from "./NotificationsCenter";
 
@@ -44,15 +44,14 @@ export function MemberNotificationsPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden px-4 pb-24 pt-32 sm:px-6">
-      <GlobalNav />
-      <div className="mx-auto max-w-2xl space-y-6">
+    <SocialShell>
+      <div className="mx-auto min-h-screen max-w-2xl space-y-6 border-x border-border/50 px-4 py-6 sm:px-6">
         <header className="space-y-2">
           <p className="eyebrow">Member activity</p>
           <h1 className="font-display text-3xl font-semibold tracking-tighter">Notifications</h1>
         </header>
         <NotificationsCenter />
       </div>
-    </div>
+    </SocialShell>
   );
 }
