@@ -120,11 +120,11 @@ export function DashHome() {
             {greeting}, <span className="text-iridescent">{profile.name || profile.handle}</span>
           </h1>
           <p className="text-xs text-muted-foreground mt-2">
-            Live at <span className="text-foreground">/{profile.handle}</span>
+            Live at <span className="text-foreground">/creator/{profile.handle}</span>
           </p>
         </div>
         <Link
-          to="/$username"
+          to="/creator/$username"
           params={{ username: profile.handle }}
           className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-iridescent text-background text-sm font-medium shadow-glow"
         >
@@ -194,16 +194,16 @@ export function DashHome() {
           <h3 className="font-display text-lg font-semibold mb-1">Your CABANA</h3>
           <p className="text-xs text-muted-foreground mb-5">At a glance</p>
           <div className="space-y-3 text-xs">
-            <Row label="Links published" value={links.length} to="/dashboard/links" />
-            <Row label="Products listed" value={products.length} to="/dashboard/storefront" />
+            <Row label="Links published" value={links.length} to="/dashboard/profile" />
+            <Row label="Products listed" value={products.length} to="/dashboard/profile" />
             <Row label="Plan" value={profile.plan} />
             <Row label="Theme" value={profile.theme} />
           </div>
           <Link
-            to="/dashboard/analytics"
+            to="/dashboard/earnings"
             className="mt-5 w-full inline-flex items-center justify-center gap-1.5 text-xs glass-strong rounded-full py-2.5 hover:text-iridescent"
           >
-            Full analytics <ArrowUpRight className="w-3 h-3" />
+            View earnings <ArrowUpRight className="w-3 h-3" />
           </Link>
         </div>
       </div>

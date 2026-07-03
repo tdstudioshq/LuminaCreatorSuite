@@ -32,8 +32,8 @@ function NotFoundComponent() {
           <Link to="/" className="btn-luxury !px-5 !py-2.5 text-xs">
             Back to home
           </Link>
-          <Link to="/demo" className="btn-ghost !px-5 !py-2.5 text-xs">
-            See a creator
+          <Link to="/explore" className="btn-ghost !px-5 !py-2.5 text-xs">
+            Explore creators
           </Link>
         </div>
       </div>

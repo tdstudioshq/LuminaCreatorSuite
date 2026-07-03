@@ -6,8 +6,8 @@ import { useCabanaUser } from "@/lib/cabana-auth";
 
 const LINKS = [
   { to: "/", label: "Platform" },
-  { to: "/discover", label: "Discover" },
-  { to: "/onboarding", label: "Onboarding" },
+  { to: "/explore", label: "Explore" },
+  { to: "/support", label: "Support" },
 ] as const;
 
 export function GlobalNav() {
@@ -75,7 +75,7 @@ export function GlobalNav() {
               )}
             </div>
             <Link
-              to="/onboarding"
+              to="/signup"
               className="btn-luxury !px-3 sm:!px-4 !py-2 text-xs whitespace-nowrap"
             >
               <span className="sm:hidden">Get in</span>
@@ -164,7 +164,7 @@ export function GlobalNav() {
               </div>
             )}
             <Link
-              to="/onboarding"
+              to="/signup"
               onClick={() => setOpen(false)}
               className="btn-ghost w-full mt-2 justify-center !py-3 text-xs"
             >

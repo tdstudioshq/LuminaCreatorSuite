@@ -533,7 +533,7 @@ function CreatorCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <Link
-              to="/$username"
+              to="/creator/$username"
               params={{ username: creator.username }}
               className="truncate text-base font-semibold transition-colors hover:text-iridescent"
             >
@@ -571,7 +571,7 @@ function CreatorCard({
 
       <div className="mt-5 flex items-center gap-2">
         <Link
-          to="/$username"
+          to="/creator/$username"
           params={{ username: creator.username }}
           className="btn-ghost !px-3.5 !py-2 text-xs"
         >

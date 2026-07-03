@@ -157,8 +157,7 @@ export function LedgerExplorer() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link
-                      to="/admin/ledger/$transactionId"
-                      params={{ transactionId: t.id }}
+                      to="/admin/transactions"
                       className="text-xs text-muted-foreground hover:text-foreground"
                     >
                       View →

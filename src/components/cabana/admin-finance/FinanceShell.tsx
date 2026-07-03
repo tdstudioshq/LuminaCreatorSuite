@@ -1,9 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Banknote, BookOpen, LayoutDashboard, Sparkles } from "lucide-react";
+import { ArrowLeft, Banknote, BookOpen, Sparkles } from "lucide-react";
 
 /**
- * Shared luxury layout for the admin finance subroutes (`/admin/finance`,
- * `/admin/ledger`). Mirrors `ModerationShell`: header + back-to-console link +
+ * Shared luxury layout for the admin finance subroutes. Mirrors
+ * `ModerationShell`: header + back-to-console link +
  * tab nav. DEMO-ONLY surface — every amount is mock ledger data.
  */
 export function FinanceShell({
@@ -13,7 +13,7 @@ export function FinanceShell({
   description,
   children,
 }: {
-  active: "finance" | "ledger" | "payouts";
+  active: "transactions" | "payouts";
   eyebrow: string;
   title: string;
   description: string;
@@ -52,11 +52,8 @@ export function FinanceShell({
         </header>
 
         <nav className="flex gap-2">
-          <ShellTab to="/admin/finance" active={active === "finance"} Icon={LayoutDashboard}>
-            Overview
-          </ShellTab>
-          <ShellTab to="/admin/ledger" active={active === "ledger"} Icon={BookOpen}>
-            Ledger
+          <ShellTab to="/admin/transactions" active={active === "transactions"} Icon={BookOpen}>
+            Transactions
           </ShellTab>
           <ShellTab to="/admin/payouts" active={active === "payouts"} Icon={Banknote}>
             Payouts

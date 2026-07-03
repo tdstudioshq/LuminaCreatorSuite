@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { RequireSignedIn } from "@/components/cabana/auth/RequireSignedIn";
 import { ConversationView } from "@/components/cabana/messaging/ConversationView";
 
 export const Route = createFileRoute("/messages/$conversationId")({
@@ -10,5 +11,9 @@ export const Route = createFileRoute("/messages/$conversationId")({
 
 function ConversationRoute() {
   const { conversationId } = Route.useParams();
-  return <ConversationView conversationId={conversationId} />;
+  return (
+    <RequireSignedIn>
+      <ConversationView conversationId={conversationId} />
+    </RequireSignedIn>
+  );
 }

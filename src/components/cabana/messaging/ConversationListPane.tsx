@@ -29,7 +29,7 @@ export function ConversationListPane({ activeId }: { activeId?: string }) {
             <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight">Messages</h1>
           </div>
           <Link
-            to="/discover"
+            to="/explore"
             className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.09] bg-white/[0.04] text-muted-foreground outline-none transition-all hover:border-primary/30 hover:bg-white/[0.08] hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Start a conversation"
             title="Start a conversation"

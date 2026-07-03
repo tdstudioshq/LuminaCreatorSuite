@@ -48,11 +48,11 @@ function AdminGate() {
     if (pathname !== "/admin") return;
     if (loading) return;
     if (!signedIn) navigate({ to: "/login", search: { redirect: "/admin" } as never });
-    else if (!hasRole) navigate({ to: "/dashboard" });
+    else if (!hasRole) navigate({ to: "/unauthorized" });
   }, [pathname, loading, hasRole, signedIn, navigate]);
 
   // Child routes own their capability gates: moderation permits admin or
-  // moderator, while finance remains admin-only. Render the child outlet here
+  // moderator, while transactions/payouts remain admin-only. Render the child outlet here
   // instead of forcing every nested route through this root admin-only gate.
   if (pathname !== "/admin") {
     return <Outlet />;
@@ -689,7 +689,7 @@ function Payouts() {
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-2">
         <Link
-          to="/admin/finance"
+          to="/admin/transactions"
           className="group glass rounded-2xl p-5 flex items-center justify-between gap-3 hover:border-foreground/20 border border-transparent transition"
         >
           <div className="flex items-center gap-3">
@@ -697,7 +697,7 @@ function Payouts() {
               <DollarSign className="w-4 h-4 text-background" />
             </div>
             <div>
-              <div className="font-semibold">Finance overview</div>
+              <div className="font-semibold">Transactions</div>
               <div className="text-xs text-muted-foreground">
                 Real revenue, earnings & payout status (admin)
               </div>
@@ -706,7 +706,7 @@ function Payouts() {
           <ArrowUpRight className="w-4 h-4 text-muted-foreground transition group-hover:translate-x-0.5" />
         </Link>
         <Link
-          to="/admin/ledger"
+          to="/admin/payouts"
           className="group glass rounded-2xl p-5 flex items-center justify-between gap-3 hover:border-foreground/20 border border-transparent transition"
         >
           <div className="flex items-center gap-3">
@@ -714,9 +714,9 @@ function Payouts() {
               <CreditCard className="w-4 h-4 text-foreground" />
             </div>
             <div>
-              <div className="font-semibold">Ledger explorer</div>
+              <div className="font-semibold">Payout queue</div>
               <div className="text-xs text-muted-foreground">
-                Read-only transactions · search · CSV
+                Review requests · holds · approvals
               </div>
             </div>
           </div>

@@ -8,7 +8,7 @@ import type { DiscoveryCreator } from "@/lib/cabana-discovery";
  * Contextual right sidebar for the social surfaces: post search + suggested
  * creators + footer links. Structure-only; reuses existing glass styling.
  * `searchPlaceholder` lets surfaces relabel the search box (e.g. a creator's
- * own posts on the profile page). Search submits to /discover.
+ * own posts on the profile page). Search submits to /explore.
  */
 export function SocialRightRail({
   searchPlaceholder = "Search posts and creators",
@@ -34,7 +34,7 @@ function RailSearch({ placeholder }: { placeholder: string }) {
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        navigate({ to: "/discover", search: q.trim() ? ({ q: q.trim() } as never) : undefined });
+        navigate({ to: "/explore", search: q.trim() ? ({ q: q.trim() } as never) : undefined });
       }}
       className="relative"
     >
@@ -68,7 +68,7 @@ function SuggestedCreators() {
           <h2 className="mt-1 font-display text-base font-semibold">Suggested creators</h2>
         </div>
         <Link
-          to="/discover"
+          to="/explore"
           className="rounded-full px-3 py-1.5 text-[11px] text-muted-foreground outline-none transition-colors hover:bg-white/[0.06] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
         >
           See all
@@ -88,7 +88,7 @@ function SuggestedCreators() {
           {creators.map((c) => (
             <li key={c.profileId}>
               <Link
-                to="/$username"
+                to="/creator/$username"
                 params={{ username: c.username }}
                 className="group flex items-center gap-3 px-5 py-3.5 outline-none transition-colors hover:bg-white/[0.045] focus-visible:bg-white/[0.045]"
               >
@@ -112,7 +112,7 @@ function SuggestedCreators() {
         </ul>
       )}
       <Link
-        to="/discover"
+        to="/explore"
         className="flex items-center justify-center gap-2 border-t border-white/[0.07] px-5 py-3.5 text-xs font-medium text-muted-foreground outline-none transition-colors hover:bg-white/[0.04] hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <Sparkles className="h-3.5 w-3.5 text-primary" />
@@ -123,7 +123,7 @@ function SuggestedCreators() {
 }
 
 const FOOTER_LINKS: { label: string; to: string }[] = [
-  { label: "Discover", to: "/discover" },
+  { label: "Explore", to: "/explore" },
   { label: "Feed", to: "/feed" },
   { label: "Messages", to: "/messages" },
 ];

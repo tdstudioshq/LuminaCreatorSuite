@@ -1,9 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { NotificationsDashboard } from "@/components/cabana/notifications/NotificationsDashboard";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/dashboard/notifications")({
-  head: () => ({
-    meta: [{ title: "CABANA" }, { name: "robots", content: "noindex, nofollow" }],
-  }),
-  component: NotificationsDashboard,
+  beforeLoad: () => {
+    throw redirect({ to: "/dashboard/settings" });
+  },
 });

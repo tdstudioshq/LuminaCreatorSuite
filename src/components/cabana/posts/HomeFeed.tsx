@@ -58,7 +58,7 @@ export function HomeFeed() {
             </div>
           </div>
           <Link
-            to="/discover"
+            to="/explore"
             className="flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-white/[0.09] bg-white/[0.04] px-4 text-xs font-medium text-muted-foreground outline-none transition-all hover:border-primary/25 hover:bg-white/[0.07] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Sparkles className="h-4 w-4 text-primary" />
@@ -115,7 +115,7 @@ export function HomeFeed() {
               title="Your feed is ready for creators"
               message="Follow creators to collect their latest public and members-only updates here."
               action={
-                <Link to="/discover" className="btn-luxury !px-5 !py-2.5 text-xs">
+                <Link to="/explore" className="btn-luxury !px-5 !py-2.5 text-xs">
                   <Sparkles className="h-3.5 w-3.5" />
                   Find creators
                 </Link>

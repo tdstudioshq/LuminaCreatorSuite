@@ -23,7 +23,7 @@ function DashboardLayout() {
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { user, loading } = useAuthSession();
-  // The creator dashboard is creator-only. Members are bounced to /account.
+  // The creator dashboard is creator-only. Members are bounced to /settings.
   const { accountType, loading: accountLoading } = useAccountType();
 
   useEffect(() => {
@@ -32,7 +32,7 @@ function DashboardLayout() {
       return;
     }
     if (user && !accountLoading && accountType === "member") {
-      navigate({ to: "/account" });
+      navigate({ to: "/settings" });
     }
   }, [loading, user, accountLoading, accountType, navigate, path]);
 

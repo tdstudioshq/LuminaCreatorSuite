@@ -30,10 +30,10 @@ type NavItem = {
 
 const MEMBER_NAV_ITEMS: NavItem[] = [
   { label: "Home", icon: Home, to: "/feed" },
-  { label: "Discover", icon: Compass, to: "/discover" },
+  { label: "Explore", icon: Compass, to: "/explore" },
   { label: "Notifications", icon: Bell, to: "/notifications", badge: true },
   { label: "Messages", icon: MessageCircle, to: "/messages" },
-  { label: "Account", icon: User, to: "/account" },
+  { label: "Settings", icon: User, to: "/settings" },
 ];
 
 function useActive(path?: string) {
@@ -47,7 +47,7 @@ export function SocialNav() {
   const user = useCabanaUser();
   const { profile } = useCabana();
   const items = profile
-    ? [...MEMBER_NAV_ITEMS, { label: "Studio", icon: LayoutDashboard, to: "/dashboard" }]
+    ? [...MEMBER_NAV_ITEMS, { label: "Studio", icon: LayoutDashboard, to: "/dashboard/home" }]
     : MEMBER_NAV_ITEMS;
 
   return (
@@ -155,7 +155,7 @@ function PrimaryAction({
   user: CabanaUser | null;
   profile: CabanaProfile | null;
 }) {
-  const destination = profile ? "/dashboard/posts" : user ? "/discover" : "/signup";
+  const destination = profile ? "/dashboard/posts/new" : user ? "/explore" : "/signup";
   const label = profile ? "Create new post" : user ? "Explore creators" : "Join CABANA";
   const Icon = profile ? PenLine : user ? Compass : Sparkles;
 

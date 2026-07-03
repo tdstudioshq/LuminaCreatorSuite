@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AnalyticsPage } from "@/components/cabana/dashboard/AnalyticsPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/dashboard/analytics")({
-  head: () => ({ meta: [{ title: "CABANA" }, { name: "robots", content: "noindex" }] }),
-  component: AnalyticsPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/dashboard/home" });
+  },
 });

@@ -38,8 +38,8 @@ export function isCreator(type: AccountType): boolean {
 }
 
 /** Post-auth landing path for an account type. */
-export function accountHomePath(type: AccountType): "/dashboard" | "/account" {
-  return type === "member" ? "/account" : "/dashboard";
+export function accountHomePath(type: AccountType): "/dashboard" | "/settings" {
+  return type === "member" ? "/settings" : "/dashboard";
 }
 
 // ─────────────────────────── Member profile ────────────────────────────────

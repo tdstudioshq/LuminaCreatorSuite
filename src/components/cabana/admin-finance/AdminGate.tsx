@@ -4,11 +4,11 @@ import { Loader2 } from "lucide-react";
 import { useHasRole } from "@/lib/cabana-roles";
 
 /**
- * Client-side ADMIN-ONLY gate for the finance subroutes (`/admin/finance`,
- * `/admin/ledger`). UX only — the real boundary is RLS (`is_current_user_admin`)
+ * Client-side ADMIN-ONLY gate for the finance subroutes (`/admin/transactions`,
+ * `/admin/payouts`). UX only — the real boundary is RLS (`is_current_user_admin`)
  * on every transactions / payouts / creator_balances read. Unlike `StaffGate`
  * (admin OR moderator), finance is admin-only: a moderator is RLS-denied and
- * would see an empty page, so we bounce non-admins to the dashboard.
+ * would see an empty page, so we bounce non-admins to the unauthorized page.
  */
 export function AdminGate({ redirect, children }: { redirect: string; children: React.ReactNode }) {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ export function AdminGate({ redirect, children }: { redirect: string; children: 
   useEffect(() => {
     if (admin.loading) return;
     if (!admin.signedIn) navigate({ to: "/login", search: { redirect } as never });
-    else if (!admin.hasRole) navigate({ to: "/dashboard" });
+    else if (!admin.hasRole) navigate({ to: "/unauthorized" });
   }, [admin.loading, admin.signedIn, admin.hasRole, navigate, redirect]);
 
   if (admin.loading || !admin.hasRole) {

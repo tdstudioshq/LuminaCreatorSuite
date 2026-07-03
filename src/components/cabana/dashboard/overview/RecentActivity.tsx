@@ -46,7 +46,7 @@ export function RecentActivity({ items }: { items: RecentActivityItem[] }) {
           <h2 className="font-display text-lg font-semibold">Recent activity</h2>
         </div>
         <Link
-          to="/dashboard/notifications"
+          to="/notifications"
           className="inline-flex items-center gap-1 rounded-full bg-foreground/[0.06] px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           <BellRing className="h-3.5 w-3.5" /> All

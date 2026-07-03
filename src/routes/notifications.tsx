@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { RequireSignedIn } from "@/components/cabana/auth/RequireSignedIn";
 import { MemberNotificationsPage } from "@/components/cabana/notifications/MemberNotificationsPage";
 
 export const Route = createFileRoute("/notifications")({
@@ -12,5 +13,13 @@ export const Route = createFileRoute("/notifications")({
       },
     ],
   }),
-  component: MemberNotificationsPage,
+  component: NotificationsRoute,
 });
+
+function NotificationsRoute() {
+  return (
+    <RequireSignedIn>
+      <MemberNotificationsPage />
+    </RequireSignedIn>
+  );
+}

@@ -44,7 +44,7 @@ export function ProfileEditor() {
           </p>
         </div>
         <Link
-          to="/$username"
+          to="/creator/$username"
           params={{ username: profile.handle || "aurora" }}
           target="_blank"
           className="flex items-center gap-2 px-4 py-2.5 rounded-full glass-strong text-sm font-medium hover:border-primary/30"

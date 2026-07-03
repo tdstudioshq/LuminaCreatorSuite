@@ -1,23 +1,19 @@
 import { motion } from "framer-motion";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
-  BarChart3,
-  BellRing,
   Eye,
-  FileText,
   Gauge,
-  LayoutDashboard,
-  LineChart,
-  Link2,
   LogOut,
   MessagesSquare,
   Newspaper,
   Settings as SettingsIcon,
   Sparkles,
-  Store,
   User,
   UsersRound,
   WalletCards,
+  Images,
+  ShieldCheck,
+  type LucideIcon,
 } from "lucide-react";
 import { useCabana } from "@/lib/cabana-store";
 import { cabanaAuth, useCabanaUser } from "@/lib/cabana-auth";
@@ -25,18 +21,14 @@ import { NotificationBadge } from "@/components/cabana/notifications/Notificatio
 
 const items = [
   { to: "/dashboard/home", label: "Home", icon: Gauge },
-  { to: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
-  { to: "/dashboard/profile", label: "Profile", icon: User },
   { to: "/dashboard/posts", label: "Posts", icon: Newspaper },
+  { to: "/dashboard/media", label: "Media", icon: Images },
   { to: "/dashboard/subscribers", label: "Subscribers", icon: UsersRound },
   { to: "/dashboard/messages", label: "Messages", icon: MessagesSquare },
   { to: "/dashboard/earnings", label: "Earnings", icon: WalletCards },
-  { to: "/dashboard/performance", label: "Performance", icon: LineChart },
-  { to: "/dashboard/notifications", label: "Notifications", icon: BellRing },
-  { to: "/dashboard/links", label: "Links", icon: Link2 },
-  { to: "/dashboard/storefront", label: "Storefront", icon: Store },
-  { to: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/dashboard/media-kit", label: "Media Kit", icon: FileText },
+  { to: "/dashboard/payouts", label: "Payouts", icon: WalletCards },
+  { to: "/dashboard/profile", label: "Profile", icon: User },
+  { to: "/dashboard/compliance", label: "Compliance", icon: ShieldCheck },
   { to: "/dashboard/settings", label: "Settings", icon: SettingsIcon },
 ] as const;
 
@@ -117,7 +109,7 @@ function PreviewLink() {
   const handle = profile?.handle || "aurora";
   return (
     <Link
-      to="/$username"
+      to="/creator/$username"
       params={{ username: handle }}
       target="_blank"
       className="mt-6 flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium glass-strong hover:border-primary/30 transition-colors"
@@ -135,7 +127,7 @@ function NavItem({
 }: {
   to: string;
   label: string;
-  icon: typeof LayoutDashboard;
+  icon: LucideIcon;
   exact?: boolean;
 }) {
   const isActive = useActive(to, exact);
@@ -156,7 +148,7 @@ function NavItem({
       >
         {label}
       </span>
-      {to === "/dashboard/notifications" && <NotificationBadge className="relative z-10 ml-auto" />}
+      {to === "/dashboard/messages" && <NotificationBadge className="relative z-10 ml-auto" />}
     </Link>
   );
 }

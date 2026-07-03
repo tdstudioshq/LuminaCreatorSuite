@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { StoreManager } from "@/components/cabana/dashboard/StoreManager";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/dashboard/storefront")({
-  head: () => ({ meta: [{ title: "CABANA" }] }),
-  component: StoreManager,
+  beforeLoad: () => {
+    throw redirect({ to: "/dashboard/profile" });
+  },
 });

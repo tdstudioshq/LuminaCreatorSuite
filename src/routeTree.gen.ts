@@ -9,27 +9,41 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TdRouteImport } from './routes/td'
+import { Route as UnauthorizedRouteImport } from './routes/unauthorized'
+import { Route as TakedownRouteImport } from './routes/takedown'
+import { Route as SuspendedRouteImport } from './routes/suspended'
+import { Route as SupportRouteImport } from './routes/support'
+import { Route as SubscriptionsRouteImport } from './routes/subscriptions'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as NotFoundRouteImport } from './routes/not-found'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FeedRouteImport } from './routes/feed'
-import { Route as EldondollaRouteImport } from './routes/eldondolla'
+import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as BillingRouteImport } from './routes/billing'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AccountRouteImport } from './routes/account'
-import { Route as UsernameRouteImport } from './routes/$username'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as VerificationSuccessRouteImport } from './routes/verification.success'
+import { Route as VerificationFailedRouteImport } from './routes/verification.failed'
 import { Route as PostPostIdRouteImport } from './routes/post.$postId'
+import { Route as PaymentSuccessRouteImport } from './routes/payment.success'
+import { Route as PaymentFailedRouteImport } from './routes/payment.failed'
 import { Route as MessagesConversationIdRouteImport } from './routes/messages.$conversationId'
+import { Route as LegalTermsRouteImport } from './routes/legal.terms'
+import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
+import { Route as LegalAdultContentPolicyRouteImport } from './routes/legal.adult-content-policy'
+import { Route as Legal2257RouteImport } from './routes/legal.2257'
 import { Route as DocsSystemRouteImport } from './routes/docs.system'
 import { Route as DocsDataModelRouteImport } from './routes/docs.data-model'
 import { Route as DashboardSubscribersRouteImport } from './routes/dashboard.subscribers'
@@ -38,28 +52,68 @@ import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settin
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as DashboardPostsRouteImport } from './routes/dashboard.posts'
 import { Route as DashboardPerformanceRouteImport } from './routes/dashboard.performance'
+import { Route as DashboardPayoutsRouteImport } from './routes/dashboard.payouts'
 import { Route as DashboardNotificationsRouteImport } from './routes/dashboard.notifications'
 import { Route as DashboardMessagesRouteImport } from './routes/dashboard.messages'
 import { Route as DashboardMediaKitRouteImport } from './routes/dashboard.media-kit'
+import { Route as DashboardMediaRouteImport } from './routes/dashboard.media'
 import { Route as DashboardLinksRouteImport } from './routes/dashboard.links'
 import { Route as DashboardHomeRouteImport } from './routes/dashboard.home'
 import { Route as DashboardEarningsRouteImport } from './routes/dashboard.earnings'
+import { Route as DashboardComplianceRouteImport } from './routes/dashboard.compliance'
 import { Route as DashboardAnalyticsRouteImport } from './routes/dashboard.analytics'
+import { Route as CreatorUsernameRouteImport } from './routes/creator.$username'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminTransactionsRouteImport } from './routes/admin.transactions'
+import { Route as AdminTakedownsRouteImport } from './routes/admin.takedowns'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminPayoutsRouteImport } from './routes/admin.payouts'
 import { Route as AdminLedgerRouteImport } from './routes/admin.ledger'
 import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
+import { Route as AdminCreatorsRouteImport } from './routes/admin.creators'
+import { Route as AdminContentRouteImport } from './routes/admin.content'
+import { Route as AdminComplianceRouteImport } from './routes/admin.compliance'
 import { Route as AdminAuditRouteImport } from './routes/admin.audit'
+import { Route as DashboardPostsNewRouteImport } from './routes/dashboard.posts.new'
+import { Route as CheckoutTipCreatorIdRouteImport } from './routes/checkout.tip.$creatorId'
+import { Route as CheckoutSubscribeCreatorIdRouteImport } from './routes/checkout.subscribe.$creatorId'
+import { Route as CheckoutPpvPostIdRouteImport } from './routes/checkout.ppv.$postId'
 import { Route as AdminLedgerTransactionIdRouteImport } from './routes/admin.ledger.$transactionId'
 
-const TdRoute = TdRouteImport.update({
-  id: '/td',
-  path: '/td',
+const UnauthorizedRoute = UnauthorizedRouteImport.update({
+  id: '/unauthorized',
+  path: '/unauthorized',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TakedownRoute = TakedownRouteImport.update({
+  id: '/takedown',
+  path: '/takedown',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuspendedRoute = SuspendedRouteImport.update({
+  id: '/suspended',
+  path: '/suspended',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SubscriptionsRoute = SubscriptionsRouteImport.update({
+  id: '/subscriptions',
+  path: '/subscriptions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -82,6 +136,11 @@ const NotificationsRoute = NotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotFoundRoute = NotFoundRouteImport.update({
+  id: '/not-found',
+  path: '/not-found',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MessagesRoute = MessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
@@ -102,9 +161,9 @@ const FeedRoute = FeedRouteImport.update({
   path: '/feed',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EldondollaRoute = EldondollaRouteImport.update({
-  id: '/eldondolla',
-  path: '/eldondolla',
+const ExploreRoute = ExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiscoverRoute = DiscoverRouteImport.update({
@@ -122,6 +181,11 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BillingRoute = BillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -130,11 +194,6 @@ const AdminRoute = AdminRouteImport.update({
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const UsernameRoute = UsernameRouteImport.update({
-  id: '/$username',
-  path: '/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -147,15 +206,55 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashboardRoute,
 } as any)
+const VerificationSuccessRoute = VerificationSuccessRouteImport.update({
+  id: '/verification/success',
+  path: '/verification/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerificationFailedRoute = VerificationFailedRouteImport.update({
+  id: '/verification/failed',
+  path: '/verification/failed',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PostPostIdRoute = PostPostIdRouteImport.update({
   id: '/post/$postId',
   path: '/post/$postId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentSuccessRoute = PaymentSuccessRouteImport.update({
+  id: '/payment/success',
+  path: '/payment/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentFailedRoute = PaymentFailedRouteImport.update({
+  id: '/payment/failed',
+  path: '/payment/failed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MessagesConversationIdRoute = MessagesConversationIdRouteImport.update({
   id: '/$conversationId',
   path: '/$conversationId',
   getParentRoute: () => MessagesRoute,
+} as any)
+const LegalTermsRoute = LegalTermsRouteImport.update({
+  id: '/legal/terms',
+  path: '/legal/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
+  id: '/legal/privacy',
+  path: '/legal/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalAdultContentPolicyRoute = LegalAdultContentPolicyRouteImport.update({
+  id: '/legal/adult-content-policy',
+  path: '/legal/adult-content-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Legal2257Route = Legal2257RouteImport.update({
+  id: '/legal/2257',
+  path: '/legal/2257',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DocsSystemRoute = DocsSystemRouteImport.update({
   id: '/docs/system',
@@ -197,6 +296,11 @@ const DashboardPerformanceRoute = DashboardPerformanceRouteImport.update({
   path: '/performance',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardPayoutsRoute = DashboardPayoutsRouteImport.update({
+  id: '/payouts',
+  path: '/payouts',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardNotificationsRoute = DashboardNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
@@ -210,6 +314,11 @@ const DashboardMessagesRoute = DashboardMessagesRouteImport.update({
 const DashboardMediaKitRoute = DashboardMediaKitRouteImport.update({
   id: '/media-kit',
   path: '/media-kit',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardMediaRoute = DashboardMediaRouteImport.update({
+  id: '/media',
+  path: '/media',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardLinksRoute = DashboardLinksRouteImport.update({
@@ -227,10 +336,40 @@ const DashboardEarningsRoute = DashboardEarningsRouteImport.update({
   path: '/earnings',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardComplianceRoute = DashboardComplianceRouteImport.update({
+  id: '/compliance',
+  path: '/compliance',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardAnalyticsRoute = DashboardAnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
   getParentRoute: () => DashboardRoute,
+} as any)
+const CreatorUsernameRoute = CreatorUsernameRouteImport.update({
+  id: '/creator/$username',
+  path: '/creator/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTransactionsRoute = AdminTransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTakedownsRoute = AdminTakedownsRouteImport.update({
+  id: '/takedowns',
+  path: '/takedowns',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminReportsRoute = AdminReportsRouteImport.update({
   id: '/reports',
@@ -252,10 +391,46 @@ const AdminFinanceRoute = AdminFinanceRouteImport.update({
   path: '/finance',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCreatorsRoute = AdminCreatorsRouteImport.update({
+  id: '/creators',
+  path: '/creators',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminContentRoute = AdminContentRouteImport.update({
+  id: '/content',
+  path: '/content',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminComplianceRoute = AdminComplianceRouteImport.update({
+  id: '/compliance',
+  path: '/compliance',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAuditRoute = AdminAuditRouteImport.update({
   id: '/audit',
   path: '/audit',
   getParentRoute: () => AdminRoute,
+} as any)
+const DashboardPostsNewRoute = DashboardPostsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => DashboardPostsRoute,
+} as any)
+const CheckoutTipCreatorIdRoute = CheckoutTipCreatorIdRouteImport.update({
+  id: '/checkout/tip/$creatorId',
+  path: '/checkout/tip/$creatorId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutSubscribeCreatorIdRoute =
+  CheckoutSubscribeCreatorIdRouteImport.update({
+    id: '/checkout/subscribe/$creatorId',
+    path: '/checkout/subscribe/$creatorId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const CheckoutPpvPostIdRoute = CheckoutPpvPostIdRouteImport.update({
+  id: '/checkout/ppv/$postId',
+  path: '/checkout/ppv/$postId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminLedgerTransactionIdRoute =
   AdminLedgerTransactionIdRouteImport.update({
@@ -266,169 +441,273 @@ const AdminLedgerTransactionIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/$username': typeof UsernameRoute
   '/account': typeof AccountRoute
   '/admin': typeof AdminRouteWithChildren
+  '/billing': typeof BillingRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/demo': typeof DemoRoute
   '/discover': typeof DiscoverRoute
-  '/eldondolla': typeof EldondollaRoute
+  '/explore': typeof ExploreRoute
   '/feed': typeof FeedRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRouteWithChildren
+  '/not-found': typeof NotFoundRoute
   '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
-  '/td': typeof TdRoute
+  '/subscriptions': typeof SubscriptionsRoute
+  '/support': typeof SupportRoute
+  '/suspended': typeof SuspendedRoute
+  '/takedown': typeof TakedownRoute
+  '/unauthorized': typeof UnauthorizedRoute
   '/admin/audit': typeof AdminAuditRoute
+  '/admin/compliance': typeof AdminComplianceRoute
+  '/admin/content': typeof AdminContentRoute
+  '/admin/creators': typeof AdminCreatorsRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/takedowns': typeof AdminTakedownsRoute
+  '/admin/transactions': typeof AdminTransactionsRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/creator/$username': typeof CreatorUsernameRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
+  '/dashboard/compliance': typeof DashboardComplianceRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
   '/dashboard/home': typeof DashboardHomeRoute
   '/dashboard/links': typeof DashboardLinksRoute
+  '/dashboard/media': typeof DashboardMediaRoute
   '/dashboard/media-kit': typeof DashboardMediaKitRoute
   '/dashboard/messages': typeof DashboardMessagesRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
+  '/dashboard/payouts': typeof DashboardPayoutsRoute
   '/dashboard/performance': typeof DashboardPerformanceRoute
-  '/dashboard/posts': typeof DashboardPostsRoute
+  '/dashboard/posts': typeof DashboardPostsRouteWithChildren
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/storefront': typeof DashboardStorefrontRoute
   '/dashboard/subscribers': typeof DashboardSubscribersRoute
   '/docs/data-model': typeof DocsDataModelRoute
   '/docs/system': typeof DocsSystemRoute
+  '/legal/2257': typeof Legal2257Route
+  '/legal/adult-content-policy': typeof LegalAdultContentPolicyRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
   '/messages/$conversationId': typeof MessagesConversationIdRoute
+  '/payment/failed': typeof PaymentFailedRoute
+  '/payment/success': typeof PaymentSuccessRoute
   '/post/$postId': typeof PostPostIdRoute
+  '/verification/failed': typeof VerificationFailedRoute
+  '/verification/success': typeof VerificationSuccessRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/admin/ledger/$transactionId': typeof AdminLedgerTransactionIdRoute
+  '/checkout/ppv/$postId': typeof CheckoutPpvPostIdRoute
+  '/checkout/subscribe/$creatorId': typeof CheckoutSubscribeCreatorIdRoute
+  '/checkout/tip/$creatorId': typeof CheckoutTipCreatorIdRoute
+  '/dashboard/posts/new': typeof DashboardPostsNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/$username': typeof UsernameRoute
   '/account': typeof AccountRoute
   '/admin': typeof AdminRouteWithChildren
+  '/billing': typeof BillingRoute
   '/demo': typeof DemoRoute
   '/discover': typeof DiscoverRoute
-  '/eldondolla': typeof EldondollaRoute
+  '/explore': typeof ExploreRoute
   '/feed': typeof FeedRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRouteWithChildren
+  '/not-found': typeof NotFoundRoute
   '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
-  '/td': typeof TdRoute
+  '/subscriptions': typeof SubscriptionsRoute
+  '/support': typeof SupportRoute
+  '/suspended': typeof SuspendedRoute
+  '/takedown': typeof TakedownRoute
+  '/unauthorized': typeof UnauthorizedRoute
   '/admin/audit': typeof AdminAuditRoute
+  '/admin/compliance': typeof AdminComplianceRoute
+  '/admin/content': typeof AdminContentRoute
+  '/admin/creators': typeof AdminCreatorsRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/takedowns': typeof AdminTakedownsRoute
+  '/admin/transactions': typeof AdminTransactionsRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/creator/$username': typeof CreatorUsernameRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
+  '/dashboard/compliance': typeof DashboardComplianceRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
   '/dashboard/home': typeof DashboardHomeRoute
   '/dashboard/links': typeof DashboardLinksRoute
+  '/dashboard/media': typeof DashboardMediaRoute
   '/dashboard/media-kit': typeof DashboardMediaKitRoute
   '/dashboard/messages': typeof DashboardMessagesRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
+  '/dashboard/payouts': typeof DashboardPayoutsRoute
   '/dashboard/performance': typeof DashboardPerformanceRoute
-  '/dashboard/posts': typeof DashboardPostsRoute
+  '/dashboard/posts': typeof DashboardPostsRouteWithChildren
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/storefront': typeof DashboardStorefrontRoute
   '/dashboard/subscribers': typeof DashboardSubscribersRoute
   '/docs/data-model': typeof DocsDataModelRoute
   '/docs/system': typeof DocsSystemRoute
+  '/legal/2257': typeof Legal2257Route
+  '/legal/adult-content-policy': typeof LegalAdultContentPolicyRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
   '/messages/$conversationId': typeof MessagesConversationIdRoute
+  '/payment/failed': typeof PaymentFailedRoute
+  '/payment/success': typeof PaymentSuccessRoute
   '/post/$postId': typeof PostPostIdRoute
+  '/verification/failed': typeof VerificationFailedRoute
+  '/verification/success': typeof VerificationSuccessRoute
   '/dashboard': typeof DashboardIndexRoute
   '/admin/ledger/$transactionId': typeof AdminLedgerTransactionIdRoute
+  '/checkout/ppv/$postId': typeof CheckoutPpvPostIdRoute
+  '/checkout/subscribe/$creatorId': typeof CheckoutSubscribeCreatorIdRoute
+  '/checkout/tip/$creatorId': typeof CheckoutTipCreatorIdRoute
+  '/dashboard/posts/new': typeof DashboardPostsNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/$username': typeof UsernameRoute
   '/account': typeof AccountRoute
   '/admin': typeof AdminRouteWithChildren
+  '/billing': typeof BillingRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/demo': typeof DemoRoute
   '/discover': typeof DiscoverRoute
-  '/eldondolla': typeof EldondollaRoute
+  '/explore': typeof ExploreRoute
   '/feed': typeof FeedRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRouteWithChildren
+  '/not-found': typeof NotFoundRoute
   '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
-  '/td': typeof TdRoute
+  '/subscriptions': typeof SubscriptionsRoute
+  '/support': typeof SupportRoute
+  '/suspended': typeof SuspendedRoute
+  '/takedown': typeof TakedownRoute
+  '/unauthorized': typeof UnauthorizedRoute
   '/admin/audit': typeof AdminAuditRoute
+  '/admin/compliance': typeof AdminComplianceRoute
+  '/admin/content': typeof AdminContentRoute
+  '/admin/creators': typeof AdminCreatorsRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/takedowns': typeof AdminTakedownsRoute
+  '/admin/transactions': typeof AdminTransactionsRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/creator/$username': typeof CreatorUsernameRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
+  '/dashboard/compliance': typeof DashboardComplianceRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
   '/dashboard/home': typeof DashboardHomeRoute
   '/dashboard/links': typeof DashboardLinksRoute
+  '/dashboard/media': typeof DashboardMediaRoute
   '/dashboard/media-kit': typeof DashboardMediaKitRoute
   '/dashboard/messages': typeof DashboardMessagesRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
+  '/dashboard/payouts': typeof DashboardPayoutsRoute
   '/dashboard/performance': typeof DashboardPerformanceRoute
-  '/dashboard/posts': typeof DashboardPostsRoute
+  '/dashboard/posts': typeof DashboardPostsRouteWithChildren
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/storefront': typeof DashboardStorefrontRoute
   '/dashboard/subscribers': typeof DashboardSubscribersRoute
   '/docs/data-model': typeof DocsDataModelRoute
   '/docs/system': typeof DocsSystemRoute
+  '/legal/2257': typeof Legal2257Route
+  '/legal/adult-content-policy': typeof LegalAdultContentPolicyRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
   '/messages/$conversationId': typeof MessagesConversationIdRoute
+  '/payment/failed': typeof PaymentFailedRoute
+  '/payment/success': typeof PaymentSuccessRoute
   '/post/$postId': typeof PostPostIdRoute
+  '/verification/failed': typeof VerificationFailedRoute
+  '/verification/success': typeof VerificationSuccessRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/admin/ledger/$transactionId': typeof AdminLedgerTransactionIdRoute
+  '/checkout/ppv/$postId': typeof CheckoutPpvPostIdRoute
+  '/checkout/subscribe/$creatorId': typeof CheckoutSubscribeCreatorIdRoute
+  '/checkout/tip/$creatorId': typeof CheckoutTipCreatorIdRoute
+  '/dashboard/posts/new': typeof DashboardPostsNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/$username'
     | '/account'
     | '/admin'
+    | '/billing'
     | '/dashboard'
     | '/demo'
     | '/discover'
-    | '/eldondolla'
+    | '/explore'
     | '/feed'
     | '/forgot-password'
     | '/login'
     | '/messages'
+    | '/not-found'
     | '/notifications'
     | '/onboarding'
     | '/pricing'
     | '/reset-password'
+    | '/settings'
     | '/signup'
-    | '/td'
+    | '/subscriptions'
+    | '/support'
+    | '/suspended'
+    | '/takedown'
+    | '/unauthorized'
     | '/admin/audit'
+    | '/admin/compliance'
+    | '/admin/content'
+    | '/admin/creators'
     | '/admin/finance'
     | '/admin/ledger'
     | '/admin/payouts'
     | '/admin/reports'
+    | '/admin/settings'
+    | '/admin/takedowns'
+    | '/admin/transactions'
+    | '/admin/users'
+    | '/creator/$username'
     | '/dashboard/analytics'
+    | '/dashboard/compliance'
     | '/dashboard/earnings'
     | '/dashboard/home'
     | '/dashboard/links'
+    | '/dashboard/media'
     | '/dashboard/media-kit'
     | '/dashboard/messages'
     | '/dashboard/notifications'
+    | '/dashboard/payouts'
     | '/dashboard/performance'
     | '/dashboard/posts'
     | '/dashboard/profile'
@@ -437,41 +716,70 @@ export interface FileRouteTypes {
     | '/dashboard/subscribers'
     | '/docs/data-model'
     | '/docs/system'
+    | '/legal/2257'
+    | '/legal/adult-content-policy'
+    | '/legal/privacy'
+    | '/legal/terms'
     | '/messages/$conversationId'
+    | '/payment/failed'
+    | '/payment/success'
     | '/post/$postId'
+    | '/verification/failed'
+    | '/verification/success'
     | '/dashboard/'
     | '/admin/ledger/$transactionId'
+    | '/checkout/ppv/$postId'
+    | '/checkout/subscribe/$creatorId'
+    | '/checkout/tip/$creatorId'
+    | '/dashboard/posts/new'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/$username'
     | '/account'
     | '/admin'
+    | '/billing'
     | '/demo'
     | '/discover'
-    | '/eldondolla'
+    | '/explore'
     | '/feed'
     | '/forgot-password'
     | '/login'
     | '/messages'
+    | '/not-found'
     | '/notifications'
     | '/onboarding'
     | '/pricing'
     | '/reset-password'
+    | '/settings'
     | '/signup'
-    | '/td'
+    | '/subscriptions'
+    | '/support'
+    | '/suspended'
+    | '/takedown'
+    | '/unauthorized'
     | '/admin/audit'
+    | '/admin/compliance'
+    | '/admin/content'
+    | '/admin/creators'
     | '/admin/finance'
     | '/admin/ledger'
     | '/admin/payouts'
     | '/admin/reports'
+    | '/admin/settings'
+    | '/admin/takedowns'
+    | '/admin/transactions'
+    | '/admin/users'
+    | '/creator/$username'
     | '/dashboard/analytics'
+    | '/dashboard/compliance'
     | '/dashboard/earnings'
     | '/dashboard/home'
     | '/dashboard/links'
+    | '/dashboard/media'
     | '/dashboard/media-kit'
     | '/dashboard/messages'
     | '/dashboard/notifications'
+    | '/dashboard/payouts'
     | '/dashboard/performance'
     | '/dashboard/posts'
     | '/dashboard/profile'
@@ -480,42 +788,71 @@ export interface FileRouteTypes {
     | '/dashboard/subscribers'
     | '/docs/data-model'
     | '/docs/system'
+    | '/legal/2257'
+    | '/legal/adult-content-policy'
+    | '/legal/privacy'
+    | '/legal/terms'
     | '/messages/$conversationId'
+    | '/payment/failed'
+    | '/payment/success'
     | '/post/$postId'
+    | '/verification/failed'
+    | '/verification/success'
     | '/dashboard'
     | '/admin/ledger/$transactionId'
+    | '/checkout/ppv/$postId'
+    | '/checkout/subscribe/$creatorId'
+    | '/checkout/tip/$creatorId'
+    | '/dashboard/posts/new'
   id:
     | '__root__'
     | '/'
-    | '/$username'
     | '/account'
     | '/admin'
+    | '/billing'
     | '/dashboard'
     | '/demo'
     | '/discover'
-    | '/eldondolla'
+    | '/explore'
     | '/feed'
     | '/forgot-password'
     | '/login'
     | '/messages'
+    | '/not-found'
     | '/notifications'
     | '/onboarding'
     | '/pricing'
     | '/reset-password'
+    | '/settings'
     | '/signup'
-    | '/td'
+    | '/subscriptions'
+    | '/support'
+    | '/suspended'
+    | '/takedown'
+    | '/unauthorized'
     | '/admin/audit'
+    | '/admin/compliance'
+    | '/admin/content'
+    | '/admin/creators'
     | '/admin/finance'
     | '/admin/ledger'
     | '/admin/payouts'
     | '/admin/reports'
+    | '/admin/settings'
+    | '/admin/takedowns'
+    | '/admin/transactions'
+    | '/admin/users'
+    | '/creator/$username'
     | '/dashboard/analytics'
+    | '/dashboard/compliance'
     | '/dashboard/earnings'
     | '/dashboard/home'
     | '/dashboard/links'
+    | '/dashboard/media'
     | '/dashboard/media-kit'
     | '/dashboard/messages'
     | '/dashboard/notifications'
+    | '/dashboard/payouts'
     | '/dashboard/performance'
     | '/dashboard/posts'
     | '/dashboard/profile'
@@ -524,43 +861,101 @@ export interface FileRouteTypes {
     | '/dashboard/subscribers'
     | '/docs/data-model'
     | '/docs/system'
+    | '/legal/2257'
+    | '/legal/adult-content-policy'
+    | '/legal/privacy'
+    | '/legal/terms'
     | '/messages/$conversationId'
+    | '/payment/failed'
+    | '/payment/success'
     | '/post/$postId'
+    | '/verification/failed'
+    | '/verification/success'
     | '/dashboard/'
     | '/admin/ledger/$transactionId'
+    | '/checkout/ppv/$postId'
+    | '/checkout/subscribe/$creatorId'
+    | '/checkout/tip/$creatorId'
+    | '/dashboard/posts/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  UsernameRoute: typeof UsernameRoute
   AccountRoute: typeof AccountRoute
   AdminRoute: typeof AdminRouteWithChildren
+  BillingRoute: typeof BillingRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   DemoRoute: typeof DemoRoute
   DiscoverRoute: typeof DiscoverRoute
-  EldondollaRoute: typeof EldondollaRoute
+  ExploreRoute: typeof ExploreRoute
   FeedRoute: typeof FeedRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   MessagesRoute: typeof MessagesRouteWithChildren
+  NotFoundRoute: typeof NotFoundRoute
   NotificationsRoute: typeof NotificationsRoute
   OnboardingRoute: typeof OnboardingRoute
   PricingRoute: typeof PricingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
-  TdRoute: typeof TdRoute
+  SubscriptionsRoute: typeof SubscriptionsRoute
+  SupportRoute: typeof SupportRoute
+  SuspendedRoute: typeof SuspendedRoute
+  TakedownRoute: typeof TakedownRoute
+  UnauthorizedRoute: typeof UnauthorizedRoute
+  CreatorUsernameRoute: typeof CreatorUsernameRoute
   DocsDataModelRoute: typeof DocsDataModelRoute
   DocsSystemRoute: typeof DocsSystemRoute
+  Legal2257Route: typeof Legal2257Route
+  LegalAdultContentPolicyRoute: typeof LegalAdultContentPolicyRoute
+  LegalPrivacyRoute: typeof LegalPrivacyRoute
+  LegalTermsRoute: typeof LegalTermsRoute
+  PaymentFailedRoute: typeof PaymentFailedRoute
+  PaymentSuccessRoute: typeof PaymentSuccessRoute
   PostPostIdRoute: typeof PostPostIdRoute
+  VerificationFailedRoute: typeof VerificationFailedRoute
+  VerificationSuccessRoute: typeof VerificationSuccessRoute
+  CheckoutPpvPostIdRoute: typeof CheckoutPpvPostIdRoute
+  CheckoutSubscribeCreatorIdRoute: typeof CheckoutSubscribeCreatorIdRoute
+  CheckoutTipCreatorIdRoute: typeof CheckoutTipCreatorIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/td': {
-      id: '/td'
-      path: '/td'
-      fullPath: '/td'
-      preLoaderRoute: typeof TdRouteImport
+    '/unauthorized': {
+      id: '/unauthorized'
+      path: '/unauthorized'
+      fullPath: '/unauthorized'
+      preLoaderRoute: typeof UnauthorizedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/takedown': {
+      id: '/takedown'
+      path: '/takedown'
+      fullPath: '/takedown'
+      preLoaderRoute: typeof TakedownRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/suspended': {
+      id: '/suspended'
+      path: '/suspended'
+      fullPath: '/suspended'
+      preLoaderRoute: typeof SuspendedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/subscriptions': {
+      id: '/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/subscriptions'
+      preLoaderRoute: typeof SubscriptionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signup': {
@@ -568,6 +963,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -598,6 +1000,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/not-found': {
+      id: '/not-found'
+      path: '/not-found'
+      fullPath: '/not-found'
+      preLoaderRoute: typeof NotFoundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/messages': {
       id: '/messages'
       path: '/messages'
@@ -626,11 +1035,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/eldondolla': {
-      id: '/eldondolla'
-      path: '/eldondolla'
-      fullPath: '/eldondolla'
-      preLoaderRoute: typeof EldondollaRouteImport
+    '/explore': {
+      id: '/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof ExploreRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/discover': {
@@ -654,6 +1063,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/billing': {
+      id: '/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof BillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -666,13 +1082,6 @@ declare module '@tanstack/react-router' {
       path: '/account'
       fullPath: '/account'
       preLoaderRoute: typeof AccountRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$username': {
-      id: '/$username'
-      path: '/$username'
-      fullPath: '/$username'
-      preLoaderRoute: typeof UsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -689,11 +1098,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/verification/success': {
+      id: '/verification/success'
+      path: '/verification/success'
+      fullPath: '/verification/success'
+      preLoaderRoute: typeof VerificationSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verification/failed': {
+      id: '/verification/failed'
+      path: '/verification/failed'
+      fullPath: '/verification/failed'
+      preLoaderRoute: typeof VerificationFailedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/post/$postId': {
       id: '/post/$postId'
       path: '/post/$postId'
       fullPath: '/post/$postId'
       preLoaderRoute: typeof PostPostIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payment/success': {
+      id: '/payment/success'
+      path: '/payment/success'
+      fullPath: '/payment/success'
+      preLoaderRoute: typeof PaymentSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payment/failed': {
+      id: '/payment/failed'
+      path: '/payment/failed'
+      fullPath: '/payment/failed'
+      preLoaderRoute: typeof PaymentFailedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/messages/$conversationId': {
@@ -702,6 +1139,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/messages/$conversationId'
       preLoaderRoute: typeof MessagesConversationIdRouteImport
       parentRoute: typeof MessagesRoute
+    }
+    '/legal/terms': {
+      id: '/legal/terms'
+      path: '/legal/terms'
+      fullPath: '/legal/terms'
+      preLoaderRoute: typeof LegalTermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/privacy': {
+      id: '/legal/privacy'
+      path: '/legal/privacy'
+      fullPath: '/legal/privacy'
+      preLoaderRoute: typeof LegalPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/adult-content-policy': {
+      id: '/legal/adult-content-policy'
+      path: '/legal/adult-content-policy'
+      fullPath: '/legal/adult-content-policy'
+      preLoaderRoute: typeof LegalAdultContentPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/2257': {
+      id: '/legal/2257'
+      path: '/legal/2257'
+      fullPath: '/legal/2257'
+      preLoaderRoute: typeof Legal2257RouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/docs/system': {
       id: '/docs/system'
@@ -759,6 +1224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardPerformanceRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/payouts': {
+      id: '/dashboard/payouts'
+      path: '/payouts'
+      fullPath: '/dashboard/payouts'
+      preLoaderRoute: typeof DashboardPayoutsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/notifications': {
       id: '/dashboard/notifications'
       path: '/notifications'
@@ -778,6 +1250,13 @@ declare module '@tanstack/react-router' {
       path: '/media-kit'
       fullPath: '/dashboard/media-kit'
       preLoaderRoute: typeof DashboardMediaKitRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/media': {
+      id: '/dashboard/media'
+      path: '/media'
+      fullPath: '/dashboard/media'
+      preLoaderRoute: typeof DashboardMediaRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/links': {
@@ -801,12 +1280,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardEarningsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/compliance': {
+      id: '/dashboard/compliance'
+      path: '/compliance'
+      fullPath: '/dashboard/compliance'
+      preLoaderRoute: typeof DashboardComplianceRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/analytics': {
       id: '/dashboard/analytics'
       path: '/analytics'
       fullPath: '/dashboard/analytics'
       preLoaderRoute: typeof DashboardAnalyticsRouteImport
       parentRoute: typeof DashboardRoute
+    }
+    '/creator/$username': {
+      id: '/creator/$username'
+      path: '/creator/$username'
+      fullPath: '/creator/$username'
+      preLoaderRoute: typeof CreatorUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/transactions': {
+      id: '/admin/transactions'
+      path: '/transactions'
+      fullPath: '/admin/transactions'
+      preLoaderRoute: typeof AdminTransactionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/takedowns': {
+      id: '/admin/takedowns'
+      path: '/takedowns'
+      fullPath: '/admin/takedowns'
+      preLoaderRoute: typeof AdminTakedownsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/reports': {
       id: '/admin/reports'
@@ -836,12 +1357,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFinanceRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/creators': {
+      id: '/admin/creators'
+      path: '/creators'
+      fullPath: '/admin/creators'
+      preLoaderRoute: typeof AdminCreatorsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/content': {
+      id: '/admin/content'
+      path: '/content'
+      fullPath: '/admin/content'
+      preLoaderRoute: typeof AdminContentRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/compliance': {
+      id: '/admin/compliance'
+      path: '/compliance'
+      fullPath: '/admin/compliance'
+      preLoaderRoute: typeof AdminComplianceRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/audit': {
       id: '/admin/audit'
       path: '/audit'
       fullPath: '/admin/audit'
       preLoaderRoute: typeof AdminAuditRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/dashboard/posts/new': {
+      id: '/dashboard/posts/new'
+      path: '/new'
+      fullPath: '/dashboard/posts/new'
+      preLoaderRoute: typeof DashboardPostsNewRouteImport
+      parentRoute: typeof DashboardPostsRoute
+    }
+    '/checkout/tip/$creatorId': {
+      id: '/checkout/tip/$creatorId'
+      path: '/checkout/tip/$creatorId'
+      fullPath: '/checkout/tip/$creatorId'
+      preLoaderRoute: typeof CheckoutTipCreatorIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout/subscribe/$creatorId': {
+      id: '/checkout/subscribe/$creatorId'
+      path: '/checkout/subscribe/$creatorId'
+      fullPath: '/checkout/subscribe/$creatorId'
+      preLoaderRoute: typeof CheckoutSubscribeCreatorIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout/ppv/$postId': {
+      id: '/checkout/ppv/$postId'
+      path: '/checkout/ppv/$postId'
+      fullPath: '/checkout/ppv/$postId'
+      preLoaderRoute: typeof CheckoutPpvPostIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/ledger/$transactionId': {
       id: '/admin/ledger/$transactionId'
@@ -867,32 +1437,61 @@ const AdminLedgerRouteWithChildren = AdminLedgerRoute._addFileChildren(
 
 interface AdminRouteChildren {
   AdminAuditRoute: typeof AdminAuditRoute
+  AdminComplianceRoute: typeof AdminComplianceRoute
+  AdminContentRoute: typeof AdminContentRoute
+  AdminCreatorsRoute: typeof AdminCreatorsRoute
   AdminFinanceRoute: typeof AdminFinanceRoute
   AdminLedgerRoute: typeof AdminLedgerRouteWithChildren
   AdminPayoutsRoute: typeof AdminPayoutsRoute
   AdminReportsRoute: typeof AdminReportsRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminTakedownsRoute: typeof AdminTakedownsRoute
+  AdminTransactionsRoute: typeof AdminTransactionsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAuditRoute: AdminAuditRoute,
+  AdminComplianceRoute: AdminComplianceRoute,
+  AdminContentRoute: AdminContentRoute,
+  AdminCreatorsRoute: AdminCreatorsRoute,
   AdminFinanceRoute: AdminFinanceRoute,
   AdminLedgerRoute: AdminLedgerRouteWithChildren,
   AdminPayoutsRoute: AdminPayoutsRoute,
   AdminReportsRoute: AdminReportsRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+  AdminTakedownsRoute: AdminTakedownsRoute,
+  AdminTransactionsRoute: AdminTransactionsRoute,
+  AdminUsersRoute: AdminUsersRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface DashboardPostsRouteChildren {
+  DashboardPostsNewRoute: typeof DashboardPostsNewRoute
+}
+
+const DashboardPostsRouteChildren: DashboardPostsRouteChildren = {
+  DashboardPostsNewRoute: DashboardPostsNewRoute,
+}
+
+const DashboardPostsRouteWithChildren = DashboardPostsRoute._addFileChildren(
+  DashboardPostsRouteChildren,
+)
+
 interface DashboardRouteChildren {
   DashboardAnalyticsRoute: typeof DashboardAnalyticsRoute
+  DashboardComplianceRoute: typeof DashboardComplianceRoute
   DashboardEarningsRoute: typeof DashboardEarningsRoute
   DashboardHomeRoute: typeof DashboardHomeRoute
   DashboardLinksRoute: typeof DashboardLinksRoute
+  DashboardMediaRoute: typeof DashboardMediaRoute
   DashboardMediaKitRoute: typeof DashboardMediaKitRoute
   DashboardMessagesRoute: typeof DashboardMessagesRoute
   DashboardNotificationsRoute: typeof DashboardNotificationsRoute
+  DashboardPayoutsRoute: typeof DashboardPayoutsRoute
   DashboardPerformanceRoute: typeof DashboardPerformanceRoute
-  DashboardPostsRoute: typeof DashboardPostsRoute
+  DashboardPostsRoute: typeof DashboardPostsRouteWithChildren
   DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardStorefrontRoute: typeof DashboardStorefrontRoute
@@ -902,14 +1501,17 @@ interface DashboardRouteChildren {
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAnalyticsRoute: DashboardAnalyticsRoute,
+  DashboardComplianceRoute: DashboardComplianceRoute,
   DashboardEarningsRoute: DashboardEarningsRoute,
   DashboardHomeRoute: DashboardHomeRoute,
   DashboardLinksRoute: DashboardLinksRoute,
+  DashboardMediaRoute: DashboardMediaRoute,
   DashboardMediaKitRoute: DashboardMediaKitRoute,
   DashboardMessagesRoute: DashboardMessagesRoute,
   DashboardNotificationsRoute: DashboardNotificationsRoute,
+  DashboardPayoutsRoute: DashboardPayoutsRoute,
   DashboardPerformanceRoute: DashboardPerformanceRoute,
-  DashboardPostsRoute: DashboardPostsRoute,
+  DashboardPostsRoute: DashboardPostsRouteWithChildren,
   DashboardProfileRoute: DashboardProfileRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardStorefrontRoute: DashboardStorefrontRoute,
@@ -935,26 +1537,44 @@ const MessagesRouteWithChildren = MessagesRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  UsernameRoute: UsernameRoute,
   AccountRoute: AccountRoute,
   AdminRoute: AdminRouteWithChildren,
+  BillingRoute: BillingRoute,
   DashboardRoute: DashboardRouteWithChildren,
   DemoRoute: DemoRoute,
   DiscoverRoute: DiscoverRoute,
-  EldondollaRoute: EldondollaRoute,
+  ExploreRoute: ExploreRoute,
   FeedRoute: FeedRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   MessagesRoute: MessagesRouteWithChildren,
+  NotFoundRoute: NotFoundRoute,
   NotificationsRoute: NotificationsRoute,
   OnboardingRoute: OnboardingRoute,
   PricingRoute: PricingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
-  TdRoute: TdRoute,
+  SubscriptionsRoute: SubscriptionsRoute,
+  SupportRoute: SupportRoute,
+  SuspendedRoute: SuspendedRoute,
+  TakedownRoute: TakedownRoute,
+  UnauthorizedRoute: UnauthorizedRoute,
+  CreatorUsernameRoute: CreatorUsernameRoute,
   DocsDataModelRoute: DocsDataModelRoute,
   DocsSystemRoute: DocsSystemRoute,
+  Legal2257Route: Legal2257Route,
+  LegalAdultContentPolicyRoute: LegalAdultContentPolicyRoute,
+  LegalPrivacyRoute: LegalPrivacyRoute,
+  LegalTermsRoute: LegalTermsRoute,
+  PaymentFailedRoute: PaymentFailedRoute,
+  PaymentSuccessRoute: PaymentSuccessRoute,
   PostPostIdRoute: PostPostIdRoute,
+  VerificationFailedRoute: VerificationFailedRoute,
+  VerificationSuccessRoute: VerificationSuccessRoute,
+  CheckoutPpvPostIdRoute: CheckoutPpvPostIdRoute,
+  CheckoutSubscribeCreatorIdRoute: CheckoutSubscribeCreatorIdRoute,
+  CheckoutTipCreatorIdRoute: CheckoutTipCreatorIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

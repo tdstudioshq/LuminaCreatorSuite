@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { MediaKit } from "@/components/cabana/dashboard/MediaKit";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/dashboard/media-kit")({
-  head: () => ({ meta: [{ title: "CABANA" }] }),
-  component: MediaKit,
+  beforeLoad: () => {
+    throw redirect({ to: "/dashboard/profile" });
+  },
 });

@@ -60,6 +60,118 @@ values (
 )
 on conflict (id) do nothing;
 
+-- Login-page demo identities. These are local/staging-only credentials:
+-- fan@cabana.demo, creator@cabana.demo, admin@cabana.demo / password123
+insert into auth.users (
+  instance_id,
+  id,
+  aud,
+  role,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  created_at,
+  updated_at
+)
+values
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '00000000-0000-4000-e100-000000000001',
+    'authenticated',
+    'authenticated',
+    'fan@cabana.demo',
+    crypt('password123', gen_salt('bf')),
+    now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"name":"Demo Fan","account_type":"member"}'::jsonb,
+    now(),
+    now()
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '00000000-0000-4000-e100-000000000002',
+    'authenticated',
+    'authenticated',
+    'creator@cabana.demo',
+    crypt('password123', gen_salt('bf')),
+    now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"name":"Demo Creator","account_type":"creator"}'::jsonb,
+    now(),
+    now()
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '00000000-0000-4000-e100-000000000003',
+    'authenticated',
+    'authenticated',
+    'admin@cabana.demo',
+    crypt('password123', gen_salt('bf')),
+    now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"name":"Demo Admin","account_type":"creator"}'::jsonb,
+    now(),
+    now()
+  )
+on conflict (id) do update set
+  email = excluded.email,
+  encrypted_password = excluded.encrypted_password,
+  email_confirmed_at = excluded.email_confirmed_at,
+  raw_app_meta_data = excluded.raw_app_meta_data,
+  raw_user_meta_data = excluded.raw_user_meta_data,
+  updated_at = excluded.updated_at;
+
+insert into auth.identities (
+  id,
+  provider_id,
+  user_id,
+  identity_data,
+  provider,
+  last_sign_in_at,
+  created_at,
+  updated_at
+)
+values
+  (
+    '00000000-0000-4000-e200-000000000001',
+    '00000000-0000-4000-e100-000000000001',
+    '00000000-0000-4000-e100-000000000001',
+    '{"sub":"00000000-0000-4000-e100-000000000001","email":"fan@cabana.demo","email_verified":true}'::jsonb,
+    'email',
+    now(),
+    now(),
+    now()
+  ),
+  (
+    '00000000-0000-4000-e200-000000000002',
+    '00000000-0000-4000-e100-000000000002',
+    '00000000-0000-4000-e100-000000000002',
+    '{"sub":"00000000-0000-4000-e100-000000000002","email":"creator@cabana.demo","email_verified":true}'::jsonb,
+    'email',
+    now(),
+    now(),
+    now()
+  ),
+  (
+    '00000000-0000-4000-e200-000000000003',
+    '00000000-0000-4000-e100-000000000003',
+    '00000000-0000-4000-e100-000000000003',
+    '{"sub":"00000000-0000-4000-e100-000000000003","email":"admin@cabana.demo","email_verified":true}'::jsonb,
+    'email',
+    now(),
+    now(),
+    now()
+  )
+on conflict (provider_id, provider) do update set
+  identity_data = excluded.identity_data,
+  updated_at = excluded.updated_at;
+
+insert into public.user_roles (user_id, role)
+values ('00000000-0000-4000-e100-000000000003', 'admin')
+on conflict (user_id, role) do nothing;
+
 -- Two seeded reports against the aurora demo content (open + reviewing) so a
 -- signed-in admin/moderator sees a populated queue at /admin/reports.
 insert into public.reports (id, reporter_user_id, subject_type, subject_id, reason, details, status)

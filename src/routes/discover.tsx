@@ -1,20 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { DiscoveryPage } from "@/components/cabana/discovery/DiscoveryPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/discover")({
-  head: () => ({
-    meta: [
-      { title: "CABANA" },
-      { name: "robots", content: "noindex, nofollow" },
-      {
-        name: "description",
-        content: "CABANA discovery and global search.",
-      },
-    ],
-  }),
-  component: DiscoverRoute,
+  beforeLoad: () => {
+    throw redirect({ to: "/explore" });
+  },
 });
-
-function DiscoverRoute() {
-  return <DiscoveryPage />;
-}

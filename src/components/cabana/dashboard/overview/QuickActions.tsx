@@ -18,7 +18,7 @@ type QuickAction = {
 
 const ACTIONS: QuickAction[] = [
   {
-    to: "/dashboard/posts",
+    to: "/dashboard/posts/new",
     label: "Create post",
     description: "Publish to your feed",
     icon: PenSquare,
@@ -30,15 +30,15 @@ const ACTIONS: QuickAction[] = [
     icon: UsersRound,
   },
   {
-    to: "/dashboard/earnings",
+    to: "/dashboard/payouts",
     label: "Payouts",
     description: "Request & track payouts",
     icon: WalletCards,
   },
   {
-    to: "/dashboard/performance",
-    label: "Analytics",
-    description: "Revenue & engagement",
+    to: "/dashboard/compliance",
+    label: "Compliance",
+    description: "Verification status",
     icon: BarChart3,
   },
   {

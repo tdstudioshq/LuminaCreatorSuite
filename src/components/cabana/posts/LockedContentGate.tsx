@@ -70,7 +70,7 @@ export function LockedContentGate({
 
       {subscribers ? (
         <Link
-          to="/$username"
+          to="/creator/$username"
           params={{ username }}
           className="btn-luxury min-h-10 !rounded-full !px-5 !py-2.5 text-xs"
         >

@@ -35,7 +35,7 @@ import { useStartConversationWithUsername } from "@/lib/use-messaging";
 import { SocialShell } from "@/components/cabana/social/SocialShell";
 import { SocialRightRail } from "@/components/cabana/social/SocialRightRail";
 
-export const Route = createFileRoute("/$username")({
+export const Route = createFileRoute("/creator/$username")({
   component: CreatorProfileRoute,
   head: ({ params }) => ({
     meta: [
@@ -117,7 +117,7 @@ export function CreatorProfile({ username }: { username: string }) {
         title={`@${username} isn’t here yet`}
         message="This handle does not currently have a public creator profile."
         action={
-          <Link to="/discover" className="btn-luxury !px-5 !py-2.5 text-xs">
+          <Link to="/explore" className="btn-luxury !px-5 !py-2.5 text-xs">
             Explore creators
           </Link>
         }
@@ -132,7 +132,7 @@ export function CreatorProfile({ username }: { username: string }) {
 
   const handleFollow = async () => {
     if (!relationship.signedIn) {
-      navigate({ to: "/login", search: { redirect: `/${username}` } as never });
+      navigate({ to: "/login", search: { redirect: `/creator/${username}` } as never });
       return;
     }
     try {
@@ -143,7 +143,7 @@ export function CreatorProfile({ username }: { username: string }) {
   };
   const handleMessage = async () => {
     if (!relationship.signedIn) {
-      navigate({ to: "/login", search: { redirect: `/${username}` } as never });
+      navigate({ to: "/login", search: { redirect: `/creator/${username}` } as never });
       return;
     }
     try {

@@ -1,12 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { CreatorProfile } from "./$username";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/demo")({
-  head: () => ({
-    meta: [
-      { title: "CABANA" },
-      { name: "description", content: "Live demo of a CABANA creator page." },
-    ],
-  }),
-  component: () => <CreatorProfile username="aurora" />,
+  beforeLoad: () => {
+    throw redirect({ to: "/creator/$username", params: { username: "aurora" } });
+  },
 });

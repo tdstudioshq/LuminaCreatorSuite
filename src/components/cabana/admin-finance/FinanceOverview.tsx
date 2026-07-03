@@ -110,8 +110,11 @@ export function FinanceOverview() {
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-muted-foreground">Top creator earnings</h2>
-          <Link to="/admin/ledger" className="text-xs text-muted-foreground hover:text-foreground">
-            View ledger →
+          <Link
+            to="/admin/transactions"
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            View transactions →
           </Link>
         </div>
         {topCreators.length === 0 ? (

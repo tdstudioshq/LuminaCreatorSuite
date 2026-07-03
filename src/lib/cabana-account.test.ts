@@ -54,8 +54,8 @@ describe("isMember / isCreator", () => {
 });
 
 describe("accountHomePath", () => {
-  it("routes members to /account and creators to /dashboard", () => {
-    expect(accountHomePath("member")).toBe("/account");
+  it("routes members to /settings and creators to /dashboard", () => {
+    expect(accountHomePath("member")).toBe("/settings");
     expect(accountHomePath("creator")).toBe("/dashboard");
   });
 });

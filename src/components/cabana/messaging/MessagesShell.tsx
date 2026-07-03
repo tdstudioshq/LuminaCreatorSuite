@@ -46,7 +46,7 @@ export function EmptyThread() {
       <p className="relative mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
         Choose a thread from your inbox to continue the conversation, or discover someone new.
       </p>
-      <Link to="/discover" className="btn-luxury relative mt-6 !rounded-full !px-5 !py-2.5 text-xs">
+      <Link to="/explore" className="btn-luxury relative mt-6 !rounded-full !px-5 !py-2.5 text-xs">
         <Sparkles className="h-3.5 w-3.5" />
         Find creators
         <ArrowUpRight className="h-3.5 w-3.5" />

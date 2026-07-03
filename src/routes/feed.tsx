@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { RequireSignedIn } from "@/components/cabana/auth/RequireSignedIn";
 import { HomeFeed } from "@/components/cabana/posts/HomeFeed";
 
 export const Route = createFileRoute("/feed")({
@@ -9,5 +10,13 @@ export const Route = createFileRoute("/feed")({
       { name: "description", content: "Your CABANA feed — updates from creators you follow." },
     ],
   }),
-  component: HomeFeed,
+  component: FeedRoute,
 });
+
+function FeedRoute() {
+  return (
+    <RequireSignedIn>
+      <HomeFeed />
+    </RequireSignedIn>
+  );
+}

@@ -58,7 +58,7 @@ export function ConversationView({ conversationId }: { conversationId: string })
         </Link>
         {other?.otherUsername ? (
           <Link
-            to="/$username"
+            to="/creator/$username"
             params={{ username: other.otherUsername }}
             className="flex min-w-0 flex-1 items-center gap-3.5 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >

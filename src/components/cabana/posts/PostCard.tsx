@@ -41,7 +41,7 @@ export function PostCard({
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent opacity-0 transition-opacity group-hover/post:opacity-100" />
       <header className="flex items-start gap-3.5 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
         <Link
-          to="/$username"
+          to="/creator/$username"
           params={{ username: post.username }}
           className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/5 text-sm font-medium outline-none ring-2 ring-white/[0.09] transition-all hover:scale-[1.03] hover:ring-primary/50 focus-visible:ring-2 focus-visible:ring-ring sm:h-12 sm:w-12"
           aria-label={`View ${post.displayName}'s profile`}
@@ -54,7 +54,7 @@ export function PostCard({
         </Link>
         <div className="min-w-0 flex-1 pt-0.5">
           <Link
-            to="/$username"
+            to="/creator/$username"
             params={{ username: post.username }}
             className="block w-fit max-w-full truncate text-[15px] font-semibold tracking-[-0.015em] outline-none transition-colors hover:text-primary focus-visible:text-primary"
           >
@@ -142,7 +142,7 @@ function PostMenu({ post, isOwner }: { post: FeedPost; isOwner: boolean }) {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild className="cursor-pointer rounded-xl">
-          <Link to="/$username" params={{ username: post.username }}>
+          <Link to="/creator/$username" params={{ username: post.username }}>
             <UserRound className="h-4 w-4" /> View creator
           </Link>
         </DropdownMenuItem>
