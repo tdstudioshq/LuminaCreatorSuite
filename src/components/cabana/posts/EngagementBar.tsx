@@ -22,36 +22,50 @@ export function EngagementBar({ postId }: { postId: string }) {
   }
 
   return (
-    <div className="flex items-center gap-1 text-muted-foreground">
+    <div
+      className="flex items-center gap-1 text-muted-foreground"
+      role="group"
+      aria-label="Post engagement"
+    >
       <button
+        type="button"
         onClick={() => requireAuth(() => void like.toggle())}
         disabled={like.pending}
-        className="inline-flex min-h-9 items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium outline-none transition-all hover:bg-white/[0.06] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+        className={`inline-flex min-h-10 items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium outline-none transition-all hover:bg-white/[0.06] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 ${
+          like.liked ? "bg-rose-400/[0.08] text-rose-300" : ""
+        }`}
         aria-pressed={like.liked}
-        aria-label="Like"
+        aria-label={like.liked ? "Unlike post" : "Like post"}
+        aria-busy={like.pending}
       >
-        <Heart className={`h-4 w-4 ${like.liked ? "fill-rose-400 text-rose-400" : ""}`} />
+        <Heart className={`h-[17px] w-[17px] ${like.liked ? "fill-rose-400 text-rose-400" : ""}`} />
         <span>{like.likeCount > 0 ? like.likeCount : "Like"}</span>
       </button>
 
       <Link
         to="/post/$postId"
         params={{ postId }}
-        className="inline-flex min-h-9 items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium outline-none transition-all hover:bg-white/[0.06] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label="Comments"
+        className="inline-flex min-h-10 items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium outline-none transition-all hover:bg-white/[0.06] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label="View comments"
       >
-        <MessageCircle className="h-4 w-4" />
+        <MessageCircle className="h-[17px] w-[17px]" />
         <span>{state && state.commentCount > 0 ? state.commentCount : "Comment"}</span>
       </Link>
 
       <button
+        type="button"
         onClick={() => requireAuth(() => void save.toggle())}
         disabled={save.pending}
-        className="ml-auto inline-flex min-h-9 items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium outline-none transition-all hover:bg-white/[0.06] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+        className={`ml-auto inline-flex min-h-10 items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium outline-none transition-all hover:bg-white/[0.06] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 ${
+          save.saved ? "bg-sky-300/[0.08] text-sky-200" : ""
+        }`}
         aria-pressed={save.saved}
-        aria-label="Save"
+        aria-label={save.saved ? "Remove saved post" : "Save post"}
+        aria-busy={save.pending}
       >
-        <Bookmark className={`h-4 w-4 ${save.saved ? "fill-sky-300 text-sky-300" : ""}`} />
+        <Bookmark
+          className={`h-[17px] w-[17px] ${save.saved ? "fill-sky-300 text-sky-300" : ""}`}
+        />
         <span className="hidden sm:inline">{save.saved ? "Saved" : "Save"}</span>
       </button>
     </div>

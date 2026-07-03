@@ -36,14 +36,14 @@ export function PostCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-30px" }}
       transition={{ duration: 0.5, delay: index * 0.05 }}
-      className="group/post relative overflow-hidden bg-[oklch(0.145_0.016_280/0.7)] shadow-[0_28px_80px_-65px_oklch(0.78_0.18_280/0.9)] transition-colors hover:bg-[oklch(0.155_0.018_280/0.78)]"
+      className="group/post relative overflow-hidden rounded-[30px] border border-white/[0.085] bg-[linear-gradient(150deg,oklch(0.18_0.02_280/0.76),oklch(0.14_0.015_280/0.72))] shadow-[0_28px_80px_-58px_oklch(0_0_0/0.95),inset_0_1px_0_oklch(1_0_0/0.075)] transition-all hover:border-white/[0.13] hover:bg-[linear-gradient(150deg,oklch(0.19_0.022_280/0.8),oklch(0.15_0.017_280/0.76))]"
     >
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent opacity-0 transition-opacity group-hover/post:opacity-100" />
-      <header className="flex items-start gap-3.5 px-5 pb-3 pt-5 sm:px-6">
+      <header className="flex items-start gap-3.5 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
         <Link
           to="/$username"
           params={{ username: post.username }}
-          className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/5 text-sm font-medium outline-none ring-2 ring-white/[0.08] transition-all hover:scale-[1.03] hover:ring-primary/50 focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/5 text-sm font-medium outline-none ring-2 ring-white/[0.09] transition-all hover:scale-[1.03] hover:ring-primary/50 focus-visible:ring-2 focus-visible:ring-ring sm:h-12 sm:w-12"
           aria-label={`View ${post.displayName}'s profile`}
         >
           {post.avatarUrl ? (
@@ -56,20 +56,26 @@ export function PostCard({
           <Link
             to="/$username"
             params={{ username: post.username }}
-            className="block w-fit truncate text-[15px] font-semibold tracking-[-0.01em] outline-none transition-colors hover:text-primary focus-visible:text-primary"
+            className="block w-fit max-w-full truncate text-[15px] font-semibold tracking-[-0.015em] outline-none transition-colors hover:text-primary focus-visible:text-primary"
           >
             {post.displayName}
           </Link>
-          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
             <span className="truncate">@{post.username}</span>
             {post.publishedAt ? (
               <>
                 <span aria-hidden>·</span>
-                <time>{formatDistanceToNow(new Date(post.publishedAt), { addSuffix: true })}</time>
+                <time dateTime={post.publishedAt}>
+                  {formatDistanceToNow(new Date(post.publishedAt), { addSuffix: true })}
+                </time>
               </>
             ) : null}
-            <span aria-hidden>·</span>
-            <PostVisibilityBadge visibility={post.visibility} />
+            <span className="hidden sm:inline" aria-hidden>
+              ·
+            </span>
+            <span className="basis-full sm:basis-auto">
+              <PostVisibilityBadge visibility={post.visibility} />
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-0.5">
@@ -81,7 +87,7 @@ export function PostCard({
       </header>
 
       {post.locked ? (
-        <div className="px-5 pb-5 sm:px-6">
+        <div className="px-3 pb-3 sm:px-4 sm:pb-4">
           <LockedContentGate
             visibility={post.visibility}
             username={post.username}
@@ -92,16 +98,20 @@ export function PostCard({
       ) : (
         <>
           {post.caption && (
-            <p className="whitespace-pre-wrap px-5 pb-4 text-[15px] leading-relaxed text-foreground/90 sm:px-6">
+            <p className="whitespace-pre-wrap px-5 pb-5 text-[15px] leading-7 text-foreground/90 sm:px-6">
               {post.caption}
             </p>
           )}
           {post.media.length > 0 && (
-            <div className="border-y border-white/[0.07] bg-black/20">
+            <div className="mx-3 overflow-hidden rounded-[22px] border border-white/[0.075] bg-black/20 sm:mx-4">
               <PostMediaGallery postId={post.postId} flush />
             </div>
           )}
-          <div className="px-4 py-2.5 sm:px-5">
+          <div
+            className={`mx-4 px-0 py-3 sm:mx-5 ${
+              post.media.length > 0 ? "" : "border-t border-white/[0.07]"
+            }`}
+          >
             <EngagementBar postId={post.postId} />
           </div>
         </>
