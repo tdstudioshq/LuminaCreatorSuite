@@ -27,7 +27,8 @@ export type SocialPlatform =
   | "fanvue"
   | "website"
   | "email"
-  | "phone";
+  | "phone"
+  | "lock";
 
 export interface SocialLink {
   platform: SocialPlatform;

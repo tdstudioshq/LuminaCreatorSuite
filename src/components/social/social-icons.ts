@@ -12,6 +12,7 @@ import {
   FaHeart,
   FaInstagram,
   FaLinkedin,
+  FaLock,
   FaPatreon,
   FaPhone,
   FaReddit,
@@ -58,6 +59,8 @@ export const SOCIAL_ICONS: Record<SocialPlatform, IconType> = {
   website: FaGlobe,
   email: FaEnvelope,
   phone: FaPhone,
+  // Semantic "locked / VIP" link — shows a padlock instead of a network glyph.
+  lock: FaLock,
 };
 
 export const PLATFORM_LABELS: Record<SocialPlatform, string> = {
@@ -86,6 +89,7 @@ export const PLATFORM_LABELS: Record<SocialPlatform, string> = {
   website: "Website",
   email: "Email",
   phone: "Phone",
+  lock: "Locked",
 };
 
 // Official brand accents, used for HOVER effects only — the resting state
@@ -117,4 +121,5 @@ export const BRAND_COLORS: Record<SocialPlatform, string> = {
   website: "#FFFFFF",
   email: "#FFFFFF",
   phone: "#FFFFFF",
+  lock: "#FFFFFF",
 };
