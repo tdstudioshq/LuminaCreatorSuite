@@ -22,6 +22,7 @@ import {
   type ButtonStyle,
   type LinkIconKey,
 } from "@/lib/cabana-store";
+import { LiquidMetalButton } from "@/components/ui/liquid-metal-button";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -474,15 +475,16 @@ function OnboardingPage() {
               </button>
             </div>
           ) : (
-            <button
+            <LiquidMetalButton
+              type="button"
               onClick={() => void goLive()}
               disabled={goingLive}
-              className="flex min-h-11 items-center gap-2 rounded-full bg-iridescent px-6 text-sm font-semibold text-background shadow-glow transition-all hover:scale-[1.02] disabled:opacity-60"
+              className="!h-11 !px-6"
             >
               {goingLive ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {goingLive ? "Going live…" : "Enter CABANA"}
               {!goingLive && <ArrowRight className="h-4 w-4" />}
-            </button>
+            </LiquidMetalButton>
           )}
         </div>
       </div>

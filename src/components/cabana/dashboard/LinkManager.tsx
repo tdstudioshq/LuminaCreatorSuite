@@ -20,6 +20,7 @@ import {
 } from "@/lib/cabana-store";
 import { useDebouncedCallback, useDebouncedField } from "@/hooks/use-debounced-callback";
 import { isValidHttpUrl, normalizeUrl } from "@/lib/cabana-validation";
+import { Button } from "@/components/ui/button";
 import { ConfirmDeleteButton } from "@/components/cabana/dashboard/ConfirmDeleteButton";
 
 export function LinkManager() {
@@ -55,12 +56,9 @@ export function LinkManager() {
             Drag to reorder. Click edit to update. Schedule for later.
           </p>
         </div>
-        <button
-          onClick={() => m.addLink()}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-iridescent text-background text-sm font-medium shadow-glow"
-        >
+        <Button onClick={() => m.addLink()} variant="cta" size="sm" className="!rounded-full">
           <Plus className="w-4 h-4" /> Add link
-        </button>
+        </Button>
       </div>
 
       {loading ? (
@@ -198,12 +196,9 @@ function LinkEditForm({ link, onClose }: { link: CabanaLink; onClose: () => void
         >
           <X className="w-3 h-3" /> Close
         </button>
-        <button
-          onClick={onClose}
-          className="text-xs px-3 py-1.5 rounded-full bg-iridescent text-background flex items-center gap-1"
-        >
+        <Button onClick={onClose} variant="cta" size="sm" className="!rounded-full !px-3 !text-xs">
           <Check className="w-3 h-3" /> Save
-        </button>
+        </Button>
       </div>
     </div>
   );

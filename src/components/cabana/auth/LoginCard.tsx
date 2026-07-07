@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { cabanaAuth, useAuthSession } from "@/lib/cabana-auth";
+import { LiquidMetalButton } from "@/components/ui/liquid-metal-button";
 
 /**
  * The CABANA sign-in card (marble backdrop, glass card, chrome ENTER button —
@@ -142,14 +143,11 @@ export function LoginCard() {
                   </button>
                 </div>
               </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="relative mt-6 flex h-14 w-full items-center justify-center rounded-full border border-white/30 bg-gradient-to-b from-white via-white to-gray-200 text-lg font-semibold uppercase tracking-[0.4em] text-black shadow-[inset_0_2px_10px_rgba(255,255,255,0.9),inset_0_-6px_12px_rgba(0,0,0,0.3),0_12px_24px_rgba(0,0,0,0.45)] transition-all duration-200 hover:shadow-[inset_0_2px_12px_rgba(255,255,255,1),inset_0_-6px_14px_rgba(0,0,0,0.35),0_14px_28px_rgba(0,0,0,0.5)] disabled:cursor-not-allowed disabled:opacity-85"
-              >
-                <span className="relative z-10">{loading ? "Signing in…" : "Enter"}</span>
-                <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/90 via-white/40 to-transparent" />
-              </button>
+              <LiquidMetalButton type="submit" disabled={loading} fullWidth className="mt-6 !h-14">
+                <span className="text-lg font-semibold uppercase tracking-[0.4em]">
+                  {loading ? "Signing in…" : "Enter"}
+                </span>
+              </LiquidMetalButton>
             </form>
             <div className="flex w-full items-center gap-3">
               <div className="h-[2px] flex-1 bg-gradient-to-r from-transparent to-white/50" />

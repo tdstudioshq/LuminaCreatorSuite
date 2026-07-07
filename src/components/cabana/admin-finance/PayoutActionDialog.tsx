@@ -93,8 +93,7 @@ export function PayoutActionDialog({
             Cancel
           </Button>
           <Button
-            className={destructive ? "" : "btn-luxury"}
-            variant={destructive ? "destructive" : "default"}
+            variant={destructive ? "destructive" : "primary"}
             onClick={onConfirm}
             disabled={review.isPending}
           >

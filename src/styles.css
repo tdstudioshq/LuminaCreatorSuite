@@ -119,6 +119,54 @@
   --shadow-glass: inset 0 1px 0 0 oklch(1 0 0 / 0.1), 0 20px 40px -10px oklch(0 0 0 / 0.5);
   --shadow-inset-hi: inset 0 1px 0 0 oklch(1 0 0 / 0.14), inset 0 -1px 0 0 oklch(0 0 0 / 0.4);
 
+  /* ── Liquid-metal button system — shared tokens (single source of truth) ──
+     Consumed by the shadcn Button variants AND the btn-luxury/btn-ghost
+     utilities so the whole app speaks one metallic language. No idle
+     animation: gloss + bevel give static depth; reflections move only on
+     hover/press (GPU-cheap background-position/transform). */
+  --metal-radius: 12px;
+  --metal-ease: var(--ease-spring);
+  --metal-dur: 0.34s;
+  --metal-gloss: linear-gradient(
+    180deg,
+    oklch(1 0 0 / 0.3) 0%,
+    oklch(1 0 0 / 0.07) 16%,
+    transparent 44%,
+    oklch(0 0 0 / 0.18) 100%
+  );
+  --metal-sheen: linear-gradient(
+    100deg,
+    transparent 34%,
+    oklch(1 0 0 / 0.4) 48%,
+    transparent 60%
+  );
+  --metal-bevel: inset 0 1px 0 oklch(1 0 0 / 0.42), inset 0 -1px 1px oklch(0 0 0 / 0.4);
+  --metal-shadow: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 18px -8px oklch(0 0 0 / 0.5);
+  --metal-shadow-hover: 0 2px 4px oklch(0 0 0 / 0.3), 0 16px 32px -10px oklch(0 0 0 / 0.55);
+  --metal-shadow-press: inset 0 2px 6px oklch(0 0 0 / 0.5), 0 1px 1px oklch(0 0 0 / 0.3);
+  --metal-body: var(--gradient-iridescent);
+  --metal-fg: var(--background);
+  --metal-ring: oklch(0.85 0.14 280 / 0.9);
+  /* Per-variant metal bodies (consumed by Button variants via --metal-body). */
+  --gradient-metal-silver: linear-gradient(
+    135deg,
+    oklch(0.86 0.02 250) 0%,
+    oklch(0.62 0.03 255) 50%,
+    oklch(0.82 0.02 240) 100%
+  );
+  --gradient-metal-destructive: linear-gradient(
+    135deg,
+    oklch(0.68 0.2 25) 0%,
+    oklch(0.55 0.22 20) 55%,
+    oklch(0.66 0.19 30) 100%
+  );
+  --gradient-metal-success: linear-gradient(
+    135deg,
+    oklch(0.78 0.16 155) 0%,
+    oklch(0.6 0.16 160) 55%,
+    oklch(0.76 0.15 150) 100%
+  );
+
   /* Spacing scale (mobile-first 4pt grid) */
   --space-1: 4px;
   --space-2: 8px;
@@ -304,74 +352,273 @@ html {
       0 20px 60px -20px oklch(0 0 0 / 0.6);
     color: oklch(0.18 0.02 280);
   }
+}
 
+/* Button primitives live in @layer components so Tailwind utilities (size,
+   width, spacing overrides applied at call sites and by the Button cva) always
+   win over these base finishes. Single source of truth for the metal language. */
+@layer components {
+  /* ── Liquid-metal base — shared by btn-luxury and the Button `metal`
+     variants. Static gloss + bevel for depth at rest; a masked sheen sweeps
+     across only on hover (no idle loop). GPU-only props. ── */
+  .btn-metal,
   .btn-luxury {
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 12px 22px;
-    border-radius: 14px;
+    border-radius: var(--metal-radius);
     font-weight: 600;
-    font-size: 0.875rem;
-    letter-spacing: -0.01em;
-    color: var(--background);
-    background: var(--gradient-iridescent);
-    background-size: 200% 100%;
+    isolation: isolate;
+    overflow: hidden;
+    color: var(--metal-fg);
+    background:
+      var(--metal-gloss),
+      var(--metal-body);
+    background-size:
+      100% 100%,
+      200% 100%;
+    background-position:
+      0 0,
+      0 0;
     box-shadow:
-      var(--shadow-glow-sm),
-      inset 0 1px 0 oklch(1 0 0 / 0.4);
+      var(--metal-bevel),
+      var(--metal-shadow);
     transition:
-      transform 0.4s var(--ease-luxury),
-      box-shadow 0.4s var(--ease-luxury),
-      background-position 0.8s var(--ease-luxury);
+      transform var(--metal-dur) var(--metal-ease),
+      box-shadow var(--metal-dur) var(--metal-ease),
+      background-position 0.7s var(--ease-luxury),
+      filter var(--metal-dur) var(--metal-ease);
     outline: none;
   }
+  /* Moving reflection highlight; parked off-screen until hover. */
+  .btn-metal::after,
+  .btn-luxury::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--metal-sheen);
+    background-size: 250% 100%;
+    background-position: 150% 0;
+    opacity: 0;
+    transition:
+      background-position 0.6s var(--ease-luxury),
+      opacity var(--metal-dur) var(--metal-ease);
+    pointer-events: none;
+  }
+  .btn-metal:hover,
   .btn-luxury:hover {
     transform: translateY(-1px);
+    filter: brightness(1.06);
+    background-position:
+      0 0,
+      100% 0;
     box-shadow:
-      var(--shadow-glow),
-      inset 0 1px 0 oklch(1 0 0 / 0.5);
-    background-position: 100% 0;
+      var(--metal-bevel),
+      var(--metal-shadow-hover);
   }
-  .btn-luxury:focus-visible {
-    box-shadow:
-      0 0 0 4px oklch(0.78 0.18 280 / 0.18),
-      var(--shadow-glow-sm),
-      inset 0 1px 0 oklch(1 0 0 / 0.5);
+  .btn-metal:hover::after,
+  .btn-luxury:hover::after {
+    opacity: 1;
+    background-position: -60% 0;
   }
+  .btn-metal:active,
   .btn-luxury:active {
     transform: translateY(0) scale(0.98);
+    box-shadow: var(--metal-shadow-press);
+    filter: brightness(0.96) contrast(1.08);
+  }
+  .btn-metal:focus-visible,
+  .btn-luxury:focus-visible {
+    box-shadow:
+      0 0 0 3px var(--metal-ring),
+      var(--metal-bevel),
+      var(--metal-shadow);
+  }
+  .btn-metal:disabled,
+  .btn-metal[aria-disabled="true"],
+  .btn-luxury:disabled,
+  .btn-luxury[aria-disabled="true"] {
+    cursor: not-allowed;
+    filter: grayscale(0.55) brightness(0.7);
+    box-shadow: var(--metal-shadow);
+    transform: none;
+  }
+  .btn-metal:disabled:hover::after,
+  .btn-metal[aria-disabled="true"]:hover::after,
+  .btn-luxury:disabled:hover::after,
+  .btn-luxury[aria-disabled="true"]:hover::after {
+    opacity: 0;
   }
 
+  /* btn-luxury adds its CTA sizing on top of the shared metal base. */
+  .btn-luxury {
+    padding: 12px 22px;
+    font-size: 0.875rem;
+    letter-spacing: -0.01em;
+  }
+
+  /* btn-ghost — the metal language in a translucent, low-emphasis form. */
   .btn-ghost {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     padding: 12px 22px;
-    border-radius: 14px;
-    background: oklch(1 0 0 / 0.04);
+    border-radius: var(--metal-radius);
+    background:
+      linear-gradient(180deg, oklch(1 0 0 / 0.08), transparent 60%),
+      oklch(1 0 0 / 0.04);
     border: 1px solid oklch(1 0 0 / 0.1);
     font-weight: 500;
     font-size: 0.875rem;
     color: var(--foreground);
+    box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.08);
     transition:
-      background 0.3s var(--ease-luxury),
-      border-color 0.3s var(--ease-luxury),
-      box-shadow 0.3s var(--ease-luxury);
+      background var(--metal-dur) var(--ease-luxury),
+      border-color var(--metal-dur) var(--ease-luxury),
+      transform var(--metal-dur) var(--metal-ease),
+      box-shadow var(--metal-dur) var(--ease-luxury);
     outline: none;
   }
   .btn-ghost:hover {
-    background: oklch(1 0 0 / 0.08);
-    border-color: oklch(1 0 0 / 0.18);
+    transform: translateY(-1px);
+    background:
+      linear-gradient(180deg, oklch(1 0 0 / 0.12), transparent 60%),
+      oklch(1 0 0 / 0.08);
+    border-color: oklch(1 0 0 / 0.2);
+    box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.12), 0 8px 18px -10px oklch(0 0 0 / 0.5);
+  }
+  .btn-ghost:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: inset 0 2px 5px oklch(0 0 0 / 0.35);
   }
   .btn-ghost:focus-visible {
     border-color: oklch(0.78 0.18 280 / 0.55);
-    box-shadow: 0 0 0 4px oklch(0.78 0.18 280 / 0.12);
+    box-shadow: 0 0 0 3px oklch(0.78 0.18 280 / 0.16);
   }
 
+  /* Reduced motion: keep the depth/gloss, drop the movement (lift, sheen
+     sweep, scale). Focus rings and color feedback remain. */
+  @media (prefers-reduced-motion: reduce) {
+    .btn-metal,
+    .btn-luxury,
+    .btn-ghost {
+      transition:
+        box-shadow var(--metal-dur) var(--ease-luxury),
+        filter var(--metal-dur) var(--ease-luxury),
+        background var(--metal-dur) var(--ease-luxury);
+    }
+    .btn-metal:hover,
+    .btn-luxury:hover,
+    .btn-ghost:hover,
+    .btn-metal:active,
+    .btn-luxury:active,
+    .btn-ghost:active {
+      transform: none;
+    }
+    .btn-metal::after,
+    .btn-luxury::after {
+      display: none;
+    }
+  }
+
+  /* ── LiquidMetalButton (WebGL hero CTA) ──────────────────────────────────
+     The shader canvas fills `.lm-btn__fill`; a static CSS gloss sits above it
+     for depth, and the label rides on top. When no shader mounts (SSR,
+     reduced-motion, over the 1-per-page cap, or WebGL unavailable) the
+     `.lm-btn--css` modifier paints the same metal body in pure CSS. */
+  .lm-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 3rem;
+    padding: 0 1.75rem;
+    border: none;
+    border-radius: 999px;
+    isolation: isolate;
+    overflow: hidden;
+    cursor: pointer;
+    outline: none;
+    background: #0a0a0a;
+    box-shadow: var(--metal-bevel), var(--metal-shadow);
+    transition:
+      transform var(--metal-dur) var(--metal-ease),
+      box-shadow var(--metal-dur) var(--metal-ease),
+      filter var(--metal-dur) var(--metal-ease);
+  }
+  .lm-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--metal-bevel), var(--metal-shadow-hover);
+  }
+  .lm-btn:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: var(--metal-shadow-press);
+  }
+  .lm-btn:focus-visible {
+    box-shadow: 0 0 0 3px var(--metal-ring), var(--metal-bevel), var(--metal-shadow);
+  }
+  .lm-btn:disabled {
+    cursor: not-allowed;
+    filter: grayscale(0.55) brightness(0.7);
+    transform: none;
+  }
+  .lm-btn__fill {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+  }
+  .lm-btn__fill canvas {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+    border-radius: inherit !important;
+  }
+  /* CSS fallback body — the metal gradient when no WebGL canvas is present. */
+  .lm-btn--css .lm-btn__fill {
+    background: var(--gradient-iridescent);
+    background-size: 200% 100%;
+    transition: background-position 0.7s var(--ease-luxury);
+  }
+  .lm-btn--css:hover .lm-btn__fill {
+    background-position: 100% 0;
+  }
+  .lm-btn__gloss {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+    background: var(--metal-gloss);
+    pointer-events: none;
+  }
+  .lm-btn__label {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: oklch(0.16 0.01 280);
+    text-shadow: 0 1px 1px oklch(1 0 0 / 0.25);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lm-btn:hover,
+    .lm-btn:active {
+      transform: none;
+    }
+  }
+}
+
+@layer utilities {
   .field-luxury {
     width: 100%;
     padding: 14px 16px;

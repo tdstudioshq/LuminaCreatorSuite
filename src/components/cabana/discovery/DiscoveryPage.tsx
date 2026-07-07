@@ -459,7 +459,7 @@ function TrendingWindowPicker({
             key={window}
             type="button"
             size="sm"
-            variant={value === window ? "default" : "outline"}
+            variant={value === window ? "primary" : "outline"}
             aria-pressed={value === window}
             onClick={() => onChange(window)}
             className="rounded-full"

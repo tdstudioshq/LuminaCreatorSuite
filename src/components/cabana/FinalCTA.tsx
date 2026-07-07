@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 import orb from "@/assets/chrome-orb.jpg";
+import { Button } from "@/components/ui/button";
 
 export function FinalCTA() {
   return (
@@ -35,13 +36,13 @@ export function FinalCTA() {
               Join the private beta and get a hand-built CABANA before public launch.
             </p>
             <div className="mt-10 flex flex-wrap justify-center gap-3">
-              <button className="group inline-flex items-center gap-2 bg-foreground text-background px-7 py-4 rounded-2xl text-sm font-medium hover:scale-[1.02] transition-transform shadow-glow">
+              <Button variant="cta" size="lg" className="group">
                 Request invitation
                 <ArrowUpRight className="w-4 h-4 transition-transform group-hover:rotate-45" />
-              </button>
-              <button className="glass px-7 py-4 rounded-2xl text-sm font-medium hover:bg-white/5 transition-colors">
+              </Button>
+              <Button variant="ghost" size="lg">
                 Talk to founders
-              </button>
+              </Button>
             </div>
           </div>
         </motion.div>

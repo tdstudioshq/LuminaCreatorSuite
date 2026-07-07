@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { useCabana } from "@/lib/cabana-store";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 
 type EventRow = { id: string; event_type: string; target_id: string | null; created_at: string };
 
@@ -135,14 +136,12 @@ export function DashHome() {
             <p className="mt-1 text-sm text-foreground/70">{profile.headline}</p>
           ) : null}
         </div>
-        <Link
-          to="/$username"
-          params={{ username: profile.handle }}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-iridescent text-background text-sm font-medium shadow-glow"
-        >
-          <Sparkles className="w-4 h-4" />
-          View public page
-        </Link>
+        <Button asChild variant="cta" className="!rounded-full">
+          <Link to="/$username" params={{ username: profile.handle }}>
+            <Sparkles className="w-4 h-4" />
+            View public page
+          </Link>
+        </Button>
       </header>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -295,13 +294,11 @@ function WelcomeLive({ handle }: { handle: string }) {
               <Copy className="h-3.5 w-3.5 text-muted-foreground" />
             )}
           </button>
-          <Link
-            to="/$username"
-            params={{ username: handle }}
-            className="flex items-center gap-1.5 rounded-full bg-iridescent px-4 py-2 text-sm font-medium text-background shadow-glow"
-          >
-            <ExternalLink className="h-3.5 w-3.5" /> View public page
-          </Link>
+          <Button asChild variant="cta" size="sm" className="!rounded-full">
+            <Link to="/$username" params={{ username: handle }}>
+              <ExternalLink className="h-3.5 w-3.5" /> View public page
+            </Link>
+          </Button>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           {actions.map((a) => {

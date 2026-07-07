@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-ro
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { AuthShell, AuthField } from "@/components/cabana/auth/AuthShell";
+import { LiquidMetalButton } from "@/components/ui/liquid-metal-button";
 import { cabanaAuth } from "@/lib/cabana-auth";
 import { type AccountType, accountHomePath } from "@/lib/cabana-account";
 import { supabase } from "@/integrations/supabase/client";
@@ -123,7 +124,7 @@ function SignupPage() {
         <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
           By creating an account you agree to our terms and privacy policy.
         </p>
-        <button type="submit" disabled={loading} className="btn-luxury w-full justify-center">
+        <LiquidMetalButton type="submit" disabled={loading} fullWidth className="mt-1">
           {loading ? (
             "Creating…"
           ) : (
@@ -131,7 +132,7 @@ function SignupPage() {
               Create account <ArrowRight className="w-4 h-4" />
             </>
           )}
-        </button>
+        </LiquidMetalButton>
       </form>
     </AuthShell>
   );

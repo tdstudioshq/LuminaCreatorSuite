@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Download, FileText, Sparkles } from "lucide-react";
 import auroraImg from "@/assets/aurora-hero.jpg";
 import { comingSoon } from "@/lib/coming-soon";
+import { Button } from "@/components/ui/button";
 
 const metrics = [
   { label: "Total Reach", value: "2.4M" },
@@ -32,12 +33,14 @@ export function MediaKit() {
             Media Kit
           </h1>
         </div>
-        <button
+        <Button
           onClick={() => comingSoon("Media kit PDF export")}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-iridescent text-background text-sm font-medium shadow-glow"
+          variant="cta"
+          size="sm"
+          className="!rounded-full"
         >
           <Download className="w-4 h-4" /> Export PDF
-        </button>
+        </Button>
       </div>
 
       <div className="glass-strong rounded-[2rem] overflow-hidden shadow-luxury">

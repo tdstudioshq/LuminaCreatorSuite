@@ -1,6 +1,7 @@
 import { Globe, CreditCard, Plug, Check } from "lucide-react";
 import { SOCIAL_ICONS } from "@/components/social/social-icons";
 import { comingSoon } from "@/lib/coming-soon";
+import { Button } from "@/components/ui/button";
 
 const integrations = [
   { name: "Stripe", desc: "Accept payments worldwide", icon: CreditCard, connected: true },
@@ -38,12 +39,9 @@ export function SettingsPanel() {
             defaultValue="aurora.cabana.co"
             className="bg-foreground/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/50"
           />
-          <button
-            onClick={() => comingSoon("Custom domain verification")}
-            className="px-5 py-3 rounded-xl bg-iridescent text-background text-sm font-medium"
-          >
+          <Button onClick={() => comingSoon("Custom domain verification")} variant="cta">
             Verify
-          </button>
+          </Button>
         </div>
         <div className="text-xs text-emerald-300 mt-3 flex items-center gap-1.5">
           <Check className="w-3 h-3" /> SSL active • CDN enabled

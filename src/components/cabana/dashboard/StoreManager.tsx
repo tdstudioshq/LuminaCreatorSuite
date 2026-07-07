@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState } from "react";
 import { Plus, Trash2, Camera, X, Check, Tag, Download, Repeat, Loader2 } from "lucide-react";
 import { useCabana, useCabanaMutations, type CabanaProduct } from "@/lib/cabana-store";
+import { Button } from "@/components/ui/button";
 import { useDebouncedField } from "@/hooks/use-debounced-callback";
 import { ConfirmDeleteButton } from "@/components/cabana/dashboard/ConfirmDeleteButton";
 
@@ -24,12 +25,9 @@ export function StoreManager() {
             Sell physical, digital, and membership products in one place.
           </p>
         </div>
-        <button
-          onClick={() => m.addProduct()}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-iridescent text-background text-sm font-medium shadow-glow"
-        >
+        <Button onClick={() => m.addProduct()} variant="cta" size="sm" className="!rounded-full">
           <Plus className="w-4 h-4" /> New product
-        </button>
+        </Button>
       </div>
 
       {loading ? (
@@ -197,12 +195,9 @@ function ProductDrawer({ product, onClose }: { product: CabanaProduct; onClose: 
           >
             <Trash2 className="w-3.5 h-3.5" /> Delete
           </ConfirmDeleteButton>
-          <button
-            onClick={onClose}
-            className="text-xs px-4 py-2 rounded-full bg-iridescent text-background flex items-center gap-1.5"
-          >
+          <Button onClick={onClose} variant="cta" size="sm" className="!rounded-full !text-xs">
             <Check className="w-3.5 h-3.5" /> Done
-          </button>
+          </Button>
         </div>
       </motion.div>
     </motion.div>
