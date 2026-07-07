@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
 import { Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
+import cabanaLogo from "@/assets/cabana-logo.png";
 
 export function AuthShell({
   eyebrow,
@@ -9,12 +10,15 @@ export function AuthShell({
   subtitle,
   children,
   footer,
+  logo = false,
 }: {
   eyebrow: string;
   title: string;
   subtitle: string;
   children: ReactNode;
   footer?: ReactNode;
+  /** Show the CABANA logo centered at the top of the card (replaces the small wordmark above it). */
+  logo?: boolean;
 }) {
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4 py-16 overflow-hidden">
@@ -42,14 +46,23 @@ export function AuthShell({
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         className="relative w-full max-w-md"
       >
-        <Link to="/" className="flex items-center justify-center gap-2 mb-7">
-          <div className="w-9 h-9 rounded-xl bg-iridescent flex items-center justify-center shadow-glow-sm">
-            <Sparkles className="w-4 h-4 text-background" />
-          </div>
-          <span className="font-display font-semibold tracking-tight text-lg">CABANA</span>
-        </Link>
+        {!logo && (
+          <Link to="/" className="flex items-center justify-center gap-2 mb-7">
+            <div className="w-9 h-9 rounded-xl bg-iridescent flex items-center justify-center shadow-glow-sm">
+              <Sparkles className="w-4 h-4 text-background" />
+            </div>
+            <span className="font-display font-semibold tracking-tight text-lg">CABANA</span>
+          </Link>
+        )}
 
         <div className="glass-strong rounded-3xl p-8 shadow-luxury">
+          {logo && (
+            <img
+              src={cabanaLogo}
+              alt="CABANA"
+              className="mx-auto mb-7 h-20 w-auto drop-shadow-[0_0_24px_rgba(165,180,252,0.35)]"
+            />
+          )}
           <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
             {eyebrow}
           </div>

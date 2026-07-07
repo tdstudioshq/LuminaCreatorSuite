@@ -12,14 +12,12 @@ import {
   Briefcase,
   Users,
   Star,
-  Instagram,
-  Youtube,
-  Twitter,
   Wand2,
   Globe,
   Loader2,
   Upload,
 } from "lucide-react";
+import { SOCIAL_ICONS } from "@/components/social/social-icons";
 import { useCabana, useCabanaMutations, type CabanaTheme } from "@/lib/cabana-store";
 
 export const Route = createFileRoute("/onboarding")({
@@ -67,11 +65,16 @@ const themes: { id: CabanaTheme; label: string; swatch: string }[] = [
 ];
 
 const socials = [
-  { id: "instagram", label: "Instagram", icon: Instagram, color: "oklch(0.7 0.2 350)" },
-  { id: "tiktok", label: "TikTok", icon: Music, color: "oklch(0.85 0.15 195)" },
-  { id: "youtube", label: "YouTube", icon: Youtube, color: "oklch(0.65 0.22 25)" },
-  { id: "x", label: "X", icon: Twitter, color: "oklch(0.95 0 0)" },
-  { id: "spotify", label: "Spotify", icon: Music, color: "oklch(0.78 0.18 145)" },
+  {
+    id: "instagram",
+    label: "Instagram",
+    icon: SOCIAL_ICONS.instagram,
+    color: "oklch(0.7 0.2 350)",
+  },
+  { id: "tiktok", label: "TikTok", icon: SOCIAL_ICONS.tiktok, color: "oklch(0.85 0.15 195)" },
+  { id: "youtube", label: "YouTube", icon: SOCIAL_ICONS.youtube, color: "oklch(0.65 0.22 25)" },
+  { id: "x", label: "X", icon: SOCIAL_ICONS.x, color: "oklch(0.95 0 0)" },
+  { id: "spotify", label: "Spotify", icon: SOCIAL_ICONS.spotify, color: "oklch(0.78 0.18 145)" },
 ];
 
 function OnboardingPage() {

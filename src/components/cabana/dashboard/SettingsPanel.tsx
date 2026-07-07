@@ -1,4 +1,5 @@
-import { Globe, CreditCard, Plug, Instagram, Youtube, Music2, Send, Check } from "lucide-react";
+import { Globe, CreditCard, Plug, Check } from "lucide-react";
+import { SOCIAL_ICONS } from "@/components/social/social-icons";
 import { comingSoon } from "@/lib/coming-soon";
 
 const integrations = [
@@ -9,10 +10,10 @@ const integrations = [
 ];
 
 const socials = [
-  { name: "Instagram", handle: "@aurora", icon: Instagram, connected: true },
-  { name: "YouTube", handle: "/aurora", icon: Youtube, connected: true },
-  { name: "Spotify", handle: "Aurora", icon: Music2, connected: false },
-  { name: "Telegram", handle: "t.me/aurora", icon: Send, connected: true },
+  { name: "Instagram", handle: "@aurora", icon: SOCIAL_ICONS.instagram, connected: true },
+  { name: "YouTube", handle: "/aurora", icon: SOCIAL_ICONS.youtube, connected: true },
+  { name: "Spotify", handle: "Aurora", icon: SOCIAL_ICONS.spotify, connected: false },
+  { name: "Telegram", handle: "t.me/aurora", icon: SOCIAL_ICONS.telegram, connected: true },
 ];
 
 export function SettingsPanel() {

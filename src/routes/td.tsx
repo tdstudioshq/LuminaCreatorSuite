@@ -1,18 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useState } from "react";
-import {
-  Check,
-  ArrowUpRight,
-  Sparkles,
-  Globe,
-  Mail,
-  Crown,
-  Instagram,
-  Send,
-  MessageCircle,
-  Phone,
-} from "lucide-react";
+import { Check, ArrowUpRight, Sparkles, Globe, Mail, Crown, Phone } from "lucide-react";
+import { SOCIAL_ICONS } from "@/components/social/social-icons";
 import cabanaLogo from "@/assets/cabana-logo.webp";
 
 export const Route = createFileRoute("/td")({
@@ -29,7 +19,7 @@ const LINKS = [
     title: "Instagram",
     sub: "@tdstudiosco",
     url: "https://instagram.com/tdstudiosco",
-    icon: Instagram,
+    icon: SOCIAL_ICONS.instagram,
     accent: "oklch(0.75 0.2 330)",
     featured: true,
   },
@@ -47,7 +37,7 @@ const LINKS = [
     title: "Telegram",
     sub: "929-752-8373",
     url: `https://t.me/+1${PHONE}`,
-    icon: Send,
+    icon: SOCIAL_ICONS.telegram,
     accent: "oklch(0.78 0.15 230)",
   },
   {
@@ -55,7 +45,7 @@ const LINKS = [
     title: "WhatsApp",
     sub: "929-752-8373",
     url: `https://wa.me/1${PHONE}`,
-    icon: MessageCircle,
+    icon: SOCIAL_ICONS.whatsapp,
     accent: "oklch(0.82 0.18 145)",
   },
   {

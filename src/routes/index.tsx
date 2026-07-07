@@ -1,45 +1,27 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { GlobalNav } from "@/components/cabana/GlobalNav";
-import { Hero } from "@/components/cabana/Hero";
-
-import { Features } from "@/components/cabana/Features";
-import { BrandShowcase } from "@/components/cabana/BrandShowcase";
-import { Analytics } from "@/components/cabana/Analytics";
-import { FinalCTA } from "@/components/cabana/FinalCTA";
-import { Footer } from "@/components/cabana/Footer";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { LoginCard } from "@/components/cabana/auth/LoginCard";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
       { title: "CABANA" },
-      {
-        name: "description",
-        content:
-          "Bio pages, storefronts, media kits, fan funnels, AI generation and analytics — engineered into one cinematic, mobile-first hub for premium creators.",
-      },
+      { name: "description", content: "Sign in to your CABANA Studio." },
       { property: "og:title", content: "CABANA" },
       {
         property: "og:description",
-        content: "More than a link in bio. The luxury operating system for modern creators.",
+        content: "The luxury operating system for modern creators.",
       },
     ],
   }),
+  beforeLoad: async () => {
+    if (typeof window === "undefined") return;
+    const { data } = await supabase.auth.getSession();
+    if (data.session) throw redirect({ to: "/dashboard" });
+  },
 });
 
 function Index() {
-  return (
-    <div className="relative overflow-x-hidden">
-      <GlobalNav />
-      <main>
-        <Hero />
-
-        <Features />
-        <Analytics />
-        <BrandShowcase />
-        <FinalCTA />
-      </main>
-      <Footer />
-    </div>
-  );
+  return <LoginCard />;
 }

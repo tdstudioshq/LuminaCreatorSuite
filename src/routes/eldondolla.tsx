@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
+import { SocialIcon } from "@/components/social/SocialIcon";
+import type { SocialPlatform } from "@/components/social/social-types";
 import portrait from "@/assets/eldondolla-portrait.png";
 import logo from "@/assets/eldondolla-logo.png";
 
@@ -19,55 +21,16 @@ const GOLD = "#d4af37";
 const GOLD_LIGHT = "#f5d97a";
 const GOLD_DEEP = "#8a6a17";
 
-// Inline SVG social icons (white) — sized to fit the gold coin
-const Icons = {
-  kick: (
-    <svg viewBox="0 0 24 24" className="w-7 h-7" fill="#53fc18" aria-hidden>
-      <path d="M3 3h5v5h2V6h2V4h2V3h5v5h-2v2h-2v2h-2v2h2v2h2v2h2v5h-5v-1h-2v-2h-2v-2H8v5H3V3z" />
-    </svg>
-  ),
-  youtube: (
-    <svg viewBox="0 0 24 24" className="w-8 h-8" aria-hidden>
-      <rect x="2" y="5" width="20" height="14" rx="3" fill="#ff0000" />
-      <path d="M10 9l5 3-5 3V9z" fill="#fff" />
-    </svg>
-  ),
-  tiktok: (
-    <svg viewBox="0 0 24 24" className="w-7 h-7" fill="#fff" aria-hidden>
-      <path d="M16 3c.4 2.3 1.9 4 4 4.3v3.2c-1.6 0-3-.4-4.3-1.2v6.4a5.7 5.7 0 1 1-5.7-5.7c.3 0 .6 0 1 .1v3.3a2.5 2.5 0 1 0 1.7 2.3V3H16z" />
-    </svg>
-  ),
-  instagram: (
-    <svg viewBox="0 0 24 24" className="w-7 h-7" aria-hidden>
-      <defs>
-        <linearGradient id="ig-g" x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0" stopColor="#f9ce34" />
-          <stop offset=".5" stopColor="#ee2a7b" />
-          <stop offset="1" stopColor="#6228d7" />
-        </linearGradient>
-      </defs>
-      <rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="url(#ig-g)" />
-      <circle cx="12" cy="12" r="4.2" fill="none" stroke="#fff" strokeWidth="1.8" />
-      <circle cx="17.4" cy="6.6" r="1.1" fill="#fff" />
-    </svg>
-  ),
-  x: (
-    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#fff" aria-hidden>
-      <path d="M17.5 3h3.2l-7 8 8.3 10h-6.5l-5-6.5L4.7 21H1.5l7.6-8.7L1 3h6.6l4.5 6L17.5 3z" />
-    </svg>
-  ),
-  facebook: (
-    <svg viewBox="0 0 24 24" className="w-8 h-8" aria-hidden>
-      <circle cx="12" cy="12" r="11" fill="#1877f2" />
-      <path
-        d="M13.5 22v-8h2.7l.4-3.2h-3.1V8.7c0-.9.3-1.6 1.6-1.6h1.6V4.2c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.4-4 4.1v2.6H7.6V14h2.7v8h3.2z"
-        fill="#fff"
-      />
-    </svg>
-  ),
+// Brand accents matching this page's original art direction; glyphs come from
+// the shared social icon registry (@/components/social).
+const SOCIAL_COLORS: Partial<Record<SocialPlatform, string>> = {
+  tiktok: "#ffffff",
+  instagram: "#E4405F",
+  x: "#ffffff",
+  facebook: "#1877f2",
 };
 
-type Social = { key: keyof typeof Icons; href: string; label: string };
+type Social = { key: SocialPlatform; href: string; label: string };
 const socials: Social[] = [
   { key: "tiktok", href: "https://tiktok.com/@eldondolla", label: "TIKTOK" },
   { key: "instagram", href: "https://instagram.com/eldondolla", label: "INSTAGRAM" },
@@ -319,7 +282,11 @@ function ElDonDollaPage() {
         >
           {socials.map((s) => (
             <GoldPill key={s.key} href={s.href} label={s.label}>
-              {Icons[s.key]}
+              <SocialIcon
+                platform={s.key}
+                size={26}
+                style={{ color: SOCIAL_COLORS[s.key] ?? "#ffffff" }}
+              />
             </GoldPill>
           ))}
         </motion.div>
