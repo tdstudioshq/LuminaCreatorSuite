@@ -1,4 +1,4 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -17,7 +17,6 @@ export function LoginCard() {
   const { user } = useAuthSession();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [vipCode, setVipCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -90,27 +89,9 @@ export function LoginCard() {
               height={120}
               className="h-28 w-28 object-contain"
             />
-            <div className="w-full space-y-3">
-              <button
-                type="button"
-                onClick={signInWithGoogle}
-                disabled={googleLoading}
-                className="flex h-12 w-full items-center justify-center gap-3 rounded-full border border-white/30 bg-white text-sm font-semibold text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-85"
-              >
-                <GoogleIcon className="h-5 w-5" />
-                {googleLoading ? "Redirecting to Google…" : "Continue with Google"}
-              </button>
-              {googleError && (
-                <p role="alert" className="text-xs text-red-300">
-                  {googleError}
-                </p>
-              )}
-            </div>
             <div className="flex w-full items-center gap-3">
               <div className="h-[2px] flex-1 bg-gradient-to-r from-transparent to-white/50" />
-              <span className="text-[11px] uppercase tracking-[0.35em] text-white/60">
-                Admin access
-              </span>
+              <span className="text-[11px] uppercase tracking-[0.35em] text-white/60">Sign in</span>
               <div className="h-[2px] flex-1 bg-gradient-to-l from-transparent to-white/50" />
             </div>
             <form onSubmit={submit} className="w-full space-y-5 text-left">
@@ -119,7 +100,7 @@ export function LoginCard() {
                   className="text-sm font-semibold tracking-wide text-white"
                   htmlFor="home-username"
                 >
-                  Username (email)
+                  Username
                 </label>
                 <input
                   id="home-username"
@@ -161,27 +142,6 @@ export function LoginCard() {
                   </button>
                 </div>
               </div>
-              <div className="relative py-2">
-                <div className="pointer-events-none absolute inset-0 flex items-center">
-                  <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-white/50 to-transparent" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label
-                  className="text-sm font-semibold tracking-wide text-white"
-                  htmlFor="home-vip"
-                >
-                  Admin/VIP Access Code
-                </label>
-                <input
-                  id="home-vip"
-                  className="h-12 w-full rounded-xl border border-white/30 bg-white/10 px-4 text-white placeholder:text-white/60 focus:border-white/60 focus:outline-none focus:ring-0"
-                  placeholder="Optional access code"
-                  value={vipCode}
-                  onChange={(event) => setVipCode(event.target.value.toUpperCase())}
-                  autoComplete="off"
-                />
-              </div>
               <button
                 type="submit"
                 disabled={loading}
@@ -190,15 +150,30 @@ export function LoginCard() {
                 <span className="relative z-10">{loading ? "Signing in…" : "Enter"}</span>
                 <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/90 via-white/40 to-transparent" />
               </button>
-              <div className="text-center text-xs text-white/80">
-                <Link
-                  to="/signup"
-                  className="underline underline-offset-4 transition hover:text-white"
-                >
-                  Request Access
-                </Link>
-              </div>
             </form>
+            <div className="flex w-full items-center gap-3">
+              <div className="h-[2px] flex-1 bg-gradient-to-r from-transparent to-white/50" />
+              <span className="text-[11px] uppercase tracking-[0.35em] text-white/60">
+                Sign up/Sign in
+              </span>
+              <div className="h-[2px] flex-1 bg-gradient-to-l from-transparent to-white/50" />
+            </div>
+            <div className="w-full space-y-3">
+              <button
+                type="button"
+                onClick={signInWithGoogle}
+                disabled={googleLoading}
+                className="flex h-12 w-full items-center justify-center gap-3 rounded-full border border-white/30 bg-white text-sm font-semibold text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-85"
+              >
+                <GoogleIcon className="h-5 w-5" />
+                {googleLoading ? "Redirecting to Google…" : "Continue with Google"}
+              </button>
+              {googleError && (
+                <p role="alert" className="text-xs text-red-300">
+                  {googleError}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </motion.div>
