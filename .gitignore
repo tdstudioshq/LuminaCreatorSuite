@@ -43,3 +43,5 @@ supabase/.temp
 *.sln
 *.sw?
 AGENTS.md
+.vercel
+.env*
