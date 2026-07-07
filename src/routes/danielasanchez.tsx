@@ -8,12 +8,12 @@ export const Route = createFileRoute("/danielasanchez")({
   component: DanielaLinkBio,
   head: () => ({
     meta: [
-      { title: "DANIELA SANCHEZ VIP" },
-      { name: "description", content: "Daniela Sanchez — official links." },
-      { property: "og:title", content: "DANIELA SANCHEZ VIP" },
+      { title: "Daniela Sánchez" },
+      { name: "description", content: "Daniela Sánchez — official links." },
+      { property: "og:title", content: "Daniela Sánchez" },
       { property: "og:image", content: "https://www.cabanagrp.com/dani/dani-social-share.jpg" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "DANIELA SANCHEZ VIP" },
+      { name: "twitter:title", content: "Daniela Sánchez" },
       { name: "twitter:image", content: "https://www.cabanagrp.com/dani/dani-social-share.jpg" },
     ],
     links: [
@@ -137,7 +137,7 @@ function DanielaLinkBio() {
               {avatarOk ? (
                 <img
                   src={PROFILE_IMAGE}
-                  alt="Daniela Sanchez"
+                  alt="Daniela Sánchez"
                   className="h-full w-full object-cover"
                   onError={() => setAvatarOk(false)}
                 />
@@ -157,7 +157,7 @@ function DanielaLinkBio() {
                 className="whitespace-nowrap text-3xl leading-tight tracking-wide sm:text-4xl md:text-5xl"
                 style={{ fontFamily: SCRIPT_FONT }}
               >
-                Daniela Sanchez
+                Daniela Sánchez
               </div>
               <div
                 className="text-sm uppercase tracking-[0.45em] text-white/85"
@@ -225,7 +225,7 @@ function CardSlideshow() {
         <img
           key={src}
           src={src}
-          alt={i === active ? "Daniela Sanchez" : ""}
+          alt={i === active ? "Daniela Sánchez" : ""}
           aria-hidden={i !== active}
           className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-700 ease-in-out ${
             i === active ? "opacity-100" : "opacity-0"
