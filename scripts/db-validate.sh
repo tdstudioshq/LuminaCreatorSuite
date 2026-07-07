@@ -65,6 +65,8 @@ if command -v psql >/dev/null 2>&1; then
   psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/creator_analytics.sql
   echo "▸ Running user_roles admin policy behavioral checks (self read + admin + anon)…"
   psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/user_roles_policy.sql
+  echo "▸ Running profile customization behavioral checks (headline/accent/button + profiles grant)…"
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/profile_customization.sql
   echo "✓ db:validate passed — fresh rebuild + smoke + behavioral checks succeeded."
 else
   echo "⚠ psql not found — 'supabase db reset' succeeded (migration + seed applied cleanly),"

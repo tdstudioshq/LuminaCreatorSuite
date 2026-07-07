@@ -1,198 +1,487 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles,
   ArrowRight,
   ArrowLeft,
   Check,
   Camera,
-  Music,
-  Dumbbell,
-  Briefcase,
-  Users,
-  Star,
-  Globe,
-  Loader2,
   Upload,
+  Loader2,
+  Plus,
+  X,
+  Link2,
 } from "lucide-react";
-import { SOCIAL_ICONS } from "@/components/social/social-icons";
-import { useCabana, useCabanaMutations, type CabanaTheme } from "@/lib/cabana-store";
+import {
+  useCabana,
+  useCabanaMutations,
+  LINK_ICONS,
+  FALLBACK_AVATAR,
+  type CabanaTheme,
+  type CabanaProfile,
+  type ButtonStyle,
+  type LinkIconKey,
+} from "@/lib/cabana-store";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
     meta: [
       { title: "CABANA" },
-      { name: "description", content: "Build your creator empire in minutes." },
+      { name: "description", content: "Create your CABANA — add your basics and go live." },
       { property: "og:title", content: "CABANA" },
-      { property: "og:description", content: "Premium creator setup, powered by AI." },
+      { property: "og:description", content: "Create your CABANA in a couple of minutes." },
     ],
   }),
   component: OnboardingPage,
 });
 
-const STEPS = ["Welcome", "Identity", "Theme", "Connect", "Preview"];
+const STEPS = ["Identity", "Links", "Look", "Preview"] as const;
 
-const creatorTypes = [
-  { id: "influencer", label: "Influencer", icon: Star, hint: "Lifestyle & content" },
-  { id: "model", label: "Model", icon: Camera, hint: "Editorial & fashion" },
-  { id: "musician", label: "Musician", icon: Music, hint: "Artists & DJs" },
-  { id: "fitness", label: "Fitness", icon: Dumbbell, hint: "Coaches & athletes" },
-  { id: "coach", label: "Coach", icon: Briefcase, hint: "Mentors & creators" },
-  { id: "agency", label: "Agency", icon: Users, hint: "Teams & rosters" },
+// ─────────────────────────── Link platforms ───────────────────────────
+type PlatformKey =
+  | "instagram"
+  | "tiktok"
+  | "youtube"
+  | "x"
+  | "website"
+  | "store"
+  | "email"
+  | "phone";
+
+const clean = (v: string) => v.trim().replace(/^@/, "");
+const isUrl = (v: string) => /^(https?:\/\/|mailto:|tel:)/i.test(v.trim());
+const ensureHttp = (v: string) =>
+  /^https?:\/\//i.test(v.trim()) ? v.trim() : `https://${v.trim()}`;
+
+type Platform = {
+  key: PlatformKey;
+  label: string;
+  icon: LinkIconKey;
+  placeholder: string;
+  build: (value: string) => { title: string; url: string };
+};
+
+const PLATFORMS: Platform[] = [
+  {
+    key: "instagram",
+    label: "Instagram",
+    icon: "instagram",
+    placeholder: "username or link",
+    build: (v) => ({
+      title: "Instagram",
+      url: isUrl(v) ? v.trim() : `https://instagram.com/${clean(v)}`,
+    }),
+  },
+  {
+    key: "tiktok",
+    label: "TikTok",
+    icon: "music",
+    placeholder: "username or link",
+    build: (v) => ({
+      title: "TikTok",
+      url: isUrl(v) ? v.trim() : `https://www.tiktok.com/@${clean(v)}`,
+    }),
+  },
+  {
+    key: "youtube",
+    label: "YouTube",
+    icon: "youtube",
+    placeholder: "@handle or link",
+    build: (v) => ({
+      title: "YouTube",
+      url: isUrl(v) ? v.trim() : `https://youtube.com/@${clean(v)}`,
+    }),
+  },
+  {
+    key: "x",
+    label: "X",
+    icon: "x",
+    placeholder: "username or link",
+    build: (v) => ({ title: "X", url: isUrl(v) ? v.trim() : `https://x.com/${clean(v)}` }),
+  },
+  {
+    key: "website",
+    label: "Website",
+    icon: "globe",
+    placeholder: "yourdomain.com",
+    build: (v) => ({ title: "Website", url: ensureHttp(v) }),
+  },
+  {
+    key: "store",
+    label: "Store",
+    icon: "shop",
+    placeholder: "store link",
+    build: (v) => ({ title: "Store", url: ensureHttp(v) }),
+  },
+  {
+    key: "email",
+    label: "Email",
+    icon: "mail",
+    placeholder: "you@email.com",
+    build: (v) => ({ title: "Email", url: `mailto:${v.trim()}` }),
+  },
+  {
+    key: "phone",
+    label: "Phone",
+    icon: "phone",
+    placeholder: "+1 555 000 0000",
+    build: (v) => ({ title: "Phone", url: `tel:${v.trim().replace(/[^\d+]/g, "")}` }),
+  },
 ];
 
-// Theme IDs intentionally match the stored CabanaTheme values so the selection
-// persists to creator_profiles.theme and applies on the public page.
-const themes: { id: CabanaTheme; label: string; swatch: string }[] = [
+type Draft = {
+  id: string;
+  platform: PlatformKey | "custom";
+  value: string;
+  customTitle: string;
+  existingId?: string;
+};
+
+function detectPlatform(url: string): PlatformKey | null {
+  const u = url.toLowerCase();
+  if (u.startsWith("mailto:")) return "email";
+  if (u.startsWith("tel:")) return "phone";
+  if (u.includes("instagram.com")) return "instagram";
+  if (u.includes("tiktok.com")) return "tiktok";
+  if (u.includes("youtube.com") || u.includes("youtu.be")) return "youtube";
+  if (u.includes("x.com") || u.includes("twitter.com")) return "x";
+  return null;
+}
+
+/** Built {title,url,icon} for a draft that has a value; null when empty. */
+function buildDraft(d: Draft): { title: string; url: string; icon: LinkIconKey } | null {
+  const v = d.value.trim();
+  if (!v) return null;
+  if (d.platform === "custom") {
+    return { title: d.customTitle.trim() || "Link", url: ensureHttp(v), icon: "globe" };
+  }
+  const p = PLATFORMS.find((x) => x.key === d.platform)!;
+  return { ...p.build(v), icon: p.icon };
+}
+
+// ─────────────────────────── Themes ───────────────────────────
+const THEMES: { id: CabanaTheme; label: string; swatch: string }[] = [
   {
     id: "iridescent",
     label: "Iridescent",
-    swatch: "linear-gradient(135deg, #8be9ff, #c084fc, #f0abfc, #fde68a)",
+    swatch: "linear-gradient(135deg,#8be9ff,#c084fc,#f0abfc,#fde68a)",
   },
-  {
-    id: "midnight",
-    label: "Midnight",
-    swatch: "linear-gradient(135deg, #0f172a, #312e81, #0f172a)",
-  },
-  {
-    id: "rose",
-    label: "Rose Gold",
-    swatch: "linear-gradient(135deg, #fda4af, #fcd34d, #f9a8d4)",
-  },
-  { id: "chrome", label: "Chrome", swatch: "linear-gradient(135deg, #e5e7eb, #94a3b8, #e5e7eb)" },
+  { id: "midnight", label: "Midnight", swatch: "linear-gradient(135deg,#0f172a,#312e81,#0f172a)" },
+  { id: "rose", label: "Rose Gold", swatch: "linear-gradient(135deg,#fda4af,#fcd34d,#f9a8d4)" },
+  { id: "chrome", label: "Chrome", swatch: "linear-gradient(135deg,#e5e7eb,#94a3b8,#e5e7eb)" },
 ];
 
-const socials = [
-  {
-    id: "instagram",
-    label: "Instagram",
-    icon: SOCIAL_ICONS.instagram,
-    color: "oklch(0.7 0.2 350)",
-  },
-  { id: "tiktok", label: "TikTok", icon: SOCIAL_ICONS.tiktok, color: "oklch(0.85 0.15 195)" },
-  { id: "youtube", label: "YouTube", icon: SOCIAL_ICONS.youtube, color: "oklch(0.65 0.22 25)" },
-  { id: "x", label: "X", icon: SOCIAL_ICONS.x, color: "oklch(0.95 0 0)" },
-  { id: "spotify", label: "Spotify", icon: SOCIAL_ICONS.spotify, color: "oklch(0.78 0.18 145)" },
+const ACCENTS: { label: string; value: string }[] = [
+  { label: "Theme default", value: "" },
+  { label: "Violet", value: "#c084fc" },
+  { label: "Cyan", value: "#8be9ff" },
+  { label: "Pink", value: "#f9a8d4" },
+  { label: "Gold", value: "#fcd34d" },
+  { label: "Green", value: "#86efac" },
+  { label: "Coral", value: "#fda4af" },
 ];
 
+const BUTTON_STYLES: { id: ButtonStyle; label: string; radius: string }[] = [
+  { id: "rounded", label: "Rounded", radius: "rounded-2xl" },
+  { id: "pill", label: "Pill", radius: "rounded-full" },
+  { id: "square", label: "Square", radius: "rounded-md" },
+];
+
+const buttonRadius = (s: ButtonStyle) =>
+  BUTTON_STYLES.find((b) => b.id === s)?.radius ?? "rounded-2xl";
+
+const sanitizeHandle = (v: string) =>
+  v
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "")
+    .slice(0, 30);
+
+// ─────────────────────────── Page ───────────────────────────
 function OnboardingPage() {
   const navigate = useNavigate();
-  const { profile } = useCabana();
+  const { profile, links, loading } = useCabana();
   const m = useCabanaMutations();
-  const [step, setStep] = useState(0);
-  const [type, setType] = useState<string>("");
-  const [theme, setTheme] = useState<CabanaTheme>("iridescent");
-  const [connected, setConnected] = useState<string[]>([]);
 
-  const next = () => setStep((s) => Math.min(STEPS.length - 1, s + 1));
+  const [step, setStep] = useState(0);
+  const [name, setName] = useState("");
+  const [handle, setHandle] = useState("");
+  const [headline, setHeadline] = useState("");
+  const [bio, setBio] = useState("");
+  const [theme, setTheme] = useState<CabanaTheme>("iridescent");
+  const [accentColor, setAccentColor] = useState("");
+  const [buttonStyle, setButtonStyle] = useState<ButtonStyle>("rounded");
+  const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const [drafts, setDrafts] = useState<Draft[]>(() =>
+    PLATFORMS.map((p) => ({ id: p.key, platform: p.key, value: "", customTitle: "" })),
+  );
+
+  const [savingIdentity, setSavingIdentity] = useState(false);
+  const [goingLive, setGoingLive] = useState(false);
+  const [handleError, setHandleError] = useState<string | null>(null);
+
+  const originalHandle = useRef<string>("");
+  const seeded = useRef(false);
+
+  // Seed once from the existing creator profile (created at signup).
+  useEffect(() => {
+    if (seeded.current || loading || !profile) return;
+    seeded.current = true;
+    setName(profile.name ?? "");
+    setHandle(profile.handle ?? "");
+    originalHandle.current = profile.handle ?? "";
+    setHeadline(profile.headline ?? "");
+    setBio(profile.bio ?? "");
+    if (profile.theme) setTheme(profile.theme);
+    setAccentColor(profile.accentColor ?? "");
+    setButtonStyle(profile.buttonStyle ?? "rounded");
+    if (profile.avatar && profile.avatar !== FALLBACK_AVATAR) setAvatarPreview(profile.avatar);
+
+    if (links.length > 0) {
+      const next = PLATFORMS.map<Draft>((p) => ({
+        id: p.key,
+        platform: p.key,
+        value: "",
+        customTitle: "",
+      }));
+      const customs: Draft[] = [];
+      for (const l of links) {
+        const platform = detectPlatform(l.url);
+        const display = l.url.replace(/^mailto:/i, "").replace(/^tel:/i, "") || l.url;
+        if (platform) {
+          const slot = next.find((d) => d.platform === platform);
+          if (slot && !slot.value) {
+            slot.value = display;
+            slot.existingId = l.id;
+            continue;
+          }
+        }
+        customs.push({
+          id: `c-${l.id}`,
+          platform: "custom",
+          value: l.url.replace(/^https?:\/\//i, ""),
+          customTitle: l.title,
+          existingId: l.id,
+        });
+      }
+      setDrafts([...next, ...customs]);
+    }
+  }, [loading, profile, links]);
+
+  const previewLinks = useMemo(
+    () => drafts.map(buildDraft).filter((x): x is NonNullable<typeof x> => x !== null),
+    [drafts],
+  );
+
+  const canContinue = step === 0 ? name.trim().length > 0 && handle.trim().length >= 2 : true;
+
+  const setDraft = (id: string, patch: Partial<Draft>) =>
+    setDrafts((ds) => ds.map((d) => (d.id === id ? { ...d, ...patch } : d)));
+  const addCustom = () =>
+    setDrafts((ds) => [
+      ...ds,
+      { id: crypto.randomUUID(), platform: "custom", value: "", customTitle: "" },
+    ]);
+  const removeDraft = (id: string) => {
+    const d = drafts.find((x) => x.id === id);
+    setDrafts((ds) => ds.filter((x) => x.id !== id));
+    if (d?.existingId) void m.removeLink(d.existingId);
+  };
+
+  const onPickAvatar = async (file: File | undefined) => {
+    if (!file || !file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) return;
+    setAvatarPreview(URL.createObjectURL(file));
+    const url = await m.uploadAvatar(file);
+    if (url) setAvatarPreview(url);
+  };
+
+  const saveIdentity = async () => {
+    setHandleError(null);
+    setSavingIdentity(true);
+    const patch: Record<string, string> = {
+      name: name.trim(),
+      bio: bio.trim(),
+      headline: headline.trim(),
+    };
+    if (handle !== originalHandle.current) patch.handle = handle.trim();
+    // wrap() resolves to null on failure (and shows a toast); undefined on success.
+    const res = await m.setProfile(patch);
+    setSavingIdentity(false);
+    if (res === null) {
+      if (patch.handle) setHandleError("That username may be taken. Try another.");
+      return false;
+    }
+    originalHandle.current = handle.trim();
+    return true;
+  };
+
+  const next = async () => {
+    if (step === 0) {
+      const ok = await saveIdentity();
+      if (!ok) return;
+    }
+    setStep((s) => Math.min(STEPS.length - 1, s + 1));
+  };
   const back = () => setStep((s) => Math.max(0, s - 1));
 
-  const toggleSocial = (id: string) =>
-    setConnected((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
+  const goLive = async () => {
+    setGoingLive(true);
+    // Reconcile links: update existing, create new (empty existing rows are
+    // removed inline via removeDraft when the user clears them).
+    const creates: { title: string; url: string; icon: LinkIconKey; featured?: boolean }[] = [];
+    const updates: Promise<unknown>[] = [];
+    for (const d of drafts) {
+      const built = buildDraft(d);
+      if (d.existingId) {
+        if (built) updates.push(m.updateLink(d.existingId, { title: built.title, url: built.url }));
+      } else if (built) {
+        creates.push(built);
+      }
+    }
+    await Promise.all(updates);
+    if (creates.length) await m.createLinks(creates);
+    const look: Partial<Pick<CabanaProfile, "theme" | "accentColor" | "buttonStyle">> = {};
+    if (theme !== profile?.theme) look.theme = theme;
+    if (accentColor !== (profile?.accentColor ?? "")) look.accentColor = accentColor;
+    if (buttonStyle !== (profile?.buttonStyle ?? "rounded")) look.buttonStyle = buttonStyle;
+    if (Object.keys(look).length) await m.setProfile(look);
+    setGoingLive(false);
+    if (typeof window !== "undefined") sessionStorage.setItem("cabana:justOnboarded", "1");
+    navigate({ to: "/dashboard" });
+  };
 
-  const canAdvance =
-    step === 0 || (step === 1 && !!type) || (step === 2 && !!theme) || step === 3 || step === 4;
+  const displayHandle = handle || "yourname";
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      {/* Floating gradient orbs */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="absolute -top-40 -left-20 w-[500px] h-[500px] rounded-full opacity-40 blur-3xl animate-float"
-          style={{ background: "var(--gradient-iridescent)" }}
-        />
-        <div
-          className="absolute top-1/3 -right-32 w-[400px] h-[400px] rounded-full opacity-30 blur-3xl animate-float"
-          style={{
-            background: "radial-gradient(circle, oklch(0.7 0.2 330), transparent 70%)",
-            animationDelay: "2s",
-          }}
-        />
-        <div
-          className="absolute -bottom-40 left-1/4 w-[450px] h-[450px] rounded-full opacity-25 blur-3xl animate-float"
-          style={{
-            background: "radial-gradient(circle, oklch(0.7 0.2 195), transparent 70%)",
-            animationDelay: "4s",
-          }}
-        />
-      </div>
+    <div className="relative flex min-h-[100dvh] flex-col overflow-x-hidden bg-background">
+      {/* subtle, non-intrusive backdrop */}
+      <div
+        className="pointer-events-none fixed inset-0 -z-10 opacity-60"
+        style={{
+          background:
+            "radial-gradient(120% 60% at 50% -10%, oklch(0.3 0.12 280 / 0.35), transparent 60%)",
+        }}
+      />
 
-      <div className="relative z-10 max-w-3xl mx-auto px-5 sm:px-8 py-10 min-h-screen flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-iridescent shadow-glow" />
-            <span className="font-display font-semibold tracking-tight">CABANA</span>
-          </div>
-          <div className="text-xs text-muted-foreground tabular-nums">
-            Step {step + 1} <span className="opacity-50">/ {STEPS.length}</span>
-          </div>
+      {/* Header + progress */}
+      <div className="mx-auto w-full max-w-lg px-5 pt-6">
+        <div className="flex items-center justify-between">
+          <span className="font-display text-sm font-semibold tracking-tight">CABANA</span>
+          <span className="text-[11px] tabular-nums text-muted-foreground">
+            {step + 1} <span className="opacity-50">/ {STEPS.length}</span>
+          </span>
         </div>
-
-        {/* Progress */}
-        <div className="flex gap-1.5 mb-12">
+        <div className="mt-3 flex gap-1.5">
           {STEPS.map((_, i) => (
-            <div key={i} className="h-1 flex-1 rounded-full overflow-hidden bg-foreground/10">
+            <div key={i} className="h-1 flex-1 overflow-hidden rounded-full bg-foreground/10">
               <motion.div
                 initial={false}
                 animate={{ width: i <= step ? "100%" : "0%" }}
-                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                 className="h-full bg-iridescent"
               />
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Step body */}
-        <div className="flex-1 flex flex-col">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={step}
-              initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: -20, filter: "blur(8px)" }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="flex-1"
-            >
-              {step === 0 && <Welcome />}
-              {step === 1 && <CreatorType value={type} onChange={setType} />}
-              {step === 2 && <ThemePicker value={theme} onChange={setTheme} />}
-              {step === 3 && <SocialConnect connected={connected} toggle={toggleSocial} />}
-              {step === 4 && <FinalPreview type={type} theme={theme} />}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+      {/* Step body */}
+      <div className="mx-auto w-full max-w-lg flex-1 px-5 pb-40 pt-7">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {step === 0 && (
+              <IdentityStep
+                name={name}
+                setName={setName}
+                handle={handle}
+                setHandle={(v) => setHandle(sanitizeHandle(v))}
+                handleError={handleError}
+                headline={headline}
+                setHeadline={setHeadline}
+                bio={bio}
+                setBio={setBio}
+                avatar={avatarPreview}
+                onPickAvatar={onPickAvatar}
+              />
+            )}
+            {step === 1 && (
+              <LinksStep
+                drafts={drafts}
+                setDraft={setDraft}
+                addCustom={addCustom}
+                removeDraft={removeDraft}
+              />
+            )}
+            {step === 2 && (
+              <LookStep
+                theme={theme}
+                setTheme={setTheme}
+                accentColor={accentColor}
+                setAccentColor={setAccentColor}
+                buttonStyle={buttonStyle}
+                setButtonStyle={setButtonStyle}
+              />
+            )}
+            {step === 3 && (
+              <PreviewStep
+                name={name}
+                handle={displayHandle}
+                headline={headline}
+                bio={bio}
+                avatar={avatarPreview}
+                theme={theme}
+                accentColor={accentColor}
+                buttonStyle={buttonStyle}
+                links={previewLinks}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
-        {/* Footer nav */}
-        <div className="flex items-center justify-between gap-3 pt-10 mt-6">
+      {/* Sticky footer — safe-area aware for mobile Safari */}
+      <div className="sticky bottom-0 z-20 border-t border-white/[0.08] bg-background/85 backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-3 px-5 pb-[calc(0.85rem+env(safe-area-inset-bottom))] pt-3.5">
           <button
             onClick={back}
             disabled={step === 0}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-full text-sm text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+            className="flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-0"
           >
-            <ArrowLeft className="w-4 h-4" /> Back
+            <ArrowLeft className="h-4 w-4" /> Back
           </button>
           {step < STEPS.length - 1 ? (
-            <button
-              onClick={next}
-              disabled={!canAdvance}
-              className="group flex items-center gap-2 px-6 py-3 rounded-full bg-foreground text-background font-medium text-sm shadow-glow disabled:opacity-40 disabled:shadow-none transition-all hover:scale-[1.02]"
-            >
-              Continue
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-            </button>
+            <div className="flex items-center gap-2">
+              {step === 1 && (
+                <button
+                  onClick={() => setStep((s) => s + 1)}
+                  className="min-h-11 rounded-full px-4 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Skip
+                </button>
+              )}
+              <button
+                onClick={() => void next()}
+                disabled={!canContinue || savingIdentity}
+                className="flex min-h-11 items-center gap-2 rounded-full bg-foreground px-6 text-sm font-medium text-background shadow-glow transition-all hover:scale-[1.02] disabled:opacity-40 disabled:shadow-none"
+              >
+                {savingIdentity ? "Saving…" : "Continue"}
+                {!savingIdentity && <ArrowRight className="h-4 w-4" />}
+              </button>
+            </div>
           ) : (
             <button
-              onClick={() => {
-                // Persist the one onboarding choice with a real backing column.
-                if (profile) m.setProfile({ theme });
-                navigate({ to: "/dashboard" });
-              }}
-              className="group flex items-center gap-2 px-6 py-3 rounded-full bg-iridescent text-background font-semibold text-sm shadow-glow transition-all hover:scale-[1.02]"
+              onClick={() => void goLive()}
+              disabled={goingLive}
+              className="flex min-h-11 items-center gap-2 rounded-full bg-iridescent px-6 text-sm font-semibold text-background shadow-glow transition-all hover:scale-[1.02] disabled:opacity-60"
             >
-              Enter CABANA{" "}
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              {goingLive ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {goingLive ? "Going live…" : "Enter CABANA"}
+              {!goingLive && <ArrowRight className="h-4 w-4" />}
             </button>
           )}
         </div>
@@ -201,384 +490,419 @@ function OnboardingPage() {
   );
 }
 
-/* ---------------- STEP COMPONENTS ---------------- */
+// ─────────────────────────── Steps ───────────────────────────
+function StepHead({ title, sub }: { title: string; sub: string }) {
+  return (
+    <div className="mb-6">
+      <h1 className="font-display text-[1.7rem] font-semibold leading-tight tracking-tight">
+        {title}
+      </h1>
+      <p className="mt-1.5 text-sm text-muted-foreground">{sub}</p>
+    </div>
+  );
+}
 
-function AvatarUpload() {
-  const { profile } = useCabana();
-  const m = useCabanaMutations();
+function Labeled({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+const inputCls =
+  "w-full rounded-2xl border border-white/[0.1] bg-white/[0.04] px-4 py-3.5 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/50 focus:border-primary/60 focus:bg-white/[0.06]";
+
+function IdentityStep({
+  name,
+  setName,
+  handle,
+  setHandle,
+  handleError,
+  headline,
+  setHeadline,
+  bio,
+  setBio,
+  avatar,
+  onPickAvatar,
+}: {
+  name: string;
+  setName: (v: string) => void;
+  handle: string;
+  setHandle: (v: string) => void;
+  handleError: string | null;
+  headline: string;
+  setHeadline: (v: string) => void;
+  bio: string;
+  setBio: (v: string) => void;
+  avatar: string;
+  onPickAvatar: (f: File | undefined) => void;
+}) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
-
-  const onPick = async (f: File | undefined) => {
-    if (!f) return;
-    if (!f.type.startsWith("image/")) return;
-    if (f.size > 5 * 1024 * 1024) return;
-    setBusy(true);
-    await m.uploadAvatar(f);
-    setBusy(false);
-  };
-
-  const avatar = profile?.avatar;
-
   return (
-    <div className="mb-8 flex items-center gap-5 glass rounded-3xl p-5">
-      <button
-        type="button"
-        onClick={() => fileRef.current?.click()}
-        className="relative shrink-0 group"
-        aria-label="Upload profile photo"
-      >
-        <div className="w-20 h-20 rounded-full p-[2px] bg-iridescent">
-          {avatar ? (
-            <img
-              src={avatar}
-              alt="Your avatar"
-              className="w-full h-full rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full rounded-full bg-background flex items-center justify-center">
-              <Camera className="w-6 h-6 text-muted-foreground" />
-            </div>
-          )}
-        </div>
-        <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full glass-strong flex items-center justify-center group-hover:scale-110 transition-transform">
-          {busy ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Upload className="w-3.5 h-3.5" />
-          )}
-        </div>
-      </button>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium">Profile photo</p>
-        <p className="text-[11px] text-muted-foreground mt-0.5">
-          This is the picture on your link page. PNG or JPG, up to 5MB.
-        </p>
+    <div>
+      <StepHead title="Create your CABANA" sub="Add the basics. You can change everything later." />
+
+      <div className="mb-6 flex items-center gap-4">
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="mt-2 text-[11px] uppercase tracking-[0.2em] text-foreground/80 hover:text-foreground transition-colors"
+          className="group relative shrink-0"
+          aria-label="Upload profile photo"
         >
-          {avatar ? "Replace photo" : "Upload photo"}
+          <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-iridescent p-[2px]">
+            <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-background">
+              {avatar ? (
+                <img src={avatar} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <Camera className="h-6 w-6 text-muted-foreground" />
+              )}
+            </span>
+          </span>
+          <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full glass-strong transition-transform group-hover:scale-110">
+            {busy ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Upload className="h-3.5 w-3.5" />
+            )}
+          </span>
         </button>
-      </div>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => onPick(e.target.files?.[0] ?? undefined)}
-      />
-    </div>
-  );
-}
-
-function Welcome() {
-  return (
-    <div className="text-center pt-8 sm:pt-16">
-      <motion.div
-        initial={{ scale: 0.5, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-        className="inline-flex items-center gap-2 glass rounded-full px-3 py-1.5 mb-8"
-      >
-        <Sparkles
-          className="w-3.5 h-3.5 text-iridescent"
-          style={{ color: "oklch(0.78 0.18 280)" }}
-        />
-        <span className="text-xs uppercase tracking-[0.3em]">Welcome</span>
-      </motion.div>
-      <h1 className="text-5xl sm:text-7xl font-semibold tracking-tighter leading-[0.95]">
-        Build your <br />
-        <span className="text-iridescent italic font-light">creator empire.</span>
-      </h1>
-      <p className="mt-6 text-muted-foreground max-w-md mx-auto leading-relaxed">
-        A few quiet questions. Your brand, storefront and landing page — crafted by AI, signed by
-        you.
-      </p>
-      <div className="relative mt-12 mx-auto w-64 h-64">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-          className="absolute inset-0 rounded-full opacity-40 blur-2xl bg-iridescent"
-        />
-        <motion.div
-          animate={{ scale: [1, 1.05, 1] }}
-          transition={{ duration: 4, repeat: Infinity }}
-          className="absolute inset-8 rounded-full bg-iridescent shadow-glow"
-        />
-        <div className="absolute inset-12 rounded-full glass-strong flex items-center justify-center">
-          <Sparkles className="w-10 h-10" style={{ color: "oklch(0.85 0.15 280)" }} />
+        <div className="min-w-0">
+          <p className="text-sm font-medium">Profile photo</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">PNG or JPG, up to 5MB. Optional.</p>
         </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={async (e) => {
+            setBusy(true);
+            await onPickAvatar(e.target.files?.[0] ?? undefined);
+            setBusy(false);
+          }}
+        />
       </div>
-    </div>
-  );
-}
 
-function StepHeading({ tag, title, sub }: { tag: string; title: string; sub: string }) {
-  return (
-    <div className="mb-10">
-      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-3">{tag}</p>
-      <h2 className="text-3xl sm:text-5xl font-semibold tracking-tighter leading-tight">{title}</h2>
-      <p className="text-muted-foreground mt-3 max-w-md">{sub}</p>
-    </div>
-  );
-}
-
-function CreatorType({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div>
-      <StepHeading
-        tag="01 — Identity"
-        title="What kind of creator are you?"
-        sub="Pick the closest fit. We'll tune everything around it."
-      />
-      <AvatarUpload />
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {creatorTypes.map((c, i) => {
-          const Icon = c.icon;
-          const active = value === c.id;
-          return (
-            <motion.button
-              key={c.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => onChange(c.id)}
-              className={`relative group text-left p-5 rounded-2xl transition-all overflow-hidden ${
-                active ? "glass-strong shadow-glow" : "glass hover:bg-foreground/5"
-              }`}
-            >
-              {active && (
-                <motion.div
-                  layoutId="type-glow"
-                  className="absolute inset-0 -z-10 opacity-50 blur-xl bg-iridescent"
-                />
-              )}
-              <Icon
-                className="w-5 h-5 mb-3"
-                style={{ color: active ? "oklch(0.85 0.15 280)" : undefined }}
-              />
-              <p className="font-medium text-sm">{c.label}</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">{c.hint}</p>
-              {active && (
-                <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center">
-                  <Check className="w-3 h-3" />
-                </div>
-              )}
-            </motion.button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ThemePicker({
-  value,
-  onChange,
-}: {
-  value: CabanaTheme;
-  onChange: (v: CabanaTheme) => void;
-}) {
-  return (
-    <div>
-      <StepHeading
-        tag="02 — Theme"
-        title="Choose your aesthetic."
-        sub="Don't overthink it. Everything is editable later."
-      />
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {themes.map((t, i) => {
-          const active = value === t.id;
-          return (
-            <motion.button
-              key={t.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => onChange(t.id)}
-              className={`relative rounded-2xl overflow-hidden aspect-[4/5] group transition-all ${
-                active
-                  ? "ring-2 ring-foreground shadow-glow"
-                  : "ring-1 ring-border hover:ring-foreground/40"
-              }`}
-            >
-              <div className="absolute inset-0" style={{ background: t.swatch }} />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
-                <span className="text-xs font-medium text-white drop-shadow">{t.label}</span>
-                {active && (
-                  <div className="w-5 h-5 rounded-full bg-white text-black flex items-center justify-center">
-                    <Check className="w-3 h-3" />
-                  </div>
-                )}
-              </div>
-            </motion.button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function SocialConnect({
-  connected,
-  toggle,
-}: {
-  connected: string[];
-  toggle: (id: string) => void;
-}) {
-  const [website, setWebsite] = useState("");
-  return (
-    <div>
-      <StepHeading
-        tag="03 — Connect"
-        title="Import your world."
-        sub="We'll pull your photos, stats and links — only what you allow."
-      />
-      <div className="space-y-2.5">
-        {socials.map((s, i) => {
-          const isOn = connected.includes(s.id);
-          const Icon = s.icon;
-          return (
-            <motion.button
-              key={s.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.06 }}
-              onClick={() => toggle(s.id)}
-              className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all ${
-                isOn ? "glass-strong" : "glass hover:bg-foreground/5"
-              }`}
-            >
-              <div className="w-10 h-10 rounded-xl glass flex items-center justify-center shrink-0">
-                <Icon className="w-4 h-4" style={{ color: s.color }} />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium">{s.label}</p>
-                <p className="text-[11px] text-muted-foreground">
-                  {isOn ? "Connected — handle, posts, stats" : "Tap to connect securely"}
-                </p>
-              </div>
-              <div
-                className={`text-xs px-3 py-1.5 rounded-full font-medium transition-all ${
-                  isOn ? "bg-foreground text-background" : "glass"
-                }`}
-              >
-                {isOn ? "Connected" : "Connect"}
-              </div>
-            </motion.button>
-          );
-        })}
-
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: socials.length * 0.06 }}
-          className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all ${
-            website ? "glass-strong" : "glass"
-          }`}
-        >
-          <div className="w-10 h-10 rounded-xl glass flex items-center justify-center shrink-0">
-            <Globe className="w-4 h-4" style={{ color: "oklch(0.82 0.14 230)" }} />
-          </div>
-          <div className="flex-1 text-left min-w-0">
-            <p className="text-sm font-medium">Website</p>
+      <div className="space-y-4">
+        <Labeled label="Display name">
+          <input
+            className={inputCls}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Your name"
+            autoComplete="name"
+          />
+        </Labeled>
+        <Labeled label="Username">
+          <div className="flex items-center gap-2 rounded-2xl border border-white/[0.1] bg-white/[0.04] px-4 focus-within:border-primary/60">
+            <span className="shrink-0 text-sm text-muted-foreground">cabanagrp.com/</span>
             <input
-              type="url"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              placeholder="https://yourdomain.com"
-              className="w-full mt-0.5 bg-transparent border-0 outline-none text-[11px] text-muted-foreground placeholder:text-muted-foreground/50 focus:text-foreground transition-colors"
+              className="w-full bg-transparent py-3.5 text-base outline-none placeholder:text-muted-foreground/50"
+              value={handle}
+              onChange={(e) => setHandle(e.target.value)}
+              placeholder="yourname"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
             />
           </div>
-          <div
-            className={`text-xs px-3 py-1.5 rounded-full font-medium transition-all ${
-              website ? "bg-foreground text-background" : "glass"
-            }`}
-          >
-            {website ? "Added" : "Add link"}
-          </div>
-        </motion.div>
+          {handleError ? (
+            <span className="mt-1.5 block text-xs text-destructive">{handleError}</span>
+          ) : null}
+        </Labeled>
+        <Labeled label="Headline">
+          <input
+            className={inputCls}
+            value={headline}
+            onChange={(e) => setHeadline(e.target.value)}
+            placeholder="e.g. Creator · Photographer (optional)"
+            maxLength={80}
+          />
+        </Labeled>
+        <Labeled label="Short bio">
+          <textarea
+            className={`${inputCls} min-h-[92px] resize-none`}
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            placeholder="A line about you (optional)"
+            maxLength={200}
+          />
+        </Labeled>
       </div>
-      <p className="text-[11px] text-muted-foreground text-center mt-6">
-        Skip if you'd rather connect later.
-      </p>
     </div>
   );
 }
 
-function FinalPreview({ type, theme }: { type: string; theme: string }) {
+function LinksStep({
+  drafts,
+  setDraft,
+  addCustom,
+  removeDraft,
+}: {
+  drafts: Draft[];
+  setDraft: (id: string, patch: Partial<Draft>) => void;
+  addCustom: () => void;
+  removeDraft: (id: string) => void;
+}) {
   return (
     <div>
-      <StepHeading
-        tag="04 — Preview"
-        title="Meet your CABANA."
-        sub="A live preview of your public page. Tap anything to refine."
-      />
-      <div className="flex justify-center">
-        <motion.div
-          initial={{ y: 30, opacity: 0, rotateX: 10 }}
-          animate={{ y: 0, opacity: 1, rotateX: 0 }}
-          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-          style={{ perspective: 1200 }}
-          className="relative"
-        >
-          <div className="absolute -inset-10 opacity-50 blur-3xl bg-iridescent rounded-full" />
-          <div className="relative w-[280px] h-[560px] rounded-[44px] glass-strong p-2 shadow-luxury">
-            <div className="w-full h-full rounded-[36px] overflow-hidden relative bg-background">
-              {/* Hero gradient */}
-              <div
-                className="absolute inset-0 opacity-80"
-                style={{
-                  background:
-                    theme === "neon"
-                      ? "linear-gradient(160deg, #ff006e22, #8338ec33, transparent 60%)"
-                      : "linear-gradient(160deg, oklch(0.3 0.15 280 / 0.6), transparent 60%)",
-                }}
-              />
-              <div className="relative p-5 flex flex-col h-full">
-                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span>cabana.co/you</span>
-                  <span className="w-1.5 h-1.5 rounded-full animate-pulse-glow bg-iridescent" />
-                </div>
-                <div className="flex flex-col items-center mt-6">
-                  <div className="relative">
-                    <div className="absolute -inset-1.5 rounded-full bg-iridescent blur-md opacity-70" />
-                    <div className="relative w-20 h-20 rounded-full bg-iridescent" />
-                  </div>
-                  <h3 className="font-display text-lg mt-3">Your name</h3>
-                  <span className="text-[10px] text-muted-foreground capitalize">
-                    {type || "creator"} · verified
-                  </span>
-                  <p className="text-[11px] text-center text-muted-foreground mt-2 leading-relaxed px-3">
-                    Your bio appears here.
-                  </p>
-                </div>
-                <div className="mt-4 space-y-1.5">
-                  {["VIP Access", "Latest Drop", "Storefront", "Bookings"].map((l, i) => (
-                    <motion.div
-                      key={l}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 + i * 0.1 }}
-                      className={`glass rounded-xl px-3 py-2.5 text-[11px] flex items-center justify-between ${i === 0 ? "ring-1 ring-foreground/30" : ""}`}
-                    >
-                      <span>{l}</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </motion.div>
-                  ))}
-                </div>
-                <div className="mt-auto pt-3 text-center">
-                  <span className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">
-                    {theme.replace("-", " ")}
-                  </span>
-                </div>
+      <StepHead title="Add your first links" sub="Only what you want. Skip any — add more later." />
+      <div className="space-y-2.5">
+        {drafts.map((d) => {
+          const platform =
+            d.platform === "custom" ? null : PLATFORMS.find((p) => p.key === d.platform)!;
+          const iconKey: LinkIconKey = platform ? platform.icon : "globe";
+          const Icon = LINK_ICONS[iconKey];
+          return (
+            <div
+              key={d.id}
+              className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-2.5 focus-within:border-primary/50"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl glass-strong">
+                <Icon className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                {platform ? (
+                  <p className="text-xs font-medium">{platform.label}</p>
+                ) : (
+                  <input
+                    className="w-full bg-transparent text-xs font-medium outline-none placeholder:text-muted-foreground/60"
+                    value={d.customTitle}
+                    onChange={(e) => setDraft(d.id, { customTitle: e.target.value })}
+                    placeholder="Link title"
+                  />
+                )}
+                <input
+                  className="w-full bg-transparent py-0.5 text-sm outline-none placeholder:text-muted-foreground/45"
+                  value={d.value}
+                  onChange={(e) => setDraft(d.id, { value: e.target.value })}
+                  placeholder={platform ? platform.placeholder : "https://…"}
+                  inputMode={
+                    d.platform === "phone" ? "tel" : d.platform === "email" ? "email" : "url"
+                  }
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
               </div>
+              {d.platform === "custom" || d.existingId ? (
+                <button
+                  type="button"
+                  onClick={() => removeDraft(d.id)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                  aria-label="Remove link"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
             </div>
+          );
+        })}
+      </div>
+      <button
+        type="button"
+        onClick={addCustom}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/[0.14] py-3 text-sm text-muted-foreground transition-colors hover:border-white/25 hover:text-foreground"
+      >
+        <Plus className="h-4 w-4" /> Add another link
+      </button>
+    </div>
+  );
+}
+
+function LookStep({
+  theme,
+  setTheme,
+  accentColor,
+  setAccentColor,
+  buttonStyle,
+  setButtonStyle,
+}: {
+  theme: CabanaTheme;
+  setTheme: (v: CabanaTheme) => void;
+  accentColor: string;
+  setAccentColor: (v: string) => void;
+  buttonStyle: ButtonStyle;
+  setButtonStyle: (v: ButtonStyle) => void;
+}) {
+  return (
+    <div>
+      <StepHead title="Pick a look" sub="Choose a vibe. You can restyle anytime." />
+
+      <span className="mb-2.5 block text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        Theme
+      </span>
+      <div className="grid grid-cols-2 gap-3">
+        {THEMES.map((t) => {
+          const active = theme === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTheme(t.id)}
+              className={`relative overflow-hidden rounded-2xl p-3 text-left transition-all ${
+                active ? "ring-2 ring-foreground" : "ring-1 ring-white/10 hover:ring-white/25"
+              }`}
+            >
+              <span className="block h-20 w-full rounded-xl" style={{ background: t.swatch }} />
+              <span className="mt-2.5 flex items-center justify-between">
+                <span className="text-sm font-medium">{t.label}</span>
+                {active ? (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-background">
+                    <Check className="h-3 w-3" />
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <span className="mb-2.5 mt-6 block text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        Accent color
+      </span>
+      <div className="flex flex-wrap gap-2.5">
+        {ACCENTS.map((a) => {
+          const active = accentColor === a.value;
+          return (
+            <button
+              key={a.value || "default"}
+              type="button"
+              onClick={() => setAccentColor(a.value)}
+              aria-label={a.label}
+              title={a.label}
+              className={`flex h-10 w-10 items-center justify-center rounded-full transition-all ${
+                active
+                  ? "ring-2 ring-foreground ring-offset-2 ring-offset-background"
+                  : "ring-1 ring-white/15"
+              }`}
+              style={
+                a.value
+                  ? { background: a.value }
+                  : {
+                      background:
+                        "var(--gradient-iridescent, linear-gradient(135deg,#8be9ff,#c084fc,#f0abfc))",
+                    }
+              }
+            >
+              {active ? <Check className="h-4 w-4 text-black/70" /> : null}
+            </button>
+          );
+        })}
+      </div>
+
+      <span className="mb-2.5 mt-6 block text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        Button style
+      </span>
+      <div className="grid grid-cols-3 gap-2.5">
+        {BUTTON_STYLES.map((b) => {
+          const active = buttonStyle === b.id;
+          return (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => setButtonStyle(b.id)}
+              className={`flex flex-col items-center gap-2 rounded-2xl p-3 transition-all ${
+                active ? "ring-2 ring-foreground" : "ring-1 ring-white/10 hover:ring-white/25"
+              }`}
+            >
+              <span className={`h-7 w-full border border-white/25 bg-white/10 ${b.radius}`} />
+              <span className="text-xs">{b.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PreviewStep({
+  name,
+  handle,
+  headline,
+  bio,
+  avatar,
+  theme,
+  accentColor,
+  buttonStyle,
+  links,
+}: {
+  name: string;
+  handle: string;
+  headline: string;
+  bio: string;
+  avatar: string;
+  theme: CabanaTheme;
+  accentColor: string;
+  buttonStyle: ButtonStyle;
+  links: { title: string; url: string; icon: LinkIconKey }[];
+}) {
+  const initial = (name || handle).charAt(0).toUpperCase();
+  const radius = buttonRadius(buttonStyle);
+  const iconColor = accentColor || undefined; // undefined → CSS class default
+  return (
+    <div>
+      <StepHead
+        title="You're live"
+        sub="This is your public page. Tweak anything from the dashboard."
+      />
+      <div
+        data-cabana-theme={theme}
+        className="mx-auto max-w-sm overflow-hidden rounded-[28px] border border-white/[0.1] bg-[oklch(0.14_0.015_280/0.6)] shadow-luxury"
+      >
+        <div
+          className="h-24 bg-iridescent opacity-80"
+          style={accentColor ? { background: accentColor } : undefined}
+        />
+        <div className="px-5 pb-6">
+          <span className="-mt-10 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-iridescent text-xl font-semibold text-background ring-4 ring-background">
+            {avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" /> : initial}
+          </span>
+          <h2 className="mt-3 font-display text-xl font-semibold tracking-tight">
+            {name || `@${handle}`}
+          </h2>
+          {headline ? (
+            <p
+              className="mt-0.5 text-sm font-medium"
+              style={accentColor ? { color: accentColor } : undefined}
+            >
+              {headline}
+            </p>
+          ) : null}
+          <p className="text-sm text-muted-foreground">@{handle}</p>
+          {bio ? (
+            <p className="mt-3 whitespace-pre-wrap text-sm text-foreground/85">{bio}</p>
+          ) : null}
+
+          <div className="mt-5 space-y-2">
+            {links.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/[0.14] px-4 py-6 text-center text-sm text-muted-foreground">
+                Add your first link anytime.
+              </div>
+            ) : (
+              links.map((l, i) => {
+                const Icon = LINK_ICONS[l.icon] ?? Link2;
+                return (
+                  <div
+                    key={`${l.title}-${i}`}
+                    className={`flex items-center gap-3 border border-white/[0.08] bg-white/[0.04] px-4 py-3 ${radius}`}
+                  >
+                    <Icon
+                      className="h-4 w-4 shrink-0 text-primary"
+                      style={iconColor ? { color: iconColor } : undefined}
+                    />
+                    <span className="truncate text-sm font-medium">{l.title}</span>
+                  </div>
+                );
+              })
+            )}
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

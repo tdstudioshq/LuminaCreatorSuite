@@ -21,7 +21,14 @@ import {
   LINK_ICONS,
   type CabanaLink,
   type CabanaProduct,
+  type ButtonStyle,
 } from "@/lib/cabana-store";
+
+const BUTTON_RADIUS: Record<ButtonStyle, string> = {
+  rounded: "rounded-2xl",
+  pill: "rounded-full",
+  square: "rounded-md",
+};
 import { trackPageView, trackLinkClick, trackProductClick } from "@/lib/cabana-analytics";
 import { comingSoon } from "@/lib/coming-soon";
 import { useFollow } from "@/lib/use-relationships";
@@ -183,6 +190,8 @@ export function CreatorProfile({ username }: { username: string }) {
             profileId={profileId}
             creatorName={profile.name}
             creatorHandle={handle}
+            accentColor={profile.accentColor}
+            buttonStyle={profile.buttonStyle}
           />
         }
       >
@@ -315,6 +324,14 @@ export function CreatorProfile({ username }: { username: string }) {
                 <h1 className="font-display text-[2rem] font-semibold leading-none tracking-[-0.04em] sm:text-[2.4rem]">
                   {profile.name || `@${handle}`}
                 </h1>
+                {profile.headline ? (
+                  <p
+                    className="mt-1.5 text-[15px] font-medium text-foreground/90"
+                    style={profile.accentColor ? { color: profile.accentColor } : undefined}
+                  >
+                    {profile.headline}
+                  </p>
+                ) : null}
                 <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
                   <span>@{handle}</span>
                   {relationship.signedIn && !relationship.loading ? (
@@ -620,23 +637,45 @@ function ProfileRightRail({
   profileId,
   creatorName,
   creatorHandle,
+  accentColor,
+  buttonStyle,
 }: {
   links: CabanaLink[];
   profileId: string | undefined;
   creatorName: string;
   creatorHandle: string;
+  accentColor: string;
+  buttonStyle: ButtonStyle;
 }) {
   return (
     <SocialRightRail
       searchPlaceholder={`Search ${creatorName || creatorHandle} posts`}
       contextContent={
-        links.length > 0 ? <LinksCard links={links} profileId={profileId} /> : undefined
+        links.length > 0 ? (
+          <LinksCard
+            links={links}
+            profileId={profileId}
+            accentColor={accentColor}
+            buttonStyle={buttonStyle}
+          />
+        ) : undefined
       }
     />
   );
 }
 
-function LinksCard({ links, profileId }: { links: CabanaLink[]; profileId: string | undefined }) {
+function LinksCard({
+  links,
+  profileId,
+  accentColor,
+  buttonStyle,
+}: {
+  links: CabanaLink[];
+  profileId: string | undefined;
+  accentColor: string;
+  buttonStyle: ButtonStyle;
+}) {
+  const rowRadius = BUTTON_RADIUS[buttonStyle] ?? "rounded-2xl";
   return (
     <section className="overflow-hidden rounded-[28px] border border-white/[0.09] bg-[linear-gradient(150deg,oklch(0.19_0.02_280/0.68),oklch(0.14_0.015_280/0.58))] p-5 shadow-[0_24px_70px_-50px_oklch(0_0_0/0.95),inset_0_1px_0_oklch(1_0_0/0.08)]">
       <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-primary">
@@ -646,7 +685,9 @@ function LinksCard({ links, profileId }: { links: CabanaLink[]; profileId: strin
       <div className="space-y-2">
         {links.map((l, i) => {
           const Icon = LINK_ICONS[l.icon] ?? LINK_ICONS.globe;
-          const accent = LINK_ACCENTS[i % LINK_ACCENTS.length];
+          // A creator-set accent overrides the rotating palette; older profiles
+          // (accentColor === "") keep the varied per-link palette.
+          const accent = accentColor || LINK_ACCENTS[i % LINK_ACCENTS.length];
           return (
             <a
               key={l.id}
@@ -656,7 +697,7 @@ function LinksCard({ links, profileId }: { links: CabanaLink[]; profileId: strin
               onClick={() =>
                 profileId && trackLinkClick(profileId, l.id, { url: l.url, title: l.title })
               }
-              className="group flex items-center gap-3 rounded-2xl p-2.5 outline-none transition-colors hover:bg-foreground/5 focus-visible:ring-2 focus-visible:ring-ring"
+              className={`group flex items-center gap-3 ${rowRadius} p-2.5 outline-none transition-colors hover:bg-foreground/5 focus-visible:ring-2 focus-visible:ring-ring`}
             >
               <span
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl glass-strong"

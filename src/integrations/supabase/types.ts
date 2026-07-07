@@ -358,11 +358,14 @@ export type Database = {
       };
       creator_profiles: {
         Row: {
+          accent_color: string;
           avatar_url: string | null;
           banner_url: string | null;
           bio: string;
+          button_style: string;
           created_at: string;
           handle: string;
+          headline: string;
           id: string;
           name: string;
           plan: string;
@@ -371,11 +374,14 @@ export type Database = {
           user_id: string | null;
         };
         Insert: {
+          accent_color?: string;
           avatar_url?: string | null;
           banner_url?: string | null;
           bio?: string;
+          button_style?: string;
           created_at?: string;
           handle: string;
+          headline?: string;
           id?: string;
           name?: string;
           plan?: string;
@@ -384,11 +390,14 @@ export type Database = {
           user_id?: string | null;
         };
         Update: {
+          accent_color?: string;
           avatar_url?: string | null;
           banner_url?: string | null;
           bio?: string;
+          button_style?: string;
           created_at?: string;
           handle?: string;
+          headline?: string;
           id?: string;
           name?: string;
           plan?: string;

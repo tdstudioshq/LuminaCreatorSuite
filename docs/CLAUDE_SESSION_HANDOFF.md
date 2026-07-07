@@ -90,6 +90,32 @@ UI/tooling-only session; **no Supabase schema or data touched**, no phase work.
      Theme · Connect · Preview (Preview retagged "04 — Preview"). `onboarding.tsx`.
   Fixes 2 & 3 need a **production redeploy** (built, `.vercel/output` ready) — also blocked pending
   Tyler's authorization. Fix 1 is a cloud-SQL change (no redeploy).
+- **Profile-first onboarding + customization fields (July 7, uncommitted):** rewrote
+  `/onboarding` into a profile-first builder — Identity (avatar · display name · username ·
+  headline · bio) → Links (real manual inputs for Instagram/TikTok/YouTube/X/Website/Store/Email/
+  Phone + custom; no fake "Connect") → Look (theme preset · accent color · button style) →
+  Preview (real, from entered data; empty-state when no links; no fake VIP/Drop buttons) → dashboard
+  "Your CABANA is live" continuation banner. Light copy throughout; mobile-first (safe-area sticky
+  footer, 16px inputs). Removed the old empire/decorative welcome + category picker + AI generation.
+- **Two migrations applied to cloud + local (approved):**
+  `20260527000000_profiles_select_grant.sql` (fixes the pre-existing dashboard "Securing your
+  studio…" hang — authenticated `profiles` own-read was 403 for lack of a grant) and
+  `20260528000000_profile_customization.sql` (`creator_profiles.headline`/`accent_color`/
+  `button_style`, defaulted so older profiles keep working). Wired through `cabana-store`
+  (types/mapper/`setProfile`), onboarding, `$username` public page, `DashHome`, and `ProfileEditor`
+  (edit later). Types regenerated; behavioral test `supabase/tests/profile_customization.sql` added
+  + wired into `db-validate.sh`. New link icons `mail`/`phone`/`x` + a batch `createLinks` mutation.
+- **Verified end-to-end on local** (mobile viewport, DB-confirmed): identity/headline/theme/accent/
+  button/links all persist (e.g. `headline='Photographer & Visual Artist'`, `accent_color='#f9a8d4'`,
+  `button_style='pill'`, `theme='rose'`); preview + public page render headline (accent-colored),
+  accent, pill buttons; grant fix confirmed (authenticated own-read 200, anon 401). No cloud test
+  data — used throwaway local users (deleted) and restored `.env`. `legacy_reel` NOT dropped.
+- **Deployed to production** (`cabanagrp.com`, prebuilt, cloud-pointed bundle). Post-deploy verified:
+  login chunk + "Continue with Google" served; Google sign-in 302 → accounts.google.com (live
+  browser); deployed onboarding chunk contains the new flow ("Create your CABANA" / "Add your first
+  links" / "Pick a look" / "Accent color" / "Button style" / "Headline"); public-page chunk carries
+  `accentColor`/`headline`. Dashboard grant fix is DB-side (applied to cloud, functionally verified
+  on local) — final signed-in confirmation is Tyler's.
 - **Gate:** lint 0 errors (6 expected shadcn react-refresh warnings) · `tsc --noEmit` clean ·
   332/332 tests pass · `bun run build` succeeds. Changes left uncommitted alongside Tyler's staged
   `thetejeda` work.

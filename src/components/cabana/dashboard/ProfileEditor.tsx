@@ -2,7 +2,12 @@ import { motion } from "framer-motion";
 import { Camera, Check, Eye, ImageIcon, Loader2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useRef } from "react";
-import { useCabana, useCabanaMutations, type CabanaTheme } from "@/lib/cabana-store";
+import {
+  useCabana,
+  useCabanaMutations,
+  type CabanaTheme,
+  type ButtonStyle,
+} from "@/lib/cabana-store";
 import { useDebouncedField } from "@/hooks/use-debounced-callback";
 
 const themes: { id: CabanaTheme; name: string; gradient: string }[] = [
@@ -14,6 +19,22 @@ const themes: { id: CabanaTheme; name: string; gradient: string }[] = [
   { id: "midnight", name: "Midnight", gradient: "linear-gradient(135deg,#0f172a,#312e81,#0f172a)" },
   { id: "rose", name: "Rose Gold", gradient: "linear-gradient(135deg,#fda4af,#fcd34d,#f9a8d4)" },
   { id: "chrome", name: "Chrome", gradient: "linear-gradient(135deg,#e5e7eb,#94a3b8,#e5e7eb)" },
+];
+
+const accents: { label: string; value: string }[] = [
+  { label: "Theme default", value: "" },
+  { label: "Violet", value: "#c084fc" },
+  { label: "Cyan", value: "#8be9ff" },
+  { label: "Pink", value: "#f9a8d4" },
+  { label: "Gold", value: "#fcd34d" },
+  { label: "Green", value: "#86efac" },
+  { label: "Coral", value: "#fda4af" },
+];
+
+const buttonStyles: { id: ButtonStyle; label: string; radius: string }[] = [
+  { id: "rounded", label: "Rounded", radius: "rounded-2xl" },
+  { id: "pill", label: "Pill", radius: "rounded-full" },
+  { id: "square", label: "Square", radius: "rounded-md" },
 ];
 
 export function ProfileEditor() {
@@ -144,33 +165,99 @@ export function ProfileEditor() {
                 prefix="@"
               />
             </div>
+            <Field
+              label="Headline"
+              value={profile.headline}
+              onChange={(v) => m.setProfile({ headline: v })}
+            />
             <BioField value={profile.bio} onChange={(v) => m.setProfile({ bio: v })} />
           </div>
 
-          <div className="glass rounded-3xl p-6">
-            <h3 className="font-display font-semibold mb-4">Theme</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {themes.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => m.setProfile({ theme: t.id })}
-                  className={`relative aspect-square rounded-2xl overflow-hidden border-2 transition-all ${
-                    profile.theme === t.id
-                      ? "border-primary scale-95"
-                      : "border-transparent hover:scale-105"
-                  }`}
-                  style={{ background: t.gradient }}
-                >
-                  {profile.theme === t.id && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                      <Check className="w-6 h-6 text-white" />
+          <div className="glass rounded-3xl p-6 space-y-6">
+            <div>
+              <h3 className="font-display font-semibold mb-4">Theme</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {themes.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => m.setProfile({ theme: t.id })}
+                    className={`relative aspect-square rounded-2xl overflow-hidden border-2 transition-all ${
+                      profile.theme === t.id
+                        ? "border-primary scale-95"
+                        : "border-transparent hover:scale-105"
+                    }`}
+                    style={{ background: t.gradient }}
+                  >
+                    {profile.theme === t.id && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <Check className="w-6 h-6 text-white" />
+                      </div>
+                    )}
+                    <div className="absolute bottom-1 left-2 text-[10px] font-medium text-white drop-shadow">
+                      {t.name}
                     </div>
-                  )}
-                  <div className="absolute bottom-1 left-2 text-[10px] font-medium text-white drop-shadow">
-                    {t.name}
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-display font-semibold mb-3">Accent color</h3>
+              <div className="flex flex-wrap gap-2.5">
+                {accents.map((a) => {
+                  const active = (profile.accentColor || "") === a.value;
+                  return (
+                    <button
+                      key={a.value || "default"}
+                      type="button"
+                      onClick={() => m.setProfile({ accentColor: a.value })}
+                      aria-label={a.label}
+                      title={a.label}
+                      className={`flex h-9 w-9 items-center justify-center rounded-full transition-all ${
+                        active
+                          ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                          : "ring-1 ring-border"
+                      }`}
+                      style={
+                        a.value
+                          ? { background: a.value }
+                          : {
+                              background:
+                                "var(--gradient-iridescent, linear-gradient(135deg,#8be9ff,#c084fc,#f0abfc))",
+                            }
+                      }
+                    >
+                      {active ? <Check className="h-4 w-4 text-black/70" /> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-display font-semibold mb-3">Button style</h3>
+              <div className="grid grid-cols-3 gap-2.5">
+                {buttonStyles.map((b) => {
+                  const active = (profile.buttonStyle || "rounded") === b.id;
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => m.setProfile({ buttonStyle: b.id })}
+                      className={`flex flex-col items-center gap-2 rounded-2xl p-3 transition-all ${
+                        active
+                          ? "ring-2 ring-primary"
+                          : "ring-1 ring-border hover:ring-foreground/30"
+                      }`}
+                    >
+                      <span
+                        className={`h-6 w-full border border-foreground/25 bg-foreground/10 ${b.radius}`}
+                      />
+                      <span className="text-xs">{b.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

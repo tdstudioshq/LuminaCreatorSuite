@@ -20,6 +20,9 @@ import {
   Star,
   Play,
   Sparkles,
+  Mail,
+  Phone,
+  Twitter,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -36,9 +39,13 @@ export type LinkIconKey =
   | "globe"
   | "star"
   | "play"
-  | "sparkles";
+  | "sparkles"
+  | "mail"
+  | "phone"
+  | "x";
 
 export type CabanaTheme = "iridescent" | "midnight" | "rose" | "chrome";
+export type ButtonStyle = "rounded" | "pill" | "square";
 
 export type CabanaProfile = {
   id: string;
@@ -49,6 +56,12 @@ export type CabanaProfile = {
   banner: string;
   theme: CabanaTheme;
   plan: string;
+  /** Short title/tagline under the display name. "" when unset (older profiles). */
+  headline: string;
+  /** Optional brand accent hex ('#rrggbb'); "" = fall back to the theme default. */
+  accentColor: string;
+  /** Link/button shape. Defaults to "rounded". */
+  buttonStyle: ButtonStyle;
 };
 
 export type CabanaLink = {
@@ -93,6 +106,9 @@ export const LINK_ICONS: Record<LinkIconKey, typeof Crown> = {
   star: Star,
   play: Play,
   sparkles: Sparkles,
+  mail: Mail,
+  phone: Phone,
+  x: Twitter,
 };
 export const ICON_OPTIONS: LinkIconKey[] = [
   "crown",
@@ -107,9 +123,12 @@ export const ICON_OPTIONS: LinkIconKey[] = [
   "star",
   "play",
   "sparkles",
+  "mail",
+  "phone",
+  "x",
 ];
 
-const FALLBACK_AVATAR =
+export const FALLBACK_AVATAR =
   "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=600&q=80";
 
 // ─────────────────────── Row mappers ───────────────────────
@@ -123,6 +142,11 @@ type CreatorRow = {
   banner_url: string | null;
   theme: string;
   plan: string;
+  // Added in 20260528000000_profile_customization; nullable-guarded for rows
+  // read before a client refresh / any projection that omits them.
+  headline?: string | null;
+  accent_color?: string | null;
+  button_style?: string | null;
 };
 type LinkRow = {
   id: string;
@@ -152,6 +176,11 @@ function mapProfile(row: CreatorRow): CabanaProfile {
   )
     ? (row.theme as CabanaTheme)
     : "iridescent";
+  const buttonStyle = (["rounded", "pill", "square"] as const).includes(
+    row.button_style as ButtonStyle,
+  )
+    ? (row.button_style as ButtonStyle)
+    : "rounded";
   return {
     id: row.id,
     name: row.name,
@@ -161,6 +190,9 @@ function mapProfile(row: CreatorRow): CabanaProfile {
     banner: row.banner_url || "",
     theme,
     plan: row.plan,
+    headline: row.headline ?? "",
+    accentColor: row.accent_color ?? "",
+    buttonStyle,
   };
 }
 function mapLink(row: LinkRow, totalClicks: number): CabanaLink {
@@ -329,7 +361,18 @@ export function useCabanaMutations() {
       // ─── profile ───
       setProfile: (
         patch: Partial<
-          Pick<CabanaProfile, "name" | "handle" | "bio" | "theme" | "avatar" | "banner">
+          Pick<
+            CabanaProfile,
+            | "name"
+            | "handle"
+            | "bio"
+            | "theme"
+            | "avatar"
+            | "banner"
+            | "headline"
+            | "accentColor"
+            | "buttonStyle"
+          >
         >,
       ) =>
         wrap("Couldn't save profile", async () => {
@@ -341,6 +384,9 @@ export function useCabanaMutations() {
           if (patch.theme !== undefined) update.theme = patch.theme;
           if (patch.avatar !== undefined) update.avatar_url = patch.avatar;
           if (patch.banner !== undefined) update.banner_url = patch.banner;
+          if (patch.headline !== undefined) update.headline = patch.headline;
+          if (patch.accentColor !== undefined) update.accent_color = patch.accentColor;
+          if (patch.buttonStyle !== undefined) update.button_style = patch.buttonStyle;
           const { error } = await supabase
             .from("creator_profiles")
             .update(update as any)
@@ -349,6 +395,33 @@ export function useCabanaMutations() {
         }),
 
       // ─── links ───
+      // Insert one or more fully-specified links in a single round-trip,
+      // appended after any existing links. Used by onboarding to persist the
+      // starter links the user actually filled in.
+      createLinks: (
+        items: { title: string; url: string; icon: LinkIconKey; featured?: boolean }[],
+      ) =>
+        wrap("Couldn't save links", async () => {
+          if (items.length === 0) return;
+          const profileId = await getMyProfileId();
+          const { data: existing } = await supabase
+            .from("links")
+            .select("position")
+            .eq("profile_id", profileId)
+            .order("position", { ascending: false })
+            .limit(1);
+          const startPos = existing && existing.length > 0 ? (existing[0].position ?? 0) + 1 : 0;
+          const rows = items.map((it, i) => ({
+            profile_id: profileId,
+            title: it.title,
+            url: it.url,
+            icon: it.icon,
+            featured: it.featured ?? false,
+            position: startPos + i,
+          }));
+          const { error } = await supabase.from("links").insert(rows);
+          if (error) throw error;
+        }),
       addLink: () =>
         wrap("Couldn't add link", async () => {
           const profileId = await getMyProfileId();
