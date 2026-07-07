@@ -257,7 +257,10 @@ export function formatMoney(cents: number, currency = "USD"): string {
 export const MIN_PAYOUT_CENTS = 1000;
 
 export type PayoutEligibilityReason =
-  "eligible" | "invalid_amount" | "below_minimum" | "exceeds_available";
+  | "eligible"
+  | "invalid_amount"
+  | "below_minimum"
+  | "exceeds_available";
 
 export interface PayoutEligibility {
   eligible: boolean;
@@ -289,7 +292,11 @@ export function evaluatePayoutEligibility(
 
 // ───────────────────────────── Purchase validation ────────────────────────────
 export type PurchaseDecisionReason =
-  "purchasable" | "owner" | "already_owned" | "not_purchasable" | "free";
+  | "purchasable"
+  | "owner"
+  | "already_owned"
+  | "not_purchasable"
+  | "free";
 
 export interface PurchaseCandidate {
   visibility: ContentVisibility;

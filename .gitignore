@@ -32,6 +32,10 @@ dist-ssr
 supabase/.branches
 supabase/.temp
 
+# Reconciliation backups: point-in-time data dumps (contain PII + a bcrypt
+# password hash from auth.users) — keep locally, never commit.
+supabase/reconcile/backups/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

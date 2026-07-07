@@ -12,7 +12,6 @@ import {
   Briefcase,
   Users,
   Star,
-  Wand2,
   Globe,
   Loader2,
   Upload,
@@ -32,7 +31,7 @@ export const Route = createFileRoute("/onboarding")({
   component: OnboardingPage,
 });
 
-const STEPS = ["Welcome", "Identity", "Theme", "Connect", "Define", "Generate", "Preview"];
+const STEPS = ["Welcome", "Identity", "Theme", "Connect", "Preview"];
 
 const creatorTypes = [
   { id: "influencer", label: "Influencer", icon: Star, hint: "Lifestyle & content" },
@@ -85,38 +84,15 @@ function OnboardingPage() {
   const [type, setType] = useState<string>("");
   const [theme, setTheme] = useState<CabanaTheme>("iridescent");
   const [connected, setConnected] = useState<string[]>([]);
-  const [niche, setNiche] = useState("");
-  const [style, setStyle] = useState("");
-  const [audience, setAudience] = useState("");
-  const [goals, setGoals] = useState("");
-  const [generated, setGenerated] = useState(false);
-  const [generating, setGenerating] = useState(false);
 
-  const next = () => {
-    if (step === 4) {
-      setStep(5);
-      setGenerating(true);
-      setTimeout(() => {
-        setGenerating(false);
-        setGenerated(true);
-      }, 2200);
-      return;
-    }
-    setStep((s) => Math.min(STEPS.length - 1, s + 1));
-  };
+  const next = () => setStep((s) => Math.min(STEPS.length - 1, s + 1));
   const back = () => setStep((s) => Math.max(0, s - 1));
 
   const toggleSocial = (id: string) =>
     setConnected((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
 
   const canAdvance =
-    step === 0 ||
-    (step === 1 && !!type) ||
-    (step === 2 && !!theme) ||
-    step === 3 ||
-    (step === 4 && niche.length > 1) ||
-    (step === 5 && generated) ||
-    step === 6;
+    step === 0 || (step === 1 && !!type) || (step === 2 && !!theme) || step === 3 || step === 4;
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -183,27 +159,7 @@ function OnboardingPage() {
               {step === 1 && <CreatorType value={type} onChange={setType} />}
               {step === 2 && <ThemePicker value={theme} onChange={setTheme} />}
               {step === 3 && <SocialConnect connected={connected} toggle={toggleSocial} />}
-              {step === 4 && (
-                <AISetup
-                  niche={niche}
-                  setNiche={setNiche}
-                  style={style}
-                  setStyle={setStyle}
-                  audience={audience}
-                  setAudience={setAudience}
-                  goals={goals}
-                  setGoals={setGoals}
-                />
-              )}
-              {step === 5 && (
-                <Generating
-                  done={generated}
-                  loading={generating}
-                  niche={niche || "creator"}
-                  type={type}
-                />
-              )}
-              {step === 6 && <FinalPreview type={type} theme={theme} niche={niche} />}
+              {step === 4 && <FinalPreview type={type} theme={theme} />}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -223,13 +179,7 @@ function OnboardingPage() {
               disabled={!canAdvance}
               className="group flex items-center gap-2 px-6 py-3 rounded-full bg-foreground text-background font-medium text-sm shadow-glow disabled:opacity-40 disabled:shadow-none transition-all hover:scale-[1.02]"
             >
-              {step === 4
-                ? "Generate with AI"
-                : step === 5
-                  ? generated
-                    ? "See preview"
-                    : "Generating…"
-                  : "Continue"}
+              Continue
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </button>
           ) : (
@@ -559,152 +509,11 @@ function SocialConnect({
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-}) {
-  return (
-    <div>
-      <label className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-        {label}
-      </label>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full mt-2 bg-transparent border-0 border-b border-border focus:border-foreground/50 outline-none py-3 text-base placeholder:text-muted-foreground/50 transition-colors"
-      />
-    </div>
-  );
-}
-
-function AISetup(props: {
-  niche: string;
-  setNiche: (v: string) => void;
-  style: string;
-  setStyle: (v: string) => void;
-  audience: string;
-  setAudience: (v: string) => void;
-  goals: string;
-  setGoals: (v: string) => void;
-}) {
+function FinalPreview({ type, theme }: { type: string; theme: string }) {
   return (
     <div>
       <StepHeading
-        tag="04 — Define"
-        title="Tell CABANA Studio about you."
-        sub="Whisper a few words. Our AI listens better than most humans."
-      />
-      <div className="glass-strong rounded-3xl p-6 sm:p-8 space-y-5">
-        <Field
-          label="Your niche"
-          value={props.niche}
-          onChange={props.setNiche}
-          placeholder="e.g. cinematic R&B vocalist"
-        />
-        <Field
-          label="Your style"
-          value={props.style}
-          onChange={props.setStyle}
-          placeholder="e.g. quiet luxury, warm noir"
-        />
-        <Field
-          label="Your audience"
-          value={props.audience}
-          onChange={props.setAudience}
-          placeholder="e.g. 18-34 night owls, fashion editors"
-        />
-        <Field
-          label="Your goals"
-          value={props.goals}
-          onChange={props.setGoals}
-          placeholder="e.g. drop announcement + VIP fanclub"
-        />
-      </div>
-    </div>
-  );
-}
-
-function Generating({
-  loading,
-  done,
-  niche,
-  type,
-}: {
-  loading: boolean;
-  done: boolean;
-  niche: string;
-  type: string;
-}) {
-  const items = [
-    { tag: "Bio", text: `${niche} blending mood and momentum into one universe.` },
-    { tag: "Palette", text: "Iridescent chrome on noir — quiet, expensive, alive." },
-    { tag: "CTA", text: "Step into the inner circle — for the few." },
-    { tag: "Layout", text: `${type || "Creator"} grid, hero portrait, smart links, locked drops.` },
-    { tag: "Sections", text: "Hero • Links • Storefront • Media kit • Locked content" },
-  ];
-  return (
-    <div>
-      <StepHeading
-        tag="05 — Generate"
-        title={done ? "Your kit is ready." : "CABANA is composing…"}
-        sub={
-          done
-            ? "Drafted in your voice. Refine anything later."
-            : "Bios, colors, copy and layout — all in one breath."
-        }
-      />
-      <div className="glass-strong rounded-3xl p-6 relative overflow-hidden">
-        <div className="absolute -inset-20 opacity-30 blur-3xl bg-iridescent animate-pulse-glow" />
-        <div className="relative space-y-3">
-          {items.map((it, i) => (
-            <motion.div
-              key={it.tag}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.35, duration: 0.5 }}
-              className="glass rounded-2xl p-4 flex items-start gap-3"
-            >
-              <span className="text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-md glass-strong shrink-0 mt-0.5">
-                {it.tag}
-              </span>
-              <p className="text-sm leading-relaxed flex-1">{it.text}</p>
-              {(done || i < 4) && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: i * 0.35 + 0.4 }}
-                  className="w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center shrink-0"
-                >
-                  <Check className="w-3 h-3" />
-                </motion.div>
-              )}
-            </motion.div>
-          ))}
-        </div>
-        {loading && (
-          <div className="relative mt-5 flex items-center gap-2 text-xs text-muted-foreground">
-            <Wand2 className="w-3.5 h-3.5 animate-pulse" />
-            <span>Composing your universe…</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function FinalPreview({ type, theme, niche }: { type: string; theme: string; niche: string }) {
-  return (
-    <div>
-      <StepHeading
-        tag="06 — Preview"
+        tag="04 — Preview"
         title="Meet your CABANA."
         sub="A live preview of your public page. Tap anything to refine."
       />
@@ -744,9 +553,7 @@ function FinalPreview({ type, theme, niche }: { type: string; theme: string; nic
                     {type || "creator"} · verified
                   </span>
                   <p className="text-[11px] text-center text-muted-foreground mt-2 leading-relaxed px-3">
-                    {niche
-                      ? `${niche} blending mood and momentum.`
-                      : "Your AI-crafted bio appears here."}
+                    Your bio appears here.
                   </p>
                 </div>
                 <div className="mt-4 space-y-1.5">

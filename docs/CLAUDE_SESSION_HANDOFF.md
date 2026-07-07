@@ -16,6 +16,84 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
+## Session update — July 7, 2026 (home/login card redesign + lint fix)
+
+UI/tooling-only session; **no Supabase schema or data touched**, no phase work.
+
+- **Home + login card redesigned to mirror the `~/cabanamgmt` home hero** (per Tyler's request):
+  `src/components/cabana/auth/LoginCard.tsx` rewritten — full-screen black-marble backdrop
+  (`public/td-studios-black-marble.jpg`), glass card (`rounded-[32px]`, `bg-black/30`,
+  `backdrop-blur-lg`), holographic logo (`public/cabana-logo.png`, hi-res copy from cabanamgmt),
+  Username (email) + Password (eye toggle) fields, gradient divider, **Admin/VIP Access Code field
+  (visual only — no redeem backend here; value is ignored)**, chrome "ENTER" pill button, and a
+  "Request Access" link → `/signup`. Sign-in still goes through `cabanaAuth.login` with the
+  `?redirect=` param preserved; sonner toasts on error/success. The Cabana script + "Management
+  Group" wordmark were added then removed at Tyler's request. `AuthShell` untouched (still used by
+  signup/forgot-password). Routes `/` and `/login` share `LoginCard` as before.
+- **Lint unblocked:** `bun run lint` was failing with ~36k errors because ESLint/Prettier were
+  scanning the generated `.vercel` + `.tanstack` build output (new since the Vercel/Nitro deploy
+  preset). Added `.vercel`, `.tanstack`, `.nitro`, `.wrangler` to `eslint.config.js` ignores and
+  `.prettierignore`, then auto-fixed 17 real Prettier errors in `src`.
+- **Google OAuth login:** `cabanaAuth.loginWithGoogle()` (`cabana-auth.ts`) calls
+  `supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo:
+  `${origin}/auth/callback` } })`. `LoginCard` now shows a "Continue with Google" button (with
+  loading + inline error states) above the email/password+VIP form, which sits under an
+  "Admin access" separator. New route `src/routes/auth.callback.tsx` (`noindex`) waits for the
+  session (detectSessionInUrl consumes the redirect tokens; 10s timeout → visible error + back
+  link), then routes: member → `/account`, user created <5 min ago (no persisted
+  onboarding-completion flag exists, so recency = first OAuth sign-in) → `/onboarding`, else →
+  `/dashboard`. Email/password + signup flows untouched. **Ops prerequisite:** enable the Google
+  provider in Supabase Auth settings and allowlist `<site-origin>/auth/callback` as a redirect
+  URL — until then the button surfaces "provider is not enabled" in its error state.
+- **Canonical backend repoint + production deploy:** root-caused the "Unsupported provider:
+  provider is not enabled" OAuth error — the app pointed at local Docker Supabase (and the old
+  prod bundle had `127.0.0.1:54321` baked in), while Google was enabled on a different project.
+  Per Tyler: **canonical backend is now `rpzaeqoqcaxxavltgvpe` ("cabanadatabase")**. `.env`
+  repointed (local-stack values kept commented); Vercel env vars set via CLI for
+  production/preview/development (publishable values only — `SUPABASE_SERVICE_ROLE_KEY`
+  intentionally NOT uploaded; add manually if an admin path needs it); rebuilt + deployed
+  prebuilt to production. Click-tested with a real browser on BOTH `localhost:8080` and
+  `https://cabanagrp.com/login`: button → cloud `/auth/v1/authorize` → 302 → Google sign-in page
+  with the correct `redirect_to` carried through. The Google-account leg needs a human login to
+  complete. **⚠️ Schema gap:** cabanadatabase carries the cabanamgmt schema — `profiles` has no
+  `account_type`, and none of this repo's migrations exist there. Auth works; the CABANA data
+  layer against that DB does not. Schema reconciliation is a gated decision (do NOT `db push`
+  without explicit approval). `supabase/config.toml` project_id still references the old
+  `dwnricswfskypqqfknnh` — left untouched so local db workflows are unaffected.
+- **Cloud schema reconciliation APPLIED (rpzaeqoqcaxxavltgvpe):** the empty Reel/compliance
+  scaffold that was on cabanadatabase has been replaced with CABANA. Audited (read-only), planned,
+  dry-run on local Docker (incl. a guard-abort test), then applied to cloud via the Management API
+  (backup → `01_pre_migrations_reset` → 16 migrations → `02_post_migrations_backfill`; all in
+  `supabase/reconcile/`, with a full backup in `supabase/reconcile/backups/`). Cloud now: 35 CABANA
+  tables, 20 enums, 62 functions, 86 policies, all RLS-enabled; admin user backfilled
+  (account_type=creator, roles {admin,user}, handle `tylerdiorio`); Google OAuth verified live
+  end-to-end. `src/integrations/supabase/types.ts` regenerated (added current RPC signatures).
+  **`legacy_reel.profiles` (preserved scaffold admin row) intentionally kept** pending a final real
+  Google sign-in; drop with `drop schema legacy_reel cascade;` once confirmed. NOTE:
+  `supabase/config.toml` project_id still says the old `dwnricswfskypqqfknnh` (local db tooling
+  only; untouched).
+- **Post-reconciliation live-testing fixes (July 7, uncommitted; gate green, NOT yet deployed):**
+  Tyler signed in with Google against the reconciled cloud DB and hit three issues:
+  1. **Avatar upload failed** — `app_private.current_profile_id()` (a leftover scaffold storage
+     policy on the `avatars` bucket) reads `public.profiles.auth_user_id`, a column CABANA doesn't
+     have, so planning the storage INSERT errored. Root cause: `01` originally KEPT scaffold storage
+     policies; the local dry-run masked it by dropping all storage policies at clean-slate. Fix:
+     `01_pre_migrations_reset.sql` corrected to drop all scaffold storage policies; corrective
+     `supabase/reconcile/03_fix_storage_policies.sql` drops every non-CABANA storage.objects policy
+     on the already-migrated cloud. **Blocked pending Tyler's approval (destructive cloud change).**
+  2. **Realtime crash** (`cannot add postgres_changes callbacks … after subscribe()`) — the
+     notifications + messaging realtime hooks shared a channel topic across multiple hook instances
+     (list + badge). Fixed in `use-notifications.ts` / `use-messaging.ts` with a per-instance unique
+     channel topic (`useRef` + module counter).
+  3. **Onboarding** — removed the "04 — Define" step and the entire "Generate with AI" flow
+     (Define/Generate steps + AISetup/Generating/Field components); STEPS is now Welcome · Identity ·
+     Theme · Connect · Preview (Preview retagged "04 — Preview"). `onboarding.tsx`.
+  Fixes 2 & 3 need a **production redeploy** (built, `.vercel/output` ready) — also blocked pending
+  Tyler's authorization. Fix 1 is a cloud-SQL change (no redeploy).
+- **Gate:** lint 0 errors (6 expected shadcn react-refresh warnings) · `tsc --noEmit` clean ·
+  332/332 tests pass · `bun run build` succeeds. Changes left uncommitted alongside Tyler's staged
+  `thetejeda` work.
+
 ## Latest Status — Phase 11B COMPLETE (Creator Analytics)
 
 Built on Phase 11A. Extends the creator dashboard with revenue / subscriber / content / engagement

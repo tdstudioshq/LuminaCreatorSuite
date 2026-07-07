@@ -7,7 +7,7 @@
 // participant-gated), so a channel only ever surfaces rows the viewer may read.
 // supabase-js handles reconnection/backoff automatically.
 // ============================================================================
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthSession } from "@/lib/cabana-auth";
@@ -33,6 +33,9 @@ const headerKey = (cid: string) => ["conversation-header", cid] as const;
  * Subscribe to a postgres_changes stream and run `onChange` for each event.
  * Cleans the channel up on unmount / dependency change.
  */
+// Monotonic id so each hook instance gets a unique channel topic.
+let realtimeInstanceSeq = 0;
+
 function useRealtime(
   enabled: boolean,
   channelName: string,
@@ -41,9 +44,15 @@ function useRealtime(
 ) {
   // Serialize bindings so the effect re-runs only when they actually change.
   const bindingKey = JSON.stringify(bindings);
+  // Unique per instance so two components subscribing to the same logical
+  // channel (e.g. the inbox list and a global unread badge both using "unread")
+  // don't share a topic — supabase-js rejects a second binding added after the
+  // first channel with that topic has subscribed.
+  const instanceIdRef = useRef<number | undefined>(undefined);
+  if (instanceIdRef.current === undefined) instanceIdRef.current = ++realtimeInstanceSeq;
   useEffect(() => {
     if (!enabled) return;
-    const channel = supabase.channel(channelName);
+    const channel = supabase.channel(`${channelName}:${instanceIdRef.current}`);
     for (const b of bindings) {
       channel.on(
         "postgres_changes",

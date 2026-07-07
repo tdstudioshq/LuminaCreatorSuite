@@ -8,7 +8,7 @@
 // own notifications. supabase-js handles reconnection automatically; the channel
 // is removed on unmount (safe cleanup).
 // ============================================================================
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthSession } from "@/lib/cabana-auth";
@@ -30,15 +30,25 @@ const preferencesKey = ["notification-preferences"] as const;
 
 // ─────────────────────────────── Realtime ───────────────────────────────────
 
+// Monotonic id so each hook instance gets a unique channel topic. Several hooks
+// (list + unread badge) subscribe for the same user; without a per-instance
+// suffix they'd share the topic `notifications:<userId>`, and the second
+// channel's binding would be added after the first has subscribed — which
+// supabase-js rejects with "cannot add postgres_changes callbacks … after
+// subscribe()". A unique topic per instance keeps each subscription independent.
+let realtimeInstanceSeq = 0;
+
 /**
  * Live in-app notification updates: invalidate the list + unread count whenever
  * a row for this recipient is inserted/updated. Cleans the channel up on unmount.
  */
 function useNotificationsRealtime(userId: string | undefined) {
   const qc = useQueryClient();
+  const instanceIdRef = useRef<number | undefined>(undefined);
+  if (instanceIdRef.current === undefined) instanceIdRef.current = ++realtimeInstanceSeq;
   useEffect(() => {
     if (!userId) return;
-    const channel = supabase.channel(`notifications:${userId}`).on(
+    const channel = supabase.channel(`notifications:${userId}:${instanceIdRef.current}`).on(
       "postgres_changes",
       {
         event: "*",

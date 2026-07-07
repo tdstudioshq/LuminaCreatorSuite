@@ -52,6 +52,22 @@ export const cabanaAuth = {
     return { ok: true as const, user: toCabana(data.user)!, accountType };
   },
 
+  /**
+   * Starts the Google OAuth flow. On success the browser redirects to Google,
+   * then back to `/auth/callback`, which finishes the session and routes the
+   * user — so a `{ ok: true }` return only means the redirect was initiated.
+   */
+  async loginWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const };
+  },
+
   async login(input: { email: string; password: string }) {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: input.email.trim().toLowerCase(),

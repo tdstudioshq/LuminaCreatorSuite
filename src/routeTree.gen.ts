@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ThetejedaRouteImport } from './routes/thetejeda'
 import { Route as TdRouteImport } from './routes/td'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
@@ -46,6 +47,7 @@ import { Route as DashboardLinksRouteImport } from './routes/dashboard.links'
 import { Route as DashboardHomeRouteImport } from './routes/dashboard.home'
 import { Route as DashboardEarningsRouteImport } from './routes/dashboard.earnings'
 import { Route as DashboardAnalyticsRouteImport } from './routes/dashboard.analytics'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminPayoutsRouteImport } from './routes/admin.payouts'
 import { Route as AdminLedgerRouteImport } from './routes/admin.ledger'
@@ -53,6 +55,11 @@ import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
 import { Route as AdminAuditRouteImport } from './routes/admin.audit'
 import { Route as AdminLedgerTransactionIdRouteImport } from './routes/admin.ledger.$transactionId'
 
+const ThetejedaRoute = ThetejedaRouteImport.update({
+  id: '/thetejeda',
+  path: '/thetejeda',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TdRoute = TdRouteImport.update({
   id: '/td',
   path: '/td',
@@ -238,6 +245,11 @@ const DashboardAnalyticsRoute = DashboardAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => DashboardRoute,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminReportsRoute = AdminReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -290,11 +302,13 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/td': typeof TdRoute
+  '/thetejeda': typeof ThetejedaRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
   '/dashboard/home': typeof DashboardHomeRoute
@@ -334,11 +348,13 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/td': typeof TdRoute
+  '/thetejeda': typeof ThetejedaRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
   '/dashboard/home': typeof DashboardHomeRoute
@@ -380,11 +396,13 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/td': typeof TdRoute
+  '/thetejeda': typeof ThetejedaRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
   '/dashboard/home': typeof DashboardHomeRoute
@@ -427,11 +445,13 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/td'
+    | '/thetejeda'
     | '/admin/audit'
     | '/admin/finance'
     | '/admin/ledger'
     | '/admin/payouts'
     | '/admin/reports'
+    | '/auth/callback'
     | '/dashboard/analytics'
     | '/dashboard/earnings'
     | '/dashboard/home'
@@ -471,11 +491,13 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/td'
+    | '/thetejeda'
     | '/admin/audit'
     | '/admin/finance'
     | '/admin/ledger'
     | '/admin/payouts'
     | '/admin/reports'
+    | '/auth/callback'
     | '/dashboard/analytics'
     | '/dashboard/earnings'
     | '/dashboard/home'
@@ -516,11 +538,13 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/td'
+    | '/thetejeda'
     | '/admin/audit'
     | '/admin/finance'
     | '/admin/ledger'
     | '/admin/payouts'
     | '/admin/reports'
+    | '/auth/callback'
     | '/dashboard/analytics'
     | '/dashboard/earnings'
     | '/dashboard/home'
@@ -562,6 +586,8 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   TdRoute: typeof TdRoute
+  ThetejedaRoute: typeof ThetejedaRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   DocsDataModelRoute: typeof DocsDataModelRoute
   DocsSystemRoute: typeof DocsSystemRoute
   PostPostIdRoute: typeof PostPostIdRoute
@@ -569,6 +595,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/thetejeda': {
+      id: '/thetejeda'
+      path: '/thetejeda'
+      fullPath: '/thetejeda'
+      preLoaderRoute: typeof ThetejedaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/td': {
       id: '/td'
       path: '/td'
@@ -828,6 +861,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAnalyticsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/reports': {
       id: '/admin/reports'
       path: '/reports'
@@ -973,6 +1013,8 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   TdRoute: TdRoute,
+  ThetejedaRoute: ThetejedaRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   DocsDataModelRoute: DocsDataModelRoute,
   DocsSystemRoute: DocsSystemRoute,
   PostPostIdRoute: PostPostIdRoute,

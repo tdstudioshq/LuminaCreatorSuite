@@ -28,6 +28,89 @@ export type Database = {
   };
   public: {
     Tables: {
+      activity_events: {
+        Row: {
+          actor_id: string | null;
+          created_at: string;
+          entity_id: string | null;
+          entity_type: string | null;
+          id: string;
+          metadata: Json;
+          recipient_id: string | null;
+          type: Database["public"]["Enums"]["activity_type"];
+        };
+        Insert: {
+          actor_id?: string | null;
+          created_at?: string;
+          entity_id?: string | null;
+          entity_type?: string | null;
+          id?: string;
+          metadata?: Json;
+          recipient_id?: string | null;
+          type: Database["public"]["Enums"]["activity_type"];
+        };
+        Update: {
+          actor_id?: string | null;
+          created_at?: string;
+          entity_id?: string | null;
+          entity_type?: string | null;
+          id?: string;
+          metadata?: Json;
+          recipient_id?: string | null;
+          type?: Database["public"]["Enums"]["activity_type"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "activity_events_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "activity_events_recipient_id_fkey";
+            columns: ["recipient_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      analytics_events: {
+        Row: {
+          created_at: string;
+          event_type: string;
+          id: string;
+          metadata: Json;
+          profile_id: string | null;
+          target_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          event_type: string;
+          id?: string;
+          metadata?: Json;
+          profile_id?: string | null;
+          target_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          event_type?: string;
+          id?: string;
+          metadata?: Json;
+          profile_id?: string | null;
+          target_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       audit_logs: {
         Row: {
           action: string;
@@ -84,242 +167,40 @@ export type Database = {
           },
         ];
       };
-      reports: {
+      blocks: {
         Row: {
-          assigned_admin_user_id: string | null;
-          created_at: string;
-          details: string | null;
-          id: string;
-          reason: Database["public"]["Enums"]["report_reason"];
-          reporter_user_id: string;
-          resolution: string | null;
-          status: Database["public"]["Enums"]["report_status"];
-          subject_id: string;
-          subject_type: Database["public"]["Enums"]["report_subject_type"];
-          updated_at: string;
-        };
-        Insert: {
-          assigned_admin_user_id?: string | null;
-          created_at?: string;
-          details?: string | null;
-          id?: string;
-          reason: Database["public"]["Enums"]["report_reason"];
-          reporter_user_id: string;
-          resolution?: string | null;
-          status?: Database["public"]["Enums"]["report_status"];
-          subject_id: string;
-          subject_type: Database["public"]["Enums"]["report_subject_type"];
-          updated_at?: string;
-        };
-        Update: {
-          assigned_admin_user_id?: string | null;
-          created_at?: string;
-          details?: string | null;
-          id?: string;
-          reason?: Database["public"]["Enums"]["report_reason"];
-          reporter_user_id?: string;
-          resolution?: string | null;
-          status?: Database["public"]["Enums"]["report_status"];
-          subject_id?: string;
-          subject_type?: Database["public"]["Enums"]["report_subject_type"];
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "reports_assigned_admin_user_id_fkey";
-            columns: ["assigned_admin_user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "reports_reporter_user_id_fkey";
-            columns: ["reporter_user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      activity_events: {
-        Row: {
-          actor_id: string | null;
-          created_at: string;
-          entity_id: string | null;
-          entity_type: string | null;
-          id: string;
-          metadata: Json;
-          recipient_id: string | null;
-          type: Database["public"]["Enums"]["activity_type"];
-        };
-        Insert: {
-          actor_id?: string | null;
-          created_at?: string;
-          entity_id?: string | null;
-          entity_type?: string | null;
-          id?: string;
-          metadata?: Json;
-          recipient_id?: string | null;
-          type: Database["public"]["Enums"]["activity_type"];
-        };
-        Update: {
-          actor_id?: string | null;
-          created_at?: string;
-          entity_id?: string | null;
-          entity_type?: string | null;
-          id?: string;
-          metadata?: Json;
-          recipient_id?: string | null;
-          type?: Database["public"]["Enums"]["activity_type"];
-        };
-        Relationships: [
-          {
-            foreignKeyName: "activity_events_actor_id_fkey";
-            columns: ["actor_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "activity_events_recipient_id_fkey";
-            columns: ["recipient_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      notifications: {
-        Row: {
-          actor_id: string | null;
-          body: string | null;
-          created_at: string;
-          dedupe_key: string;
-          entity_id: string | null;
-          entity_type: string | null;
-          id: string;
-          read_at: string | null;
-          recipient_id: string;
-          title: string;
-          type: Database["public"]["Enums"]["notification_type"];
-        };
-        Insert: {
-          actor_id?: string | null;
-          body?: string | null;
-          created_at?: string;
-          dedupe_key: string;
-          entity_id?: string | null;
-          entity_type?: string | null;
-          id?: string;
-          read_at?: string | null;
-          recipient_id: string;
-          title: string;
-          type: Database["public"]["Enums"]["notification_type"];
-        };
-        Update: {
-          actor_id?: string | null;
-          body?: string | null;
-          created_at?: string;
-          dedupe_key?: string;
-          entity_id?: string | null;
-          entity_type?: string | null;
-          id?: string;
-          read_at?: string | null;
-          recipient_id?: string;
-          title?: string;
-          type?: Database["public"]["Enums"]["notification_type"];
-        };
-        Relationships: [
-          {
-            foreignKeyName: "notifications_actor_id_fkey";
-            columns: ["actor_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "notifications_recipient_id_fkey";
-            columns: ["recipient_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      notification_outbox: {
-        Row: {
-          attempts: number;
-          channel: Database["public"]["Enums"]["notification_channel"];
+          blocked_user_id: string;
+          blocker_id: string;
           created_at: string;
           id: string;
-          last_error: string | null;
-          notification_id: string;
-          processed_at: string | null;
-          scheduled_for: string;
-          status: Database["public"]["Enums"]["outbox_status"];
+          reason: string | null;
         };
         Insert: {
-          attempts?: number;
-          channel: Database["public"]["Enums"]["notification_channel"];
+          blocked_user_id: string;
+          blocker_id: string;
           created_at?: string;
           id?: string;
-          last_error?: string | null;
-          notification_id: string;
-          processed_at?: string | null;
-          scheduled_for?: string;
-          status?: Database["public"]["Enums"]["outbox_status"];
+          reason?: string | null;
         };
         Update: {
-          attempts?: number;
-          channel?: Database["public"]["Enums"]["notification_channel"];
+          blocked_user_id?: string;
+          blocker_id?: string;
           created_at?: string;
           id?: string;
-          last_error?: string | null;
-          notification_id?: string;
-          processed_at?: string | null;
-          scheduled_for?: string;
-          status?: Database["public"]["Enums"]["outbox_status"];
+          reason?: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: "notification_outbox_notification_id_fkey";
-            columns: ["notification_id"];
+            foreignKeyName: "blocks_blocked_user_id_fkey";
+            columns: ["blocked_user_id"];
             isOneToOne: false;
-            referencedRelation: "notifications";
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
-        ];
-      };
-      notification_preferences: {
-        Row: {
-          created_at: string;
-          email_enabled: boolean;
-          in_app_enabled: boolean;
-          push_enabled: boolean;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          email_enabled?: boolean;
-          in_app_enabled?: boolean;
-          push_enabled?: boolean;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          email_enabled?: boolean;
-          in_app_enabled?: boolean;
-          push_enabled?: boolean;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [
           {
-            foreignKeyName: "notification_preferences_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: true;
+            foreignKeyName: "blocks_blocker_id_fkey";
+            columns: ["blocker_id"];
+            isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
@@ -368,429 +249,6 @@ export type Database = {
           {
             foreignKeyName: "content_entitlements_user_id_fkey";
             columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      creator_balances: {
-        Row: {
-          available_cents: number;
-          created_at: string;
-          creator_profile_id: string;
-          currency: string;
-          id: string;
-          lifetime_fees_cents: number;
-          lifetime_gross_cents: number;
-          lifetime_net_cents: number;
-          lifetime_paid_out_cents: number;
-          pending_cents: number;
-          updated_at: string;
-        };
-        Insert: {
-          available_cents?: number;
-          created_at?: string;
-          creator_profile_id: string;
-          currency?: string;
-          id?: string;
-          lifetime_fees_cents?: number;
-          lifetime_gross_cents?: number;
-          lifetime_net_cents?: number;
-          lifetime_paid_out_cents?: number;
-          pending_cents?: number;
-          updated_at?: string;
-        };
-        Update: {
-          available_cents?: number;
-          created_at?: string;
-          creator_profile_id?: string;
-          currency?: string;
-          id?: string;
-          lifetime_fees_cents?: number;
-          lifetime_gross_cents?: number;
-          lifetime_net_cents?: number;
-          lifetime_paid_out_cents?: number;
-          pending_cents?: number;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "creator_balances_creator_profile_id_fkey";
-            columns: ["creator_profile_id"];
-            isOneToOne: false;
-            referencedRelation: "creator_profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      payout_requests: {
-        Row: {
-          amount_cents: number;
-          created_at: string;
-          creator_profile_id: string;
-          currency: string;
-          decided_at: string | null;
-          id: string;
-          mock_provider_reference: string | null;
-          note: string | null;
-          status: Database["public"]["Enums"]["payout_request_status"];
-          updated_at: string;
-        };
-        Insert: {
-          amount_cents: number;
-          created_at?: string;
-          creator_profile_id: string;
-          currency?: string;
-          decided_at?: string | null;
-          id?: string;
-          mock_provider_reference?: string | null;
-          note?: string | null;
-          status?: Database["public"]["Enums"]["payout_request_status"];
-          updated_at?: string;
-        };
-        Update: {
-          amount_cents?: number;
-          created_at?: string;
-          creator_profile_id?: string;
-          currency?: string;
-          decided_at?: string | null;
-          id?: string;
-          mock_provider_reference?: string | null;
-          note?: string | null;
-          status?: Database["public"]["Enums"]["payout_request_status"];
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "payout_requests_creator_profile_id_fkey";
-            columns: ["creator_profile_id"];
-            isOneToOne: false;
-            referencedRelation: "creator_profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      payouts: {
-        Row: {
-          amount_cents: number;
-          created_at: string;
-          creator_profile_id: string;
-          currency: string;
-          failure_reason: string | null;
-          id: string;
-          mock_provider_reference: string | null;
-          paid_at: string | null;
-          payout_request_id: string | null;
-          requested_at: string;
-          status: Database["public"]["Enums"]["payout_status"];
-          updated_at: string;
-        };
-        Insert: {
-          amount_cents: number;
-          created_at?: string;
-          creator_profile_id: string;
-          currency?: string;
-          failure_reason?: string | null;
-          id?: string;
-          mock_provider_reference?: string | null;
-          paid_at?: string | null;
-          payout_request_id?: string | null;
-          requested_at?: string;
-          status?: Database["public"]["Enums"]["payout_status"];
-          updated_at?: string;
-        };
-        Update: {
-          amount_cents?: number;
-          created_at?: string;
-          creator_profile_id?: string;
-          currency?: string;
-          failure_reason?: string | null;
-          id?: string;
-          mock_provider_reference?: string | null;
-          paid_at?: string | null;
-          payout_request_id?: string | null;
-          requested_at?: string;
-          status?: Database["public"]["Enums"]["payout_status"];
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "payouts_creator_profile_id_fkey";
-            columns: ["creator_profile_id"];
-            isOneToOne: false;
-            referencedRelation: "creator_profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "payouts_payout_request_id_fkey";
-            columns: ["payout_request_id"];
-            isOneToOne: false;
-            referencedRelation: "payout_requests";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      purchases: {
-        Row: {
-          amount_cents: number;
-          buyer_user_id: string;
-          created_at: string;
-          creator_profile_id: string | null;
-          currency: string;
-          id: string;
-          post_id: string | null;
-          status: string;
-          transaction_id: string;
-        };
-        Insert: {
-          amount_cents: number;
-          buyer_user_id: string;
-          created_at?: string;
-          creator_profile_id?: string | null;
-          currency?: string;
-          id?: string;
-          post_id?: string | null;
-          status?: string;
-          transaction_id: string;
-        };
-        Update: {
-          amount_cents?: number;
-          buyer_user_id?: string;
-          created_at?: string;
-          creator_profile_id?: string | null;
-          currency?: string;
-          id?: string;
-          post_id?: string | null;
-          status?: string;
-          transaction_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "purchases_buyer_user_id_fkey";
-            columns: ["buyer_user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "purchases_creator_profile_id_fkey";
-            columns: ["creator_profile_id"];
-            isOneToOne: false;
-            referencedRelation: "creator_profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "purchases_post_id_fkey";
-            columns: ["post_id"];
-            isOneToOne: false;
-            referencedRelation: "posts";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "purchases_transaction_id_fkey";
-            columns: ["transaction_id"];
-            isOneToOne: false;
-            referencedRelation: "transactions";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      tips: {
-        Row: {
-          amount_cents: number;
-          created_at: string;
-          creator_profile_id: string;
-          currency: string;
-          id: string;
-          message: string | null;
-          sender_user_id: string | null;
-          status: string;
-          transaction_id: string;
-        };
-        Insert: {
-          amount_cents: number;
-          created_at?: string;
-          creator_profile_id: string;
-          currency?: string;
-          id?: string;
-          message?: string | null;
-          sender_user_id?: string | null;
-          status?: string;
-          transaction_id: string;
-        };
-        Update: {
-          amount_cents?: number;
-          created_at?: string;
-          creator_profile_id?: string;
-          currency?: string;
-          id?: string;
-          message?: string | null;
-          sender_user_id?: string | null;
-          status?: string;
-          transaction_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "tips_creator_profile_id_fkey";
-            columns: ["creator_profile_id"];
-            isOneToOne: false;
-            referencedRelation: "creator_profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "tips_sender_user_id_fkey";
-            columns: ["sender_user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "tips_transaction_id_fkey";
-            columns: ["transaction_id"];
-            isOneToOne: false;
-            referencedRelation: "transactions";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      transactions: {
-        Row: {
-          created_at: string;
-          creator_profile_id: string | null;
-          creator_net_cents: number;
-          currency: string;
-          gross_cents: number;
-          id: string;
-          mock_provider_reference: string | null;
-          payer_user_id: string | null;
-          platform_fee_cents: number;
-          processor_fee_cents: number;
-          reference_id: string | null;
-          reference_type: string | null;
-          status: Database["public"]["Enums"]["transaction_status"];
-          type: Database["public"]["Enums"]["transaction_type"];
-          updated_at: string;
-        };
-        Insert: {
-          created_at?: string;
-          creator_profile_id?: string | null;
-          creator_net_cents: number;
-          currency?: string;
-          gross_cents: number;
-          id?: string;
-          mock_provider_reference?: string | null;
-          payer_user_id?: string | null;
-          platform_fee_cents?: number;
-          processor_fee_cents?: number;
-          reference_id?: string | null;
-          reference_type?: string | null;
-          status?: Database["public"]["Enums"]["transaction_status"];
-          type: Database["public"]["Enums"]["transaction_type"];
-          updated_at?: string;
-        };
-        Update: {
-          created_at?: string;
-          creator_profile_id?: string | null;
-          creator_net_cents?: number;
-          currency?: string;
-          gross_cents?: number;
-          id?: string;
-          mock_provider_reference?: string | null;
-          payer_user_id?: string | null;
-          platform_fee_cents?: number;
-          processor_fee_cents?: number;
-          reference_id?: string | null;
-          reference_type?: string | null;
-          status?: Database["public"]["Enums"]["transaction_status"];
-          type?: Database["public"]["Enums"]["transaction_type"];
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "transactions_creator_profile_id_fkey";
-            columns: ["creator_profile_id"];
-            isOneToOne: false;
-            referencedRelation: "creator_profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "transactions_payer_user_id_fkey";
-            columns: ["payer_user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      analytics_events: {
-        Row: {
-          created_at: string;
-          event_type: string;
-          id: string;
-          metadata: Json;
-          profile_id: string | null;
-          target_id: string | null;
-        };
-        Insert: {
-          created_at?: string;
-          event_type: string;
-          id?: string;
-          metadata?: Json;
-          profile_id?: string | null;
-          target_id?: string | null;
-        };
-        Update: {
-          created_at?: string;
-          event_type?: string;
-          id?: string;
-          metadata?: Json;
-          profile_id?: string | null;
-          target_id?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "analytics_events_profile_id_fkey";
-            columns: ["profile_id"];
-            isOneToOne: false;
-            referencedRelation: "creator_profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      blocks: {
-        Row: {
-          blocked_user_id: string;
-          blocker_id: string;
-          created_at: string;
-          id: string;
-          reason: string | null;
-        };
-        Insert: {
-          blocked_user_id: string;
-          blocker_id: string;
-          created_at?: string;
-          id?: string;
-          reason?: string | null;
-        };
-        Update: {
-          blocked_user_id?: string;
-          blocker_id?: string;
-          created_at?: string;
-          id?: string;
-          reason?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "blocks_blocked_user_id_fkey";
-            columns: ["blocked_user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "blocks_blocker_id_fkey";
-            columns: ["blocker_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
@@ -850,6 +308,53 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [];
+      };
+      creator_balances: {
+        Row: {
+          available_cents: number;
+          creator_profile_id: string;
+          currency: string;
+          id: string;
+          lifetime_fees_cents: number;
+          lifetime_gross_cents: number;
+          lifetime_net_cents: number;
+          lifetime_paid_out_cents: number;
+          pending_cents: number;
+          updated_at: string;
+        };
+        Insert: {
+          available_cents?: number;
+          creator_profile_id: string;
+          currency?: string;
+          id?: string;
+          lifetime_fees_cents?: number;
+          lifetime_gross_cents?: number;
+          lifetime_net_cents?: number;
+          lifetime_paid_out_cents?: number;
+          pending_cents?: number;
+          updated_at?: string;
+        };
+        Update: {
+          available_cents?: number;
+          creator_profile_id?: string;
+          currency?: string;
+          id?: string;
+          lifetime_fees_cents?: number;
+          lifetime_gross_cents?: number;
+          lifetime_net_cents?: number;
+          lifetime_paid_out_cents?: number;
+          pending_cents?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "creator_balances_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       creator_profiles: {
         Row: {
@@ -1207,6 +712,249 @@ export type Database = {
           },
         ];
       };
+      notification_outbox: {
+        Row: {
+          attempts: number;
+          channel: Database["public"]["Enums"]["notification_channel"];
+          created_at: string;
+          id: string;
+          last_error: string | null;
+          notification_id: string;
+          processed_at: string | null;
+          scheduled_for: string;
+          status: Database["public"]["Enums"]["outbox_status"];
+        };
+        Insert: {
+          attempts?: number;
+          channel: Database["public"]["Enums"]["notification_channel"];
+          created_at?: string;
+          id?: string;
+          last_error?: string | null;
+          notification_id: string;
+          processed_at?: string | null;
+          scheduled_for?: string;
+          status?: Database["public"]["Enums"]["outbox_status"];
+        };
+        Update: {
+          attempts?: number;
+          channel?: Database["public"]["Enums"]["notification_channel"];
+          created_at?: string;
+          id?: string;
+          last_error?: string | null;
+          notification_id?: string;
+          processed_at?: string | null;
+          scheduled_for?: string;
+          status?: Database["public"]["Enums"]["outbox_status"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notification_outbox_notification_id_fkey";
+            columns: ["notification_id"];
+            isOneToOne: false;
+            referencedRelation: "notifications";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      notification_preferences: {
+        Row: {
+          created_at: string;
+          email_enabled: boolean;
+          in_app_enabled: boolean;
+          push_enabled: boolean;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          email_enabled?: boolean;
+          in_app_enabled?: boolean;
+          push_enabled?: boolean;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          email_enabled?: boolean;
+          in_app_enabled?: boolean;
+          push_enabled?: boolean;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      notifications: {
+        Row: {
+          actor_id: string | null;
+          body: string | null;
+          created_at: string;
+          dedupe_key: string;
+          entity_id: string | null;
+          entity_type: string | null;
+          id: string;
+          read_at: string | null;
+          recipient_id: string;
+          title: string;
+          type: Database["public"]["Enums"]["notification_type"];
+        };
+        Insert: {
+          actor_id?: string | null;
+          body?: string | null;
+          created_at?: string;
+          dedupe_key: string;
+          entity_id?: string | null;
+          entity_type?: string | null;
+          id?: string;
+          read_at?: string | null;
+          recipient_id: string;
+          title: string;
+          type: Database["public"]["Enums"]["notification_type"];
+        };
+        Update: {
+          actor_id?: string | null;
+          body?: string | null;
+          created_at?: string;
+          dedupe_key?: string;
+          entity_id?: string | null;
+          entity_type?: string | null;
+          id?: string;
+          read_at?: string | null;
+          recipient_id?: string;
+          title?: string;
+          type?: Database["public"]["Enums"]["notification_type"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey";
+            columns: ["recipient_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payout_requests: {
+        Row: {
+          amount_cents: number;
+          created_at: string;
+          creator_profile_id: string;
+          currency: string;
+          decided_at: string | null;
+          id: string;
+          mock_provider_reference: string | null;
+          note: string | null;
+          status: Database["public"]["Enums"]["payout_request_status"];
+          updated_at: string;
+        };
+        Insert: {
+          amount_cents: number;
+          created_at?: string;
+          creator_profile_id: string;
+          currency?: string;
+          decided_at?: string | null;
+          id?: string;
+          mock_provider_reference?: string | null;
+          note?: string | null;
+          status?: Database["public"]["Enums"]["payout_request_status"];
+          updated_at?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          created_at?: string;
+          creator_profile_id?: string;
+          currency?: string;
+          decided_at?: string | null;
+          id?: string;
+          mock_provider_reference?: string | null;
+          note?: string | null;
+          status?: Database["public"]["Enums"]["payout_request_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payout_requests_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payouts: {
+        Row: {
+          amount_cents: number;
+          created_at: string;
+          creator_profile_id: string;
+          currency: string;
+          failure_reason: string | null;
+          id: string;
+          mock_provider_reference: string | null;
+          paid_at: string | null;
+          payout_request_id: string | null;
+          requested_at: string;
+          status: Database["public"]["Enums"]["payout_status"];
+          updated_at: string;
+        };
+        Insert: {
+          amount_cents: number;
+          created_at?: string;
+          creator_profile_id: string;
+          currency?: string;
+          failure_reason?: string | null;
+          id?: string;
+          mock_provider_reference?: string | null;
+          paid_at?: string | null;
+          payout_request_id?: string | null;
+          requested_at?: string;
+          status?: Database["public"]["Enums"]["payout_status"];
+          updated_at?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          created_at?: string;
+          creator_profile_id?: string;
+          currency?: string;
+          failure_reason?: string | null;
+          id?: string;
+          mock_provider_reference?: string | null;
+          paid_at?: string | null;
+          payout_request_id?: string | null;
+          requested_at?: string;
+          status?: Database["public"]["Enums"]["payout_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payouts_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payouts_payout_request_id_fkey";
+            columns: ["payout_request_id"];
+            isOneToOne: false;
+            referencedRelation: "payout_requests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       post_comments: {
         Row: {
           author_id: string;
@@ -1505,6 +1253,128 @@ export type Database = {
         };
         Relationships: [];
       };
+      purchases: {
+        Row: {
+          amount_cents: number;
+          buyer_user_id: string;
+          created_at: string;
+          creator_profile_id: string | null;
+          currency: string;
+          id: string;
+          post_id: string | null;
+          status: string;
+          transaction_id: string;
+        };
+        Insert: {
+          amount_cents: number;
+          buyer_user_id: string;
+          created_at?: string;
+          creator_profile_id?: string | null;
+          currency?: string;
+          id?: string;
+          post_id?: string | null;
+          status?: string;
+          transaction_id: string;
+        };
+        Update: {
+          amount_cents?: number;
+          buyer_user_id?: string;
+          created_at?: string;
+          creator_profile_id?: string | null;
+          currency?: string;
+          id?: string;
+          post_id?: string | null;
+          status?: string;
+          transaction_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "purchases_buyer_user_id_fkey";
+            columns: ["buyer_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "purchases_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "purchases_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "posts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "purchases_transaction_id_fkey";
+            columns: ["transaction_id"];
+            isOneToOne: false;
+            referencedRelation: "transactions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      reports: {
+        Row: {
+          assigned_admin_user_id: string | null;
+          created_at: string;
+          details: string | null;
+          id: string;
+          reason: Database["public"]["Enums"]["report_reason"];
+          reporter_user_id: string;
+          resolution: string | null;
+          status: Database["public"]["Enums"]["report_status"];
+          subject_id: string;
+          subject_type: Database["public"]["Enums"]["report_subject_type"];
+          updated_at: string;
+        };
+        Insert: {
+          assigned_admin_user_id?: string | null;
+          created_at?: string;
+          details?: string | null;
+          id?: string;
+          reason: Database["public"]["Enums"]["report_reason"];
+          reporter_user_id: string;
+          resolution?: string | null;
+          status?: Database["public"]["Enums"]["report_status"];
+          subject_id: string;
+          subject_type: Database["public"]["Enums"]["report_subject_type"];
+          updated_at?: string;
+        };
+        Update: {
+          assigned_admin_user_id?: string | null;
+          created_at?: string;
+          details?: string | null;
+          id?: string;
+          reason?: Database["public"]["Enums"]["report_reason"];
+          reporter_user_id?: string;
+          resolution?: string | null;
+          status?: Database["public"]["Enums"]["report_status"];
+          subject_id?: string;
+          subject_type?: Database["public"]["Enums"]["report_subject_type"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "reports_assigned_admin_user_id_fkey";
+            columns: ["assigned_admin_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reports_reporter_user_id_fkey";
+            columns: ["reporter_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       reserved_handles: {
         Row: {
           handle: string;
@@ -1552,6 +1422,133 @@ export type Database = {
           user_id?: string;
         };
         Relationships: [];
+      };
+      tips: {
+        Row: {
+          amount_cents: number;
+          created_at: string;
+          creator_profile_id: string;
+          currency: string;
+          id: string;
+          message: string | null;
+          sender_user_id: string | null;
+          status: string;
+          transaction_id: string;
+        };
+        Insert: {
+          amount_cents: number;
+          created_at?: string;
+          creator_profile_id: string;
+          currency?: string;
+          id?: string;
+          message?: string | null;
+          sender_user_id?: string | null;
+          status?: string;
+          transaction_id: string;
+        };
+        Update: {
+          amount_cents?: number;
+          created_at?: string;
+          creator_profile_id?: string;
+          currency?: string;
+          id?: string;
+          message?: string | null;
+          sender_user_id?: string | null;
+          status?: string;
+          transaction_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tips_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tips_sender_user_id_fkey";
+            columns: ["sender_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tips_transaction_id_fkey";
+            columns: ["transaction_id"];
+            isOneToOne: false;
+            referencedRelation: "transactions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      transactions: {
+        Row: {
+          created_at: string;
+          creator_net_cents: number;
+          creator_profile_id: string | null;
+          currency: string;
+          gross_cents: number;
+          id: string;
+          mock_provider_reference: string | null;
+          payer_user_id: string | null;
+          platform_fee_cents: number;
+          processor_fee_cents: number;
+          reference_id: string | null;
+          reference_type: string | null;
+          status: Database["public"]["Enums"]["transaction_status"];
+          type: Database["public"]["Enums"]["transaction_type"];
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          creator_net_cents: number;
+          creator_profile_id?: string | null;
+          currency?: string;
+          gross_cents: number;
+          id?: string;
+          mock_provider_reference?: string | null;
+          payer_user_id?: string | null;
+          platform_fee_cents?: number;
+          processor_fee_cents?: number;
+          reference_id?: string | null;
+          reference_type?: string | null;
+          status?: Database["public"]["Enums"]["transaction_status"];
+          type: Database["public"]["Enums"]["transaction_type"];
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          creator_net_cents?: number;
+          creator_profile_id?: string | null;
+          currency?: string;
+          gross_cents?: number;
+          id?: string;
+          mock_provider_reference?: string | null;
+          payer_user_id?: string | null;
+          platform_fee_cents?: number;
+          processor_fee_cents?: number;
+          reference_id?: string | null;
+          reference_type?: string | null;
+          status?: Database["public"]["Enums"]["transaction_status"];
+          type?: Database["public"]["Enums"]["transaction_type"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "transactions_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "transactions_payer_user_id_fkey";
+            columns: ["payer_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       user_roles: {
         Row: {
@@ -1650,6 +1647,10 @@ export type Database = {
       };
     };
     Functions: {
+      admin_review_payout: {
+        Args: { _action: string; _note?: string; _payout_request_id: string };
+        Returns: undefined;
+      };
       can_view_post: { Args: { _post_id: string }; Returns: boolean };
       cancel_creator_subscription: {
         Args: { _username: string };
@@ -1683,10 +1684,7 @@ export type Database = {
         Args: { _other_user_id: string };
         Returns: string;
       };
-      create_mock_purchase: {
-        Args: { _post_id: string };
-        Returns: undefined;
-      };
+      create_mock_purchase: { Args: { _post_id: string }; Returns: undefined };
       create_mock_tip: {
         Args: { _amount_cents: number; _message?: string; _username: string };
         Returns: undefined;
@@ -1742,6 +1740,25 @@ export type Database = {
           username: string;
         }[];
       };
+      current_audit_actor_role: {
+        Args: never;
+        Returns: Database["public"]["Enums"]["audit_actor_role"];
+      };
+      emit_notification: {
+        Args: {
+          _actor_id: string;
+          _body: string;
+          _dedupe_key: string;
+          _entity_id: string;
+          _entity_type: string;
+          _metadata: Json;
+          _notify?: boolean;
+          _recipient_id: string;
+          _title: string;
+          _type: Database["public"]["Enums"]["notification_type"];
+        };
+        Returns: undefined;
+      };
       feed_creator_posts: {
         Args: { _cursor?: string; _limit?: number; _username: string };
         Returns: {
@@ -1792,6 +1809,7 @@ export type Database = {
         Args: { _conversation_id: string };
         Returns: boolean;
       };
+      is_current_user_admin: { Args: never; Returns: boolean };
       is_current_user_creator: {
         Args: { _creator_profile_id: string };
         Returns: boolean;
@@ -1800,6 +1818,7 @@ export type Database = {
         Args: { _post_id: string };
         Returns: boolean;
       };
+      is_current_user_staff: { Args: never; Returns: boolean };
       is_engagement_blocked: { Args: { _post_id: string }; Returns: boolean };
       is_following_creator: {
         Args: { _creator_profile_id: string };
@@ -1826,6 +1845,11 @@ export type Database = {
       mark_conversation_read: {
         Args: { _conversation_id: string };
         Returns: undefined;
+      };
+      notif_display_name: { Args: { _user_id: string }; Returns: string };
+      notif_is_blocked: {
+        Args: { _actor_id: string; _recipient_id: string };
+        Returns: boolean;
       };
       post_card: {
         Args: { _post_id: string };
@@ -1863,6 +1887,10 @@ export type Database = {
           saved_by_me: boolean;
         }[];
       };
+      process_notification_outbox: {
+        Args: { _batch_size?: number; _max_attempts?: number; _result?: string };
+        Returns: Json;
+      };
       recalc_creator_balance: {
         Args: { _creator_profile_id: string; _currency?: string };
         Returns: undefined;
@@ -1885,14 +1913,6 @@ export type Database = {
       relationship_unfollow_creator: {
         Args: { _username: string };
         Returns: undefined;
-      };
-      admin_review_payout: {
-        Args: { _payout_request_id: string; _action: string; _note?: string };
-        Returns: undefined;
-      };
-      process_notification_outbox: {
-        Args: { _batch_size?: number; _max_attempts?: number; _result?: string };
-        Returns: Json;
       };
       request_payout: {
         Args: { _amount_cents: number; _note?: string };
@@ -1979,12 +1999,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals;
 }
@@ -2004,12 +2024,13 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals;
 }
@@ -2028,12 +2049,13 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals;
 }
@@ -2052,12 +2074,13 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals;
 }
@@ -2068,12 +2091,13 @@ export type Enums<
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    keyof DefaultSchema["CompositeTypes"] | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals;
 }

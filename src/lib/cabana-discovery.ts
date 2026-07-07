@@ -75,7 +75,8 @@ export type DiscoverySearchResults = {
 };
 
 export type DiscoveryFeedItem =
-  { kind: "post"; post: FeedPost } | { kind: "creator"; creator: DiscoveryCreator };
+  | { kind: "post"; post: FeedPost }
+  | { kind: "creator"; creator: DiscoveryCreator };
 
 export type DiscoveryCreatorRankMode = "featured" | "trending" | "recent" | "suggested" | "search";
 
