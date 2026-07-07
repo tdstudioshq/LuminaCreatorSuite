@@ -1,0 +1,1360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>LUMINA · Project Control Center</title>
+<style>
+/* ============================== TOKENS ============================== */
+:root{
+  --void:#06060b; --panel:#0d0d15; --panel-2:#10101a;
+  --glass:rgba(255,255,255,.032); --glass-2:rgba(255,255,255,.055);
+  --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.16);
+  --ink:#f2f2f7; --ink-2:#a9aab8; --ink-3:#7d7e8d;
+  --seq:#6ea8ef;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b; --violet:#a5b4fc;
+  --iri:linear-gradient(115deg,#93e6f8 0%,#a5b4fc 32%,#e6a8f0 64%,#ffd9a3 100%);
+  --display:"Bodoni 72","Didot","Playfair Display",Georgia,ui-serif,serif;
+  --body:system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:
+    radial-gradient(1200px 520px at 15% -10%,rgba(165,180,252,.08),transparent 60%),
+    radial-gradient(1000px 480px at 95% 0%,rgba(230,168,240,.05),transparent 55%),
+    var(--void);
+  color:var(--ink);font:14.5px/1.6 var(--body);-webkit-font-smoothing:antialiased;
+}
+a{color:inherit;text-decoration:none}
+code{font:12px var(--mono);background:rgba(255,255,255,.06);border:1px solid var(--line);padding:1px 5px;border-radius:5px;color:var(--ink)}
+::selection{background:rgba(165,180,252,.35)}
+
+/* ============================== SHELL ============================== */
+.topbar{position:fixed;inset:0 0 auto 0;z-index:60;height:56px;
+  display:flex;align-items:center;gap:14px;padding:0 20px;
+  background:rgba(6,6,11,.8);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--line)}
+.wordmark{font-family:var(--display);font-size:17px;letter-spacing:.3em}
+.wordmark b{font-weight:400;background:var(--iri);-webkit-background-clip:text;background-clip:text;color:transparent}
+.topbar .sub{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.searchwrap{margin-left:auto;position:relative;width:min(360px,38vw)}
+.searchwrap input{width:100%;background:var(--glass);border:1px solid var(--line);border-radius:9px;
+  color:var(--ink);font:13px var(--body);padding:8px 78px 8px 34px}
+.searchwrap input::placeholder{color:var(--ink-3)}
+.searchwrap .icon{position:absolute;left:11px;top:9px;color:var(--ink-3);font-size:13px}
+.searchwrap .count{position:absolute;right:10px;top:8px;font:10.5px var(--mono);color:var(--ink-3);
+  border:1px solid var(--line);border-radius:6px;padding:2px 6px;display:none}
+.layout{display:grid;grid-template-columns:216px minmax(0,1fr);gap:26px;max-width:1400px;margin:0 auto;padding:80px 24px 60px}
+
+/* floating sidebar */
+.side{position:sticky;top:80px;align-self:start;max-height:calc(100vh - 100px);overflow-y:auto;
+  background:var(--glass);border:1px solid var(--line);border-radius:var(--r);padding:10px}
+.side a{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;
+  font-size:12.5px;color:var(--ink-2);border:1px solid transparent}
+.side a .dot{width:5px;height:5px;border-radius:50%;background:var(--ink-3);flex-shrink:0}
+.side a:hover{background:var(--glass-2);color:var(--ink)}
+.side a.active{background:var(--glass-2);border-color:var(--line);color:var(--ink)}
+.side a.active .dot{background:var(--violet)}
+.side .grp{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);padding:10px 10px 4px}
+main{min-width:0}
+section{margin-bottom:26px;scroll-margin-top:76px}
+
+/* section frame */
+.sec{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.016));
+  border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.sec-head{display:flex;align-items:baseline;gap:12px;padding:18px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.sec-head .num{font:11px var(--mono);color:var(--ink-3)}
+.sec-head h2{font-family:var(--display);font-weight:400;font-size:22px;letter-spacing:.015em}
+.sec-head .note{margin-left:auto;font-size:11.5px;color:var(--ink-3)}
+.sec-body{padding:20px 22px}
+.muted{color:var(--ink-2)} .dim{color:var(--ink-3)}
+h3.sub{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 10px}
+h3.sub:first-child{margin-top:0}
+
+/* badges — glyph + label, never color alone */
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--ink-2);white-space:nowrap}
+.badge i{font-style:normal;font-size:9px;line-height:1}
+.b-done{border-color:rgba(12,163,12,.5)} .b-done i{color:var(--good)}
+.b-part{border-color:rgba(250,178,25,.45)} .b-part i{color:var(--warn)}
+.b-miss{border-color:rgba(208,59,59,.5)} .b-miss i{color:var(--crit)}
+.b-gate{border-color:rgba(236,131,90,.5)} .b-gate i{color:var(--serious)}
+.b-demo{border-color:rgba(165,180,252,.4)} .b-demo i{color:var(--violet)}
+.b-verify{border-style:dashed;border-color:rgba(250,178,25,.45)} .b-verify i{color:var(--warn)}
+
+/* generic pills / buttons */
+.pill{font-size:12px;padding:5px 11px;cursor:pointer;border:1px solid var(--line);border-radius:999px;
+  background:none;color:var(--ink-2)}
+.pill[aria-pressed="true"]{border-color:var(--line-2);background:rgba(255,255,255,.08);color:var(--ink)}
+.btn{font:12.5px var(--body);color:var(--ink);cursor:pointer;background:rgba(255,255,255,.08);
+  border:1px solid var(--line-2);border-radius:9px;padding:8px 14px}
+.btn:hover{background:rgba(255,255,255,.13)}
+.btn.ghost{background:none;color:var(--ink-2)}
+button:focus-visible,input:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--violet);outline-offset:2px;border-radius:6px}
+
+/* ============================== HERO ============================== */
+.hero{position:relative;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
+  border:1px solid var(--line);border-radius:18px;padding:34px;display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:28px}
+.hero::after{content:"";position:absolute;inset:-40% -20% auto auto;width:560px;height:560px;border-radius:50%;
+  background:var(--iri);opacity:.07;filter:blur(90px);pointer-events:none;animation:drift 14s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0)}to{transform:translate(-60px,40px)}}
+.eyebrow{font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-3);display:flex;gap:10px;align-items:center}
+.eyebrow::before{content:"";width:26px;height:1px;background:var(--iri)}
+.hero h1{font-family:var(--display);font-weight:400;font-size:clamp(30px,4.4vw,46px);line-height:1.08;margin:14px 0 10px}
+.hero h1 em{font-style:italic;background:var(--iri);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .lede{color:var(--ink-2);max-width:64ch}
+.hero-kv{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:10px;margin-top:22px}
+.hkv{background:var(--glass);border:1px solid var(--line);border-radius:11px;padding:11px 13px}
+.hkv .k{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.hkv .v{font-size:14px;color:var(--ink);margin-top:3px;font-weight:600}
+.hkv .v .badge{margin-left:6px}
+.ringwrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.ringwrap svg{transform:rotate(-90deg)}
+.ring-val{font-size:34px;font-weight:650;letter-spacing:-.01em}
+.ring-lab{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);text-align:center}
+.ring-center{position:relative}
+.ring-center .inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:none}
+
+/* ============================== CARDS / GRIDS ============================== */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+details.xcard{background:var(--glass);border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:border-color .18s,transform .18s}
+details.xcard:hover{border-color:var(--line-2);transform:translateY(-1px)}
+details.xcard>summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;align-items:center;gap:10px}
+details.xcard>summary::-webkit-details-marker{display:none}
+.xcard .t{font-weight:600;font-size:13.5px}
+.xcard .pct{margin-left:auto;font:12px var(--mono);color:var(--ink-2)}
+.xcard .chev{color:var(--ink-3);font-size:11px;transition:transform .2s}
+details[open].xcard .chev{transform:rotate(90deg)}
+.xcard .bd{padding:0 16px 14px;font-size:13px;color:var(--ink-2);border-top:1px solid var(--line)}
+.xcard .bd>:first-child{margin-top:12px}
+.xcard .bd p+p{margin-top:8px}
+.xcard .bd .lab{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);margin:10px 0 3px}
+.minibar{height:4px;border-radius:3px;background:rgba(255,255,255,.08);margin-top:10px;overflow:hidden}
+.minibar i{display:block;height:100%;border-radius:3px;background:var(--seq)}
+
+/* tables */
+.tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:12.5px}
+th{text-align:left;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:600;
+  padding:10px 13px;border-bottom:1px solid var(--line-2);background:rgba(255,255,255,.02);position:sticky;top:0}
+td{padding:9px 13px;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.mono{font-family:var(--mono);font-size:11.5px;color:var(--ink)}
+td b{color:var(--ink);font-weight:600}
+
+/* timeline */
+.timeline{position:relative;margin-left:8px;padding-left:26px}
+.timeline::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--iri);opacity:.8;border-radius:2px}
+.tl-item{position:relative;margin-bottom:6px}
+.tl-item::before{content:"";position:absolute;left:-25px;top:12px;width:12px;height:12px;border-radius:50%;
+  background:var(--iri);box-shadow:0 0 0 3px var(--void)}
+.tl-item.fix::before{border-radius:3px;transform:rotate(45deg);background:var(--panel);border:2px solid var(--warn)}
+.tl-item.now::before{background:var(--panel);border:2px solid #93e6f8;animation:pulse 2s ease-in-out infinite}
+.tl-item.future::before{background:transparent;border:2px dashed var(--ink-3)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px var(--void),0 0 0 4px rgba(147,230,248,.0)}50%{box-shadow:0 0 0 3px var(--void),0 0 0 7px rgba(147,230,248,.25)}}
+.tl-item>details{background:var(--glass);border:1px solid var(--line);border-radius:10px}
+.tl-item>details>summary{list-style:none;cursor:pointer;display:flex;gap:10px;align-items:center;padding:10px 14px;font-size:13px}
+.tl-item>details>summary::-webkit-details-marker{display:none}
+.tl-item .when{font:10.5px var(--mono);color:var(--ink-3);width:86px;flex-shrink:0}
+.tl-item .tt{font-weight:600}
+.tl-item .bd{padding:0 14px 12px;font-size:12.5px;color:var(--ink-2);border-top:1px solid var(--line)}
+.tl-item .bd>:first-child{margin-top:10px}
+
+/* repo tree */
+.tree details{margin-left:0}
+.tree details details{margin-left:20px}
+.tree summary{list-style:none;cursor:pointer;padding:5px 8px;border-radius:7px;display:flex;gap:9px;align-items:baseline;font-size:13px}
+.tree summary::-webkit-details-marker{display:none}
+.tree summary:hover{background:var(--glass-2)}
+.tree .f{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+.tree .c{font-size:11.5px;color:var(--ink-3)}
+.tree .leaf{padding:3px 8px 3px 28px;font-size:12px;color:var(--ink-2);display:flex;gap:9px;align-items:baseline}
+.tree .leaf .f{color:var(--ink-2)}
+.tree summary .tw{color:var(--ink-3);font-size:10px;transition:transform .15s}
+.tree details[open]>summary .tw{transform:rotate(90deg)}
+
+/* todo */
+.todo-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.todo-tools .spacer{flex:1}
+.track{position:relative;height:7px;border-radius:4px;background:rgba(255,255,255,.07)}
+.fill{position:absolute;inset:0 auto 0 0;border-radius:4px;background:var(--seq);transition:width .4s ease}
+.fill.iri{background:var(--iri)}
+.todo-group{margin-top:16px}
+.todo-group h4{display:flex;align-items:center;gap:9px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px}
+.todo-group h4 .swatch{width:9px;height:9px;border-radius:3px}
+ul.tasks{list-style:none}
+ul.tasks>li{border:1px solid var(--line);border-radius:10px;margin-bottom:7px;background:rgba(255,255,255,.015)}
+ul.tasks>li.done{opacity:.5}
+ul.tasks>li.done .tt{text-decoration:line-through;text-decoration-color:var(--ink-3)}
+.task>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:11px;padding:11px 13px}
+.task>summary::-webkit-details-marker{display:none}
+.task input[type=checkbox]{width:15px;height:15px;accent-color:var(--violet);cursor:pointer;flex-shrink:0}
+.task .tt{font-size:13.5px;color:var(--ink);font-weight:600}
+.task .eff{margin-left:auto;font:10.5px var(--mono);color:var(--ink-3);white-space:nowrap}
+.task .bd{padding:0 13px 12px 39px;font-size:12.5px;color:var(--ink-2)}
+.tmeta{display:grid;grid-template-columns:96px 1fr;gap:4px 12px;margin-top:8px;font-size:12px}
+.tmeta dt{color:var(--ink-3);text-transform:uppercase;font-size:9.5px;letter-spacing:.12em;padding-top:2px}
+.copy-mini{font:10px var(--body);color:var(--ink-2);background:none;border:1px solid var(--line);border-radius:6px;padding:2px 7px;cursor:pointer}
+.copy-mini:hover{color:var(--ink);border-color:var(--line-2)}
+
+/* kanban */
+.kanban{display:grid;grid-template-columns:repeat(4,minmax(210px,1fr));gap:10px}
+.kcol{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:10px;min-width:0}
+.kcol h4{display:flex;align-items:center;gap:8px;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);padding:4px 6px 10px}
+.kcol h4 .n{margin-left:auto;font-family:var(--mono);font-size:10.5px}
+.kcard{border:1px solid var(--line);border-radius:9px;background:var(--panel-2);margin-bottom:7px}
+.kcard summary{list-style:none;cursor:pointer;padding:9px 11px;font-size:12.5px;color:var(--ink);font-weight:600;display:flex;gap:8px;align-items:baseline}
+.kcard summary::-webkit-details-marker{display:none}
+.kcard .bd{padding:0 11px 10px;font-size:12px;color:var(--ink-2);border-top:1px solid var(--line)}
+.kcard .bd>:first-child{margin-top:8px}
+.kcard .lab{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:7px 0 2px}
+
+/* gauges */
+.gauges{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:12px}
+.gauge{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.gauge .lab{font-size:11px;color:var(--ink-2);text-align:center}
+.gauge .num{font-size:15px;font-weight:650}
+.gauge svg{transform:rotate(-90deg)}
+.gauge circle.bg{stroke:rgba(255,255,255,.09)}
+.gauge circle.fg{stroke:var(--seq);transition:stroke-dashoffset 1s ease}
+.gauge.hero-g circle.fg{stroke:url(#irigrad)}
+
+/* stat tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tile{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:14px 15px 12px}
+.tile .v{font-size:26px;font-weight:650;line-height:1.1}
+.tile .k{font-size:11px;color:var(--ink-3);margin-top:3px;line-height:1.35}
+
+/* testing checks */
+.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.check{display:flex;gap:12px;align-items:center;background:var(--glass);border:1px solid var(--line);border-radius:11px;padding:13px 14px}
+.check .ok{width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(12,163,12,.6);display:flex;align-items:center;justify-content:center;
+  color:var(--good);font-size:13px;flex-shrink:0;animation:pop .5s ease both}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+.check b{display:block;font-size:13px}
+.check span{font-size:11.5px;color:var(--ink-3)}
+
+/* prompts */
+.prompt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.pbox{border:1px solid var(--line);border-radius:12px;background:#0a0a11;display:flex;flex-direction:column;min-width:0}
+.pbox .ph{display:flex;align-items:center;gap:8px;padding:10px 13px;border-bottom:1px solid var(--line);font:10.5px var(--mono);color:var(--ink-3)}
+.pbox .ph .btn{margin-left:auto;padding:5px 10px;font-size:11.5px}
+.pbox pre{padding:13px;font:11px/1.65 var(--mono);color:var(--ink-2);white-space:pre-wrap;word-break:break-word;max-height:230px;overflow-y:auto}
+
+/* roadmap lanes */
+.lanes{display:grid;grid-template-columns:repeat(4,minmax(200px,1fr));gap:10px}
+.lane{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:10px}
+.lane h4{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;padding:4px 6px 10px;display:flex;gap:8px;align-items:center}
+.lane h4 i{font-style:normal;font-size:9px}
+.lane .kcard summary{font-weight:600}
+
+/* footer */
+footer{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);color:var(--ink-3);font-size:11.5px;line-height:1.7}
+
+/* search hidden state */
+.search-hidden{display:none !important}
+mark{background:rgba(250,178,25,.3);color:var(--ink);border-radius:3px;padding:0 1px}
+.empty-note{color:var(--ink-3);font-size:12.5px;padding:14px 4px;display:none}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+  html{scroll-behavior:auto}
+}
+@media (max-width:1080px){.kanban{grid-template-columns:repeat(2,1fr)}.lanes{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:900px){
+  .layout{grid-template-columns:1fr;padding-top:70px}
+  .side{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:2px}
+  .side .grp{display:none}
+  .hero{grid-template-columns:1fr}
+  .ringwrap{align-items:flex-start}
+}
+@media (max-width:620px){
+  .kanban,.lanes{grid-template-columns:1fr}
+  .hero-kv{grid-template-columns:1fr 1fr}
+  .searchwrap{width:46vw}
+  .topbar .sub{display:none}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="irigrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#93e6f8"/><stop offset="35%" stop-color="#a5b4fc"/>
+    <stop offset="65%" stop-color="#e6a8f0"/><stop offset="100%" stop-color="#ffd9a3"/>
+  </linearGradient>
+</defs></svg>
+
+<div class="topbar">
+  <span class="wordmark"><b>LUMINA</b></span>
+  <span class="sub">Project control center · Cabana</span>
+  <div class="searchwrap">
+    <span class="icon">⌕</span>
+    <input id="globalSearch" type="search" placeholder="Search features, tasks, routes, files, architecture…" aria-label="Global search" />
+    <span class="count" id="searchCount"></span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ============ SIDEBAR ============ -->
+  <nav class="side" id="sideNav" aria-label="Sections">
+    <div class="grp">Overview</div>
+    <a href="#top" data-s="top"><span class="dot"></span>Hero</a>
+    <a href="#executive" data-s="executive"><span class="dot"></span>Executive summary</a>
+    <a href="#readiness" data-s="readiness"><span class="dot"></span>Production readiness</a>
+    <div class="grp">System</div>
+    <a href="#architecture" data-s="architecture"><span class="dot"></span>Architecture</a>
+    <a href="#timeline" data-s="timeline"><span class="dot"></span>Timeline</a>
+    <a href="#repo" data-s="repo"><span class="dot"></span>Repository map</a>
+    <a href="#routes" data-s="routes"><span class="dot"></span>Route explorer</a>
+    <a href="#database" data-s="database"><span class="dot"></span>Database</a>
+    <a href="#testing" data-s="testing"><span class="dot"></span>Testing</a>
+    <div class="grp">Work</div>
+    <a href="#features" data-s="features"><span class="dot"></span>Feature matrix</a>
+    <a href="#todo" data-s="todo"><span class="dot"></span>TODO center</a>
+    <a href="#missing" data-s="missing"><span class="dot"></span>Missing features</a>
+    <a href="#debt" data-s="debt"><span class="dot"></span>Technical debt</a>
+    <div class="grp">Forward</div>
+    <a href="#services" data-s="services"><span class="dot"></span>External services</a>
+    <a href="#roadmap" data-s="roadmap"><span class="dot"></span>Roadmap</a>
+    <a href="#claude" data-s="claude"><span class="dot"></span>Claude integration</a>
+    <a href="#stats" data-s="stats"><span class="dot"></span>Statistics</a>
+  </nav>
+
+  <main>
+
+  <!-- ============ HERO ============ -->
+  <section id="top">
+    <div class="hero">
+      <div>
+        <p class="eyebrow">Engineering audit · read-only · single source of truth</p>
+        <h1>CABANA <em>· Lumina</em><br/>Master project control center</h1>
+        <p class="lede">A production-shaped creator subscription platform. The data layer, RLS discipline, append-only
+        financial core, and test culture are launch-grade; identity hardening, delivery providers, payments (gated by design),
+        media, and ops are the measured gap.</p>
+        <div class="hero-kv">
+          <div class="hkv"><div class="k">Project</div><div class="v">CABANA · repo LuminaCreatorSuite</div></div>
+          <div class="hkv"><div class="k">Build status</div><div class="v">Gate green <span class="badge b-done"><i>●</i> verified</span></div></div>
+          <div class="hkv"><div class="k">Current phase</div><div class="v">Phase 11B shipped · next gated</div></div>
+          <div class="hkv"><div class="k">Repository health</div><div class="v">332/332 tests · tsc ✓ · lint 0 err · build ✓</div></div>
+          <div class="hkv"><div class="k">Last audit</div><div class="v">July 6, 2026 · commit 43c1321</div></div>
+          <div class="hkv"><div class="k">Working tree</div><div class="v">1 uncommitted CLAUDE.md sync <span class="badge b-verify"><i>◆</i> review</span></div></div>
+        </div>
+      </div>
+      <div class="ringwrap">
+        <div class="ring-center">
+          <svg width="190" height="190" viewBox="0 0 190 190" role="img" aria-label="Overall production readiness 58 percent">
+            <circle cx="95" cy="95" r="82" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"/>
+            <circle id="heroRing" cx="95" cy="95" r="82" fill="none" stroke="url(#irigrad)" stroke-width="10"
+              stroke-linecap="round" stroke-dasharray="515.2" stroke-dashoffset="515.2"
+              style="transition:stroke-dashoffset 1.4s ease .3s"/>
+          </svg>
+          <div class="inner">
+            <div class="ring-val">58%</div>
+            <div class="ring-lab">Production<br/>readiness</div>
+          </div>
+        </div>
+        <div class="ring-lab">audit score · 2026-07-06</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ EXECUTIVE ============ -->
+  <section id="executive">
+    <div class="sec">
+      <div class="sec-head"><span class="num">01</span><h2>Executive summary</h2><span class="note">from the July 6 audit</span></div>
+      <div class="sec-body">
+        <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
+          <details class="xcard" open><summary><span class="t">Overall completion</span><span class="pct">58%</span><span class="chev">▶</span></summary>
+            <div class="bd"><p>18 platform slices shipped (Phases 2A → 11B) plus two corrective migrations and a social-UI refactor.
+            Everything demo-money by design. The gap is concentrated: identity, delivery, payments, media, ops.</p></div></details>
+          <details class="xcard" open><summary><span class="t">Major accomplishments</span><span class="chev">▶</span></summary>
+            <div class="bd"><p>16 migrations rebuild from zero · 35 RLS-tested tables · 85 server actions (101 server functions) ·
+            append-only money ledger with authorize-vs-settle payouts · realtime messaging + notifications ·
+            332 unit tests at a 95% coverage gate · 14 behavioral SQL suites in CI.</p></div></details>
+          <details class="xcard" open><summary><span class="t">Biggest blockers</span><span class="chev">▶</span></summary>
+            <div class="bd"><p>Remote schema never reconciled · client-side-only route guards · public <code>user_id</code> leak ·
+            zero delivery providers · no CD/monitoring · payments hard-gated pending approval.</p></div></details>
+          <details class="xcard" open><summary><span class="t">Next milestone</span><span class="chev">▶</span></summary>
+            <div class="bd"><p><b style="color:var(--ink)">M0 — Truth &amp; hygiene</b> (low complexity, low risk): commit the CLAUDE.md sync,
+            close the CI suite gap, update the handoff, add a README, refresh stale docs, name the wrangler app.</p></div></details>
+          <details class="xcard" open><summary><span class="t">Roadmap remaining</span><span class="chev">▶</span></summary>
+            <div class="bd"><p>Nine milestones, M0 → M8: hygiene → security → beta UX → ops floor → notification delivery →
+            search &amp; counts → media pipeline → payments GA (gated) → trust &amp; scale. See <a href="#roadmap" style="color:var(--violet)">Roadmap</a>.</p></div></details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ READINESS GAUGES ============ -->
+  <section id="readiness">
+    <div class="sec">
+      <div class="sec-head"><span class="num">02</span><h2>Production readiness</h2><span class="note">audit Part 6 · all twenty scored areas</span></div>
+      <div class="sec-body">
+        <div class="gauges" id="gauges"></div>
+        <p class="dim" style="margin-top:12px;font-size:12px">Scores are the audit's Part 6 values, unmodified. "Backend" and "Infrastructure"
+        were not scored as discrete areas in the audit — their nearest measured proxies are Routing/Database/Realtime and Deployment/Testing.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ARCHITECTURE ============ -->
+  <section id="architecture">
+    <div class="sec">
+      <div class="sec-head"><span class="num">03</span><h2>Architecture</h2><span class="note">click any card to expand</span></div>
+      <div class="sec-body"><div class="cards" id="archCards"></div></div>
+    </div>
+  </section>
+
+  <!-- ============ TIMELINE ============ -->
+  <section id="timeline">
+    <div class="sec">
+      <div class="sec-head"><span class="num">04</span><h2>Project timeline</h2><span class="note">click a milestone to expand</span></div>
+      <div class="sec-body"><div class="timeline" id="timelineList"></div></div>
+    </div>
+  </section>
+
+  <!-- ============ REPO MAP ============ -->
+  <section id="repo">
+    <div class="sec">
+      <div class="sec-head"><span class="num">05</span><h2>Repository map</h2><span class="note">counts verified during the audit</span></div>
+      <div class="sec-body">
+        <div class="tree" data-search-scope>
+          <details open><summary><span class="tw">▶</span><span class="f">LuminaCreatorSuite/</span><span class="c">TanStack Start · React 19 · Bun</span></summary>
+            <details><summary><span class="tw">▶</span><span class="f">src/routes/</span><span class="c">42 route files · flat dot-notation · routeTree.gen.ts is generated</span></summary>
+              <div class="leaf"><span class="f">$username.tsx · feed.tsx · post.$postId.tsx · discover.tsx</span><span class="c">public social surfaces (SocialShell)</span></div>
+              <div class="leaf"><span class="f">dashboard.*.tsx</span><span class="c">15 creator-studio screens incl. home, performance, subscribers</span></div>
+              <div class="leaf"><span class="f">admin.*.tsx</span><span class="c">6 staff/admin screens: reports, audit, finance, ledger, payouts</span></div>
+              <div class="leaf"><span class="f">messages.tsx · messages.$conversationId.tsx · notifications.tsx · account.tsx</span><span class="c">member surfaces</span></div>
+              <div class="leaf"><span class="f">login · signup · forgot/reset-password · onboarding</span><span class="c">auth flows</span></div>
+            </details>
+            <details><summary><span class="tw">▶</span><span class="f">src/lib/</span><span class="c">business core: 16 pure modules · 16 action files · 14 hook files</span></summary>
+              <div class="leaf"><span class="f">cabana-*.ts</span><span class="c">pure, repository-injected domain modules — the 95% coverage set</span></div>
+              <div class="leaf"><span class="f">*-actions.ts</span><span class="c">85 exported server actions (101 createServerFn), RLS-scoped</span></div>
+              <div class="leaf"><span class="f">use-*.ts</span><span class="c">React Query hooks (posts, messaging, money, notifications…)</span></div>
+              <div class="leaf"><span class="f">cabana-store.ts · cabana-auth.ts · cabana-roles.ts</span><span class="c">T1 creator data · auth · roles</span></div>
+            </details>
+            <details><summary><span class="tw">▶</span><span class="f">src/components/</span><span class="c">ui/ (~46 shadcn primitives) + cabana/ feature areas</span></summary>
+              <div class="leaf"><span class="f">cabana/social/</span><span class="c">SocialShell · SocialNav · SocialRightRail — three-column layout</span></div>
+              <div class="leaf"><span class="f">cabana/posts · messaging · notifications · discovery · subscriptions · earnings</span><span class="c">feature UI</span></div>
+              <div class="leaf"><span class="f">cabana/moderation · reporting · admin-finance</span><span class="c">trust &amp; back-office UI</span></div>
+              <div class="leaf"><span class="f">cabana/dashboard/ (+ overview, analytics)</span><span class="c">studio screens, 11A/11B dashboards</span></div>
+              <div class="leaf"><span class="f">cabana/demo · foundation</span><span class="c">legacy demo surfaces (DemoMessages) + FoundationPage guest view</span></div>
+            </details>
+            <details><summary><span class="tw">▶</span><span class="f">src/integrations/supabase/</span><span class="c">3 trust boundaries + middleware (4 files auto-generated)</span></summary>
+              <div class="leaf"><span class="f">client.ts</span><span class="c">anon browser client — RLS enforced</span></div>
+              <div class="leaf"><span class="f">client.server.ts</span><span class="c">service-role admin — server-only</span></div>
+              <div class="leaf"><span class="f">auth-middleware.ts · optional-auth-middleware.ts</span><span class="c">required / guest-callable RLS scoping</span></div>
+              <div class="leaf"><span class="f">types.ts</span><span class="c">generated DB types</span></div>
+            </details>
+            <details><summary><span class="tw">▶</span><span class="f">supabase/</span><span class="c">16 migrations · 14 test suites · seed · config</span></summary>
+              <div class="leaf"><span class="f">migrations/</span><span class="c">20260511 baseline → 20260526 roles-policy fix, rebuild from zero</span></div>
+              <div class="leaf"><span class="f">tests/</span><span class="c">smoke + 13 behavioral suites (psql, ON_ERROR_STOP)</span></div>
+              <div class="leaf"><span class="f">seed.sql</span><span class="c">aurora demo creator, purchase post, reports, payout requests</span></div>
+            </details>
+            <details><summary><span class="tw">▶</span><span class="f">docs/</span><span class="c">10 blueprints incl. roadmap, handoff, API, database, product spec</span></summary>
+              <div class="leaf"><span class="f">CLAUDE_SESSION_HANDOFF.md</span><span class="c">phase state ledger (through 11B)</span></div>
+              <div class="leaf"><span class="f">CABANA_PROJECT_STATE.md · CABANA_TECH_DEBT.md</span><span class="c">stale checkpoints — flagged for refresh</span></div>
+            </details>
+            <div class="leaf"><span class="f">.github/workflows/ci.yml</span><span class="c">verify job + from-zero DB rebuild · missing user_roles_policy.sql</span></div>
+            <div class="leaf"><span class="f">scripts/db-validate.sh</span><span class="c">local rebuild-from-zero + all 14 suites (Docker)</span></div>
+            <div class="leaf"><span class="f">wrangler.jsonc</span><span class="c">Cloudflare Workers target — still template-named "tanstack-start-app"</span></div>
+            <div class="leaf"><span class="f">CLAUDE.md · GEMINI.md · CABANA_ARCHITECTURE.md</span><span class="c">agent + architecture docs (GEMINI duplicates CLAUDE — drift risk)</span></div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ROUTE EXPLORER ============ -->
+  <section id="routes">
+    <div class="sec">
+      <div class="sec-head"><span class="num">06</span><h2>Route explorer</h2><span class="note" id="routeCount"></span></div>
+      <div class="sec-body">
+        <div class="todo-tools" role="group" aria-label="Route filters" id="routeFilters">
+          <button class="pill" data-rf="all" aria-pressed="true">All</button>
+          <button class="pill" data-rf="public" aria-pressed="false">Public</button>
+          <button class="pill" data-rf="member" aria-pressed="false">Member</button>
+          <button class="pill" data-rf="creator" aria-pressed="false">Creator</button>
+          <button class="pill" data-rf="dashboard" aria-pressed="false">Dashboard</button>
+          <button class="pill" data-rf="social" aria-pressed="false">Social</button>
+          <button class="pill" data-rf="admin" aria-pressed="false">Admin</button>
+        </div>
+        <div class="tbl-scroll"><table id="routeTable">
+          <thead><tr><th style="width:220px">Route</th><th>Purpose</th><th style="width:120px">Completion</th><th style="width:220px">Dependencies</th><th>Notes</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <p class="empty-note" id="routeEmpty">No routes match.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DATABASE ============ -->
+  <section id="database">
+    <div class="sec">
+      <div class="sec-head"><span class="num">07</span><h2>Database overview</h2><span class="note">rebuilds from zero · verified counts</span></div>
+      <div class="sec-body">
+        <div class="tiles">
+          <div class="tile"><div class="v">35</div><div class="k">tables (all RLS-enabled)</div></div>
+          <div class="tile"><div class="v">2</div><div class="k">safe public views (ID-free)</div></div>
+          <div class="tile"><div class="v">~45</div><div class="k">functions / SECURITY DEFINER RPCs</div></div>
+          <div class="tile"><div class="v">40</div><div class="k">indexes across migrations</div></div>
+          <div class="tile"><div class="v">20+</div><div class="k">triggers (provisioning, audit, immutability, events)</div></div>
+          <div class="tile"><div class="v">4</div><div class="k">storage buckets (1 private: post-media)</div></div>
+          <div class="tile"><div class="v">16</div><div class="k">ordered migrations</div></div>
+          <div class="tile"><div class="v">14</div><div class="k">behavioral SQL suites</div></div>
+        </div>
+        <h3 class="sub">Migration chain</h3>
+        <p class="muted" style="font-family:var(--mono);font-size:11.5px;line-height:2">
+          0511 baseline → 0512 member accounts → 0513 social graph → 0514 posts+feed → 0515 engagement →
+          0516 creator subs → 0517 messaging → 0518 money ledger → 0519 notifications → 0520 moderation →
+          0521 report reasons → 0522 admin payouts → 0523 notif engine → 0524 creator analytics →
+          0525 baseline grants (fix) → 0526 roles policy (fix)</p>
+        <h3 class="sub">Policies &amp; guarantees</h3>
+        <ul class="muted" style="list-style:none;font-size:13px">
+          <li style="padding:4px 0">— RLS on every table; behavioral suites assert per-role isolation, anonymous denial, and block-awareness.</li>
+          <li style="padding:4px 0">— <code>transactions</code>, <code>audit_logs</code>, <code>activity_events</code> are append-only via BEFORE UPDATE/DELETE triggers (FK-null cascades only).</li>
+          <li style="padding:4px 0">— Lesson encoded by migration 0525: RLS needs explicit table GRANTs or PostgREST fails with <code>42501</code> before policies run.</li>
+          <li style="padding:4px 0">— <span class="badge b-verify"><i>◆</i> needs verification</span> remote project never diffed against the reconstructed baseline; <code>post_count</code> in public views may still be a placeholder 0.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TESTING ============ -->
+  <section id="testing">
+    <div class="sec">
+      <div class="sec-head"><span class="num">08</span><h2>Testing dashboard</h2><span class="note">all runs executed July 6, 2026</span></div>
+      <div class="sec-body">
+        <div class="checks">
+          <div class="check"><span class="ok">✓</span><div><b>Vitest — 332 / 332</b><span>16 files · 490ms · run today</span></div></div>
+          <div class="check"><span class="ok">✓</span><div><b>Coverage above 95% gate</b><span>99.52 stmts · 95.75 branch · 100 funcs · 100 lines</span></div></div>
+          <div class="check"><span class="ok">✓</span><div><b>Typecheck</b><span>tsc --noEmit clean</span></div></div>
+          <div class="check"><span class="ok">✓</span><div><b>Lint</b><span>0 errors · 6 expected react-refresh warnings</span></div></div>
+          <div class="check"><span class="ok">✓</span><div><b>Build</b><span>client + SSR green · 3.7s SSR pass</span></div></div>
+          <div class="check"><span class="ok">✓</span><div><b>SQL suites</b><span>14 behavioral suites via db:validate (Docker)</span></div></div>
+        </div>
+        <h3 class="sub">Coverage meters · threshold tick at 95%</h3>
+        <div id="covMeters"></div>
+        <h3 class="sub">Gaps</h3>
+        <ul class="muted" style="list-style:none;font-size:13px">
+          <li style="padding:4px 0">— <span class="badge b-part"><i>◆</i> gap</span> CI runs only 13 of 14 SQL suites — <code>user_roles_policy.sql</code> is in <code>db-validate.sh</code> but missing from <code>ci.yml</code>.</li>
+          <li style="padding:4px 0">— <span class="badge b-miss"><i>✕</i> missing</span> Zero component/hook tests and zero E2E — pure modules + SQL suites only.</li>
+          <li style="padding:4px 0">— Lowest branch coverage: cabana-discovery 86.9% · cabana-creator-analytics 93.6% · cabana-moderation 93.7%.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FEATURE MATRIX ============ -->
+  <section id="features">
+    <div class="sec">
+      <div class="sec-head"><span class="num">09</span><h2>Feature matrix</h2><span class="note" id="featCount"></span></div>
+      <div class="sec-body">
+        <div class="todo-tools" role="group" aria-label="Feature filters" id="featFilters">
+          <button class="pill" data-ff="all" aria-pressed="true">All</button>
+          <button class="pill" data-ff="complete" aria-pressed="false">✅ Complete</button>
+          <button class="pill" data-ff="partial" aria-pressed="false">🟡 Partial</button>
+          <button class="pill" data-ff="missing" aria-pressed="false">❌ Missing</button>
+          <button class="pill" data-ff="gated" aria-pressed="false">◆ Gated</button>
+        </div>
+        <div class="tbl-scroll" style="max-height:520px;overflow-y:auto"><table id="featTable">
+          <thead><tr><th style="width:210px">Feature</th><th style="width:120px">Status</th><th style="width:90px">Priority</th><th style="width:100px">Complexity</th><th>Dependencies</th><th style="width:110px">Est. effort</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <p class="empty-note" id="featEmpty">No features match.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TODO ============ -->
+  <section id="todo">
+    <div class="sec">
+      <div class="sec-head"><span class="num">10</span><h2>TODO center</h2><span class="note">state persists in this browser</span></div>
+      <div class="sec-body">
+        <div class="todo-tools" role="group" aria-label="Task filters" id="todoFilters">
+          <button class="pill" data-tf="all" aria-pressed="true">All</button>
+          <button class="pill" data-tf="critical" aria-pressed="false">Critical</button>
+          <button class="pill" data-tf="high" aria-pressed="false">High</button>
+          <button class="pill" data-tf="medium" aria-pressed="false">Medium</button>
+          <button class="pill" data-tf="low" aria-pressed="false">Low</button>
+          <button class="pill" data-tf="future" aria-pressed="false">Future</button>
+          <button class="pill" data-tf="open" aria-pressed="false">Open only</button>
+          <span class="spacer"></span>
+          <button class="btn ghost" id="resetTasks">Reset checklist</button>
+        </div>
+        <div style="margin:4px 0 6px;display:flex;justify-content:space-between;font-size:12px">
+          <b>Master progress</b><span id="todoLabel" class="dim" aria-live="polite"></span>
+        </div>
+        <div class="track"><div class="fill iri" id="todoFill" style="width:0%"></div></div>
+        <div id="todoGroups"></div>
+        <p class="empty-note" id="todoEmpty">No tasks match.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MISSING FEATURES ============ -->
+  <section id="missing">
+    <div class="sec">
+      <div class="sec-head"><span class="num">11</span><h2>Missing features</h2><span class="note">what launch still requires</span></div>
+      <div class="sec-body"><div class="cards" id="missingCards"></div></div>
+    </div>
+  </section>
+
+  <!-- ============ TECH DEBT ============ -->
+  <section id="debt">
+    <div class="sec">
+      <div class="sec-head"><span class="num">12</span><h2>Technical debt</h2><span class="note">kanban · click cards to expand</span></div>
+      <div class="sec-body"><div class="kanban" id="debtBoard"></div></div>
+    </div>
+  </section>
+
+  <!-- ============ SERVICES ============ -->
+  <section id="services">
+    <div class="sec">
+      <div class="sec-head"><span class="num">13</span><h2>External services</h2><span class="note">audit Part 3</span></div>
+      <div class="sec-body"><div class="cards" id="serviceCards"></div></div>
+    </div>
+  </section>
+
+  <!-- ============ ROADMAP ============ -->
+  <section id="roadmap">
+    <div class="sec">
+      <div class="sec-head"><span class="num">14</span><h2>Roadmap</h2><span class="note">M0 → M8 · payments last, on purpose</span></div>
+      <div class="sec-body"><div class="lanes" id="roadmapLanes"></div></div>
+    </div>
+  </section>
+
+  <!-- ============ CLAUDE ============ -->
+  <section id="claude">
+    <div class="sec">
+      <div class="sec-head"><span class="num">15</span><h2>Claude integration</h2><span class="note">three ready-to-paste prompts</span></div>
+      <div class="sec-body"><div class="prompt-grid" id="promptGrid"></div></div>
+    </div>
+  </section>
+
+  <!-- ============ STATS ============ -->
+  <section id="stats">
+    <div class="sec">
+      <div class="sec-head"><span class="num">16</span><h2>Project statistics</h2></div>
+      <div class="sec-body">
+        <div class="tiles">
+          <div class="tile"><div class="v" id="statDone">0</div><div class="k">tasks completed (this checklist)</div></div>
+          <div class="tile"><div class="v" id="statLeft">0</div><div class="k">tasks remaining</div></div>
+          <div class="tile"><div class="v" id="statPct">0%</div><div class="k">checklist completion</div></div>
+          <div class="tile"><div class="v">42</div><div class="k">routes analyzed</div></div>
+          <div class="tile"><div class="v">85</div><div class="k">server actions (101 server functions)</div></div>
+          <div class="tile"><div class="v">126+</div><div class="k">database objects (35 tables · 2 views · ~45 fns · 40 indexes · 4 buckets)</div></div>
+          <div class="tile"><div class="v">332</div><div class="k">unit tests + 14 SQL suites</div></div>
+          <div class="tile"><div class="v">58%</div><div class="k">overall production readiness</div></div>
+        </div>
+        <footer>
+          <p><b>Provenance.</b> Built July 6, 2026 from the read-only engineering audit of LuminaCreatorSuite at commit <code>43c1321</code>.
+          Numbers marked "verified" were produced by running the suite during the audit session (tests, coverage, lint, typecheck, build).
+          Anything the audit could not re-confirm is labeled <em>Needs Verification</em>. Checklist state lives only in this browser's
+          localStorage. This dashboard contains no external dependencies and makes no network requests.</p>
+        </footer>
+      </div>
+    </div>
+  </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================== DATA (from the July 6, 2026 audit only) ============================== */
+
+var GAUGES = [
+  {k:"Overall readiness", v:58, hero:true},
+  {k:"Developer experience", v:88}, {k:"Database", v:88}, {k:"UI", v:82}, {k:"Components", v:80},
+  {k:"Documentation", v:74}, {k:"Routing", v:74}, {k:"Testing", v:72}, {k:"Messaging", v:70},
+  {k:"Moderation", v:70}, {k:"UX", v:68}, {k:"Analytics", v:65}, {k:"Realtime", v:65},
+  {k:"Notifications", v:62}, {k:"Storage", v:60}, {k:"Security", v:58}, {k:"Authentication", v:55},
+  {k:"Performance", v:55}, {k:"Deployment", v:35}, {k:"Payments", v:15}
+];
+
+var ARCH = [
+  {t:"Frontend", pct:82, s:"done", sum:"TanStack Start SSR, React 19, file-based routing, React Query, shadcn/ui + luxury design system, SocialShell three-column layout.", risks:"Heavy chunks (~1 MB router / analytics); RHF+Zod installed but unused.", deps:"Vite 7 · Tailwind 4 · Cloudflare vite plugin."},
+  {t:"Backend", pct:null, s:"done", sum:"85 exported server actions (101 createServerFn) composing client token-attach + server RLS-scoping middleware; thin handlers delegating to pure repository-injected modules. No Edge Functions (not needed by design).", risks:"No rate limiting on any write path.", deps:"Supabase auth middleware · pure cabana-* modules."},
+  {t:"Supabase", pct:null, s:"done", sum:"Three trust boundaries (anon / service-role / per-request RLS) + guest-callable optionalSupabaseAuth. Auth, Postgres, storage, realtime all in use.", risks:"Remote project never reconciled with the reconstructed baseline (credentials absent).", deps:"supabase-js 2.105 · generated types.ts."},
+  {t:"Database", pct:88, s:"done", sum:"16 rebuild-from-zero migrations: 35 RLS-tested tables, 2 ID-free views, ~45 functions, 40 indexes, append-only ledgers enforced by trigger.", risks:"subscriptions naming collision (SaaS plans vs fan billing); post_count placeholder needs verification.", deps:"Docker-based db:validate · 14 behavioral suites."},
+  {t:"Authentication", pct:55, s:"part", sum:"Email/password + reset only; solid session handling and role model (admin/moderator/user × creator/member).", risks:"No OAuth, magic links, MFA, or explicit email-verification branch; route guards client-side only.", deps:"Supabase Auth · handle_new_user provisioning trigger."},
+  {t:"Storage", pct:60, s:"part", sum:"4 buckets. Private post-media with entitlement-gated signed URLs is the proven pattern; avatars/banners/products remain CDN-public.", risks:"Public buckets unsuitable for private media; no server-side upload validation or EXIF strip.", deps:"can_view_post · getPostMediaUrls (sole service-role signer)."},
+  {t:"Realtime", pct:65, s:"part", sum:"Supabase Realtime for messages, read receipts, and notifications — delivery RLS-filtered.", risks:"No presence/typing; no live feed updates.", deps:"supabase_realtime publication."},
+  {t:"Messaging", pct:70, s:"part", sum:"Real 1:1 DMs: soft-delete, receipts, block enforcement, realtime, unread counts.", risks:"No attachments or paid messages (enum values exist, not writable); typing indicator is static markup; pagination unwired in UI.", deps:"Conversation RPCs · blocks · notification triggers."},
+  {t:"Notifications", pct:62, s:"part", sum:"DB-trigger event generation (idempotent dedupe), realtime in-app center, preferences, worker-safe outbox with backoff + dead-letter.", risks:"Zero delivery transports — email/push simulated until Phase 9C (gated); nothing schedules the processor.", deps:"emit_notification triggers · process_notification_outbox."},
+  {t:"Analytics", pct:65, s:"part", sum:"Creator revenue/subscriber/content/engagement analytics (11B) + legacy first-party link-in-bio analytics.", risks:"No admin/platform analytics; anonymous analytics inserts spammable.", deps:"creator_content_analytics RPC · recharts (heaviest chunk)."},
+  {t:"Moderation", pct:70, s:"part", sum:"Member reporting on posts/comments/creators/DMs; staff triage with a validated state machine; append-only audit trail.", risks:"No appeals, verification, or automated scanning.", deps:"is_current_user_staff · audit triggers."},
+  {t:"Payments", pct:15, s:"gate", sum:"Demo-only by standing constraint. The ledger is production-shaped: append-only, net = gross − fees CHECK, integer cents, authorize-vs-settle payout split.", risks:"No processor, webhooks, KYC, refunds flow, invoices, or taxes — all hard-gated pending approval.", deps:"M7 milestone: rename + remote reconciliation first."},
+  {t:"Deployment", pct:35, s:"part", sum:"Cloudflare Workers target via wrangler + vite plugin; strong CI (verify + from-zero DB rebuild).", risks:"No CD, environments, domains, monitoring, logging, or secrets strategy; wrangler app still template-named.", deps:"GitHub Actions · wrangler.jsonc."}
+];
+
+var TIMELINE = [
+  {tag:"2A", when:"0511", cls:"ship", t:"Supabase baseline + CI", d:"Squashed rebuild-from-zero baseline, seed, smoke tests, db-validate script, CI verify + Docker DB job."},
+  {tag:"2B", when:"0512", cls:"ship", t:"Member accounts", d:"account_type enum, member_profiles, branched signup provisioning, first protected server-action tier, /account."},
+  {tag:"2C", when:"0513", cls:"ship", t:"Social graph", d:"follows + blocks with behavioral RLS, ID-free public views, relationship RPCs, persistent follow on /$username."},
+  {tag:"3", when:"0514", cls:"ship", t:"Posts & feed", d:"posts + post_media, public/followers visibility, private bucket + signed URLs, locked stubs, composer + feeds."},
+  {tag:"3.2", when:"0515", cls:"ship", t:"Engagement", d:"Comments, likes, saves with block-aware RLS; /post/$postId; engagement RPCs."},
+  {tag:"4", when:"0516", cls:"ship", t:"Creator subscriptions (demo)", d:"Tiers + fan subscriptions, is_active_subscriber entitlement, mock subscribe/cancel RPCs, subscriber dashboard."},
+  {tag:"5", when:"0517", cls:"ship", t:"Messaging", d:"1:1 conversations, messages, read receipts, participant-scoped RLS, Supabase Realtime, /messages."},
+  {tag:"6", when:"0518", cls:"ship", t:"Monetization ledger (demo)", d:"Append-only transactions, balances projection, tips, purchases, entitlements, payout requests; /dashboard/earnings."},
+  {tag:"7", when:"0519", cls:"ship", t:"Notifications & activity", d:"emit_notification triggers on nine tables, idempotent dedupe, preferences, inert outbox, realtime badge."},
+  {tag:"8", when:"0520", cls:"ship", t:"Moderation & audit", d:"reports queue + append-only audit_logs, staff gates, /admin/reports + /admin/audit."},
+  {tag:"8B", when:"0521", cls:"ship", t:"Member reporting", d:"ReportButton → dialog on posts, comments, creator profiles, DMs; hate + sexual_content reason categories."},
+  {tag:"8C", when:"0522", cls:"ship", t:"Admin finance & payouts", d:"Finance back office + transition-validated payout review; approve authorizes, mark-paid settles — deliberately distinct."},
+  {tag:"9A", when:"0523", cls:"ship", t:"Notification engine", d:"process_notification_outbox: batch claim (SKIP LOCKED), exponential backoff, dead-letter; delivery simulated."},
+  {tag:"9B", when:"—", cls:"ship", t:"Notification center UI", d:"Center, activity feed, settings, badges over the Phase 7 foundation — frontend only."},
+  {tag:"10", when:"—", cls:"ship", t:"Discovery & search", d:"/discover public surface (noindex): featured/trending/suggested + global search with deterministic ranking (10A + 10B)."},
+  {tag:"11A", when:"—", cls:"ship", t:"Creator dashboard home", d:"KPI cards, revenue + subscriber summaries, recent activity at /dashboard/home — pure aggregation, no new SQL."},
+  {tag:"11B", when:"0524", cls:"ship", t:"Creator analytics", d:"Revenue/subscriber/content/engagement analytics with date ranges at /dashboard/performance; creator_content_analytics RPC."},
+  {tag:"fix", when:"0525-26", cls:"fix", t:"Corrective fixes + social shell", d:"Baseline table GRANTs (42501 fix), user_roles admin policy via is_current_user_admin(), three-column SocialShell refactor (PR #22)."},
+  {tag:"M0", when:"now", cls:"now", t:"You are here — Truth & hygiene", d:"Commit CLAUDE.md sync, close the CI suite gap, update handoff, README, refresh stale docs, name the wrangler app."},
+  {tag:"11C", when:"gated", cls:"future", t:"Audience insights (gated)", d:"Demographics/geography/devices/exports. Requires explicit approval + the standard migration/RLS/test gate."},
+  {tag:"9C", when:"gated", cls:"future", t:"Delivery providers (gated)", d:"Replace simulated outbox outcomes with real email/push providers; digests and deep links."},
+  {tag:"M7", when:"gated", cls:"future", t:"Payments GA (hard-gated)", d:"Stripe + Connect settling into the existing ledger; webhooks, KYC, refunds, taxes. Prerequisites: rename + remote reconciliation."}
+];
+
+var ROUTES = [
+  {r:"/", p:"Marketing landing", c:"live", cat:["public"], dep:"—", n:"Static marketing + first-party analytics"},
+  {r:"/$username", p:"Public creator page: posts, tiers, follow, message", c:"live", cat:["public","social","creator"], dep:"feed_creator_posts · relationship RPCs · subscription state", n:"SocialShell; shadows unknown top-level slugs (wrong 404)"},
+  {r:"/feed", p:"Home feed of followed creators", c:"live", cat:["public","social","member"], dep:"feed_home_posts · optionalSupabaseAuth", n:"Server cursors exist; client pagination unwired"},
+  {r:"/post/$postId", p:"Post detail with comments, likes, saves", c:"live", cat:["public","social"], dep:"post_card · post_comments_list · engagement state", n:"Entitlement-correct locked stubs"},
+  {r:"/discover", p:"Discovery + global search over public projections", c:"live", cat:["public","social"], dep:"getDiscoverySnapshot · getDiscoverySearchResults", n:"noindex; deterministic ranking; no FTS index"},
+  {r:"/pricing", p:"SaaS plan tiers", c:"demo", cat:["public"], dep:"—", n:"No checkout wired"},
+  {r:"/demo · /td · /eldondolla", p:"Seeded demo profile + bespoke static microsites", c:"demo", cat:["public"], dep:"aurora seed", n:"/td and /eldondolla bypass the data model"},
+  {r:"/docs/system · /docs/data-model", p:"In-app architecture + schema docs", c:"verify", cat:["public"], dep:"—", n:"data-model flagged stale in the debt register"},
+  {r:"/login · /signup · /forgot-password · /reset-password", p:"Auth flows", c:"live", cat:["public"], dep:"cabanaAuth · Supabase Auth", n:"Email/password only; no OAuth/MFA"},
+  {r:"/onboarding", p:"Seven-step onboarding", c:"demo", cat:["public","creator"], dep:"—", n:"Mostly not persisted; reachable pre-auth"},
+  {r:"/account", p:"Member home", c:"live", cat:["member"], dep:"getAccountContext · member profile actions", n:"noindex; creators bounced to /dashboard"},
+  {r:"/messages · /messages/$conversationId", p:"Realtime inbox + thread", c:"live", cat:["member","creator","social"], dep:"messaging RPCs · Realtime publication", n:"1:1 only; no attachments/PPV; typing indicator static"},
+  {r:"/notifications", p:"Member notification center", c:"live", cat:["member","social"], dep:"use-notifications realtime", n:"Auth-gated client-side; guests see FoundationPage"},
+  {r:"/dashboard", p:"Link-in-bio studio home (DashHome)", c:"live", cat:["creator","dashboard"], dep:"cabana-store T1 hooks", n:"Legacy creator OS surface"},
+  {r:"/dashboard/home", p:"Creator business dashboard: KPIs, revenue, subscribers, activity", c:"live", cat:["creator","dashboard"], dep:"getCreatorDashboard · creator_balance", n:"Demo money throughout"},
+  {r:"/dashboard/posts", p:"Composer + post manager", c:"live", cat:["creator","dashboard"], dep:"post actions · media signed URLs", n:"Images only; scheduling enum exists, no UI"},
+  {r:"/dashboard/subscribers", p:"Subscriber roster", c:"live", cat:["creator","dashboard"], dep:"creator_subscribers_list", n:"Demo subscriptions"},
+  {r:"/dashboard/earnings", p:"Earnings, tips, purchases, payout requests", c:"live", cat:["creator","dashboard"], dep:"money actions · ledger RPCs", n:"Demo money; request_payout"},
+  {r:"/dashboard/performance", p:"Creator analytics (11B)", c:"live", cat:["creator","dashboard"], dep:"getCreatorAnalytics · creator_content_analytics", n:"Distinct from legacy /dashboard/analytics; heaviest chunk"},
+  {r:"/dashboard/analytics", p:"Legacy link-in-bio analytics", c:"live", cat:["creator","dashboard"], dep:"analytics_events", n:"Page views, link + product clicks"},
+  {r:"/dashboard/notifications", p:"Creator notification center", c:"live", cat:["creator","dashboard"], dep:"use-notifications", n:"Live unread badge in sidebar"},
+  {r:"/dashboard/messages", p:"Dashboard messages screen", c:"demo", cat:["creator","dashboard"], dep:"DemoMessages component", n:"Renders MOCK data — real inbox lives at /messages; retire or redirect"},
+  {r:"/dashboard/links · /profile · /storefront", p:"Link manager · profile editor · products", c:"live", cat:["creator","dashboard"], dep:"useCabanaMutations", n:"Original creator OS, live data"},
+  {r:"/dashboard/media-kit", p:"Media kit", c:"demo", cat:["creator","dashboard"], dep:"—", n:"Hardcoded Aurora metrics; dead export buttons"},
+  {r:"/dashboard/settings", p:"Settings + integrations", c:"demo", cat:["creator","dashboard"], dep:"—", n:'Hardcodes "Stripe · connected: true" — misleading placeholder'},
+  {r:"/admin", p:"Legacy admin demo tabs + nav cards", c:"demo", cat:["admin"], dep:"useHasRole(admin)", n:"Hardcoded arrays incl. fake payouts"},
+  {r:"/admin/reports · /admin/audit", p:"Moderation queue + audit trail", c:"live", cat:["admin"], dep:"moderation actions · StaffGate", n:"Real RLS-scoped triage; append-only audit"},
+  {r:"/admin/finance · /admin/ledger · /admin/ledger/$id", p:"Finance back office + ledger drill-down", c:"live", cat:["admin"], dep:"admin-finance actions · AdminGate", n:"CSV export; demo money"},
+  {r:"/admin/payouts", p:"Payout review workflow", c:"live", cat:["admin"], dep:"admin_review_payout RPC", n:"approve / hold / reject / release / mark-paid state machine"}
+];
+
+var FEATURES = [
+  {f:"Creator OS (links, store, media, analytics)", s:"complete", pr:"—", cx:"—", dep:"baseline schema", eff:"shipped"},
+  {f:"Member accounts & social graph", s:"complete", pr:"—", cx:"—", dep:"migrations 0512–0513", eff:"shipped"},
+  {f:"Posts, feed & visibility tiers", s:"complete", pr:"—", cx:"—", dep:"can_view_post · private bucket", eff:"shipped"},
+  {f:"Engagement (comments/likes/saves)", s:"complete", pr:"—", cx:"—", dep:"posts", eff:"shipped"},
+  {f:"Fan subscriptions", s:"partial", pr:"—", cx:"—", dep:"demo checkout only — real billing gated (M7)", eff:"shipped (demo)"},
+  {f:"1:1 realtime messaging", s:"complete", pr:"—", cx:"—", dep:"Realtime publication", eff:"shipped"},
+  {f:"Monetization ledger & payouts", s:"partial", pr:"—", cx:"—", dep:"demo money; settlement layer gated (M7)", eff:"shipped (demo)"},
+  {f:"In-app notifications + engine", s:"partial", pr:"—", cx:"—", dep:"delivery providers gated (9C)", eff:"shipped (internal)"},
+  {f:"Moderation, reporting & audit", s:"complete", pr:"—", cx:"—", dep:"staff roles", eff:"shipped"},
+  {f:"Discovery & search", s:"partial", pr:"—", cx:"—", dep:"no FTS; post_count needs verification", eff:"shipped (10A/B)"},
+  {f:"Creator dashboards & analytics", s:"complete", pr:"—", cx:"—", dep:"ledger + engagement RPC", eff:"shipped"},
+  {f:"Server-side route guards", s:"missing", pr:"Critical", cx:"Medium", dep:"TanStack loaders/middleware", eff:"M1"},
+  {f:"Public user_id leak fix (safe view)", s:"missing", pr:"Critical", cx:"Low–Medium", dep:"public_creator_profiles view (exists)", eff:"M1"},
+  {f:"Remote schema reconciliation", s:"missing", pr:"Critical", cx:"Medium", dep:"Supabase credentials; mutates remote history", eff:"M7 prerequisite"},
+  {f:"?redirect= allow-list", s:"verify", pr:"High", cx:"Low", dep:"dashboard.tsx / login.tsx", eff:"M1"},
+  {f:"CI: add user_roles_policy.sql suite", s:"missing", pr:"High", cx:"Low", dep:"ci.yml", eff:"M0"},
+  {f:"Rate limiting + captcha", s:"missing", pr:"High", cx:"Medium", dep:"none today anywhere", eff:"M1/M3"},
+  {f:"Cursor pagination in UI (feed/comments/messages)", s:"missing", pr:"High", cx:"Medium", dep:"RPCs already take cursors", eff:"M2"},
+  {f:"Saved-posts & collections UI", s:"missing", pr:"Medium", cx:"Low–Medium", dep:"post_saves table exists", eff:"M2"},
+  {f:"Post scheduling (UI + publisher)", s:"partial", pr:"Medium", cx:"Medium", dep:"scheduled status + scheduled_at exist; no UI, no cron", eff:"M2/M3"},
+  {f:"CD pipeline + environments", s:"missing", pr:"High", cx:"Medium", dep:"wrangler config, secrets strategy", eff:"M3"},
+  {f:"Monitoring, logging & alerting", s:"missing", pr:"High", cx:"Medium", dep:"Sentry-class + structured logs", eff:"M3"},
+  {f:"Outbox scheduler (cron)", s:"missing", pr:"High", cx:"Low–Medium", dep:"processor RPC exists & tested", eff:"M3"},
+  {f:"Email delivery (Resend)", s:"gated", pr:"High", cx:"Medium", dep:"outbox engine (done) · scheduler (M3)", eff:"M4 / Phase 9C"},
+  {f:"Web push delivery", s:"gated", pr:"Medium", cx:"Medium", dep:"outbox engine · device-token registry (missing)", eff:"M4 / Phase 9C"},
+  {f:"Postgres FTS for discovery", s:"missing", pr:"Medium", cx:"Medium", dep:"gated migration (tsvector + GIN)", eff:"M5"},
+  {f:"Real post_count in public views", s:"verify", pr:"Medium", cx:"Low", dep:"gated view migration", eff:"M5"},
+  {f:"Video pipeline (upload/transcode/stream)", s:"missing", pr:"High", cx:"High", dep:"provider choice (Stream/Mux); enum already supports video", eff:"M6"},
+  {f:"Server-side upload validation + EXIF strip", s:"missing", pr:"High", cx:"Medium", dep:"media pipeline", eff:"M6"},
+  {f:"OAuth + magic links", s:"missing", pr:"Medium", cx:"Medium", dep:"Supabase Auth config + UI", eff:"M1–M2 window"},
+  {f:"MFA (admins first)", s:"missing", pr:"High", cx:"Medium", dep:"Supabase Auth", eff:"M1"},
+  {f:"Stripe + Connect (real payments)", s:"gated", pr:"Future", cx:"Very High", dep:"M7 prerequisites: rename + reconciliation; explicit approval", eff:"M7"},
+  {f:"Webhook tier (signed, idempotent)", s:"gated", pr:"Future", cx:"High", dep:"documented in CABANA_API.md only", eff:"M7"},
+  {f:"KYC (Persona/Veriff)", s:"gated", pr:"Future", cx:"High", dep:"payments approval", eff:"M7"},
+  {f:"Refunds / disputes / invoices / taxes", s:"gated", pr:"Future", cx:"High", dep:"refund row type modeled in ledger", eff:"M7"},
+  {f:"Paid messages + attachments", s:"gated", pr:"Future", cx:"High", dep:"private-bucket pattern (exists) + entitlements", eff:"post-M7"},
+  {f:"platform_subscriptions rename", s:"gated", pr:"High", cx:"Medium", dep:"gated migration + types regen", eff:"M7 prerequisite"},
+  {f:"Appeals + creator verification", s:"missing", pr:"Medium", cx:"High", dep:"moderation foundation (done)", eff:"M8"},
+  {f:"Admin user management (suspend/ban)", s:"missing", pr:"Medium", cx:"Medium", dep:"roles model (done)", eff:"M8"},
+  {f:"Admin / platform analytics", s:"missing", pr:"Medium", cx:"Medium", dep:"admin finance reads (done)", eff:"M8"},
+  {f:"E2E + component tests", s:"missing", pr:"High", cx:"Medium", dep:"none exist today", eff:"M2/M8"},
+  {f:"Group / broadcast messaging", s:"missing", pr:"Low", cx:"High", dep:"1:1 model shipped", eff:"post-M7"},
+  {f:"Typing indicators (real presence)", s:"missing", pr:"Low", cx:"Low–Medium", dep:"Realtime presence; static markup exists", eff:"M2"}
+];
+
+var TASKS = [
+  /* CRITICAL */
+  {id:"commit-claude-sync", g:"critical", t:"Review + commit the pending CLAUDE.md sync", eff:"Low",
+   d:"The working tree holds one uncommitted change syncing CLAUDE.md with migrations 0525/0526, the SocialShell, and the new dashboard routes.",
+   files:"CLAUDE.md", dep:"none", cmd:"git diff CLAUDE.md"},
+  {id:"userid-leak", g:"critical", t:"Fix the public user_id leak via the safe view", eff:"Low–Medium (M1)",
+   d:"Legacy public reads select raw creator_profiles, exposing user_id. Migrate useCreatorByHandle + /$username to public_creator_profiles (exists since Phase 2C); owner reads stay on the table.",
+   files:"src/lib/cabana-store.ts · src/routes/$username.tsx", dep:"none — the view already exists", cmd:"grep -rn 'creator_profiles' src/lib/cabana-store.ts"},
+  {id:"server-guards", g:"critical", t:"Implement server-side route guards", eff:"Medium (M1)",
+   d:"Guards for /dashboard, /account, /admin are client redirects only; guarded shells flash for wrong principals. Data is RLS-safe — this closes the admin-surface launch blocker.",
+   files:"src/routes/dashboard.tsx · account.tsx · admin.tsx · src/server.ts", dep:"design first", cmd:"curl -sI http://localhost:3000/dashboard | head -5"},
+  /* HIGH */
+  {id:"ci-suite-gap", g:"high", t:"Add user_roles_policy.sql to CI", eff:"Low (M0)",
+   d:"The newest behavioral suite runs in scripts/db-validate.sh but is missing from ci.yml — migration 0526's regression coverage is silently absent from CI.",
+   files:".github/workflows/ci.yml", dep:"none", cmd:"grep -c 'tests/' .github/workflows/ci.yml"},
+  {id:"redirect-allowlist", g:"high", t:"Verify + allow-list ?redirect=", eff:"Low (M1)",
+   d:"Debt register flags dashboard.tsx for consuming ?redirect= unvalidated (open-redirect / phishing primitive). Confirm, then restrict to same-origin path-only targets.",
+   files:"src/routes/dashboard.tsx · src/routes/login.tsx", dep:"none", cmd:"grep -n 'redirect' src/routes/dashboard.tsx src/routes/login.tsx"},
+  {id:"demo-labels", g:"high", t:"Fix misleading demo labels", eff:"Low (M2)",
+   d:'Settings hardcodes "Stripe · connected: true"; admin demo tabs show fake payouts with realistic dollar amounts. Label as demo, wire, or remove — the repo\'s own demo-discipline rule.',
+   files:"SettingsPanel.tsx · admin.tsx · MediaKit.tsx · pricing.tsx", dep:"none", cmd:"bun run lint && bunx tsc --noEmit"},
+  {id:"handoff-gate", g:"high", t:"Record the verified gate in the session handoff", eff:"Low (M0)",
+   d:"Handoff ends at the Phase 11B session. Add the July 6 verification: 332/332 tests, coverage 99.52/95.75/100/100, lint 0 errors, tsc clean, build green.",
+   files:"docs/CLAUDE_SESSION_HANDOFF.md", dep:"none", cmd:"bun run lint && bunx tsc --noEmit && bun run test && bun run build"},
+  {id:"rate-limit", g:"high", t:"Introduce rate limiting + captcha", eff:"Medium (M1/M3)",
+   d:"No rate limits anywhere: signup, report creation, analytics_events inserts, message sends. Add Turnstile-class captcha on public writes and per-user limits on hot paths.",
+   files:"server functions · analytics insert policy", dep:"provider decision", cmd:"grep -rniE 'rate.?limit' src supabase/migrations"},
+  {id:"pagination", g:"high", t:"Wire cursor pagination in the UI", eff:"Medium (M2)",
+   d:"Every feed/comments/messages/notifications RPC accepts a cursor; no hook exposes load-more, so long lists silently truncate.",
+   files:"use-posts.ts · use-messaging.ts · use-notifications.ts · feed components", dep:"none — server side done", cmd:"grep -rn 'fetchNextPage\\|cursor' src/lib/use-posts.ts"},
+  /* MEDIUM */
+  {id:"retire-demo-messages", g:"medium", t:"Retire /dashboard/messages demo screen", eff:"Low (M2)",
+   d:"It renders DemoMessages (mock data) while the real inbox lives at /messages — confusing duplicate. Redirect or embed the real messaging UI; removing it also makes cabana-demo-data.ts deletable.",
+   files:"src/routes/dashboard.messages.tsx · components/cabana/demo/", dep:"none", cmd:"grep -rln 'cabana-demo-data' src"},
+  {id:"chunk-split", g:"medium", t:"Code-split the heavy chunks", eff:"Low–Medium (M2)",
+   d:"Build emits ~0.9–1.05 MB assets (router, dashboard.performance/recharts). Lazy-load the analytics surface.",
+   files:"dashboard/analytics/* · route lazy imports", dep:"none", cmd:"bun run build"},
+  {id:"stale-docs", g:"medium", t:"Refresh stale checkpoint docs", eff:"Low (M0)",
+   d:"CABANA_PROJECT_STATE.md is a Phase-7 snapshot; CABANA_TECH_DEBT.md lists resolved rows as open; route/component maps predate the social shell. Banner or update per the 'living docs win' rule.",
+   files:"docs/CABANA_PROJECT_STATE.md · CABANA_TECH_DEBT.md · CABANA_ROUTE_MAP.md", dep:"none", cmd:"doc review — no build impact"},
+  {id:"readme", g:"medium", t:"Add a root README.md", eff:"Low (M0)",
+   d:"The repo has no README — blank GitHub landing. State what CABANA is, the Bun command set, and link CLAUDE.md + docs/.",
+   files:"README.md (new)", dep:"none", cmd:"bun run format"},
+  {id:"post-count", g:"medium", t:"Verify post_count in public views", eff:"Low (M5)",
+   d:"Placeholder 0 at Phase 2C; never explicitly closed. If still stubbed, /discover ranking is skewed. A fix is a gated view migration.",
+   files:"view definitions · cabana-discovery.ts", dep:"migration gate if change needed", cmd:"bun run db:reset && psql \"$DB_URL\" -c 'select username, post_count from public_creator_profiles'"},
+  {id:"rhf-zod", g:"medium", t:"Adopt or remove RHF + Zod", eff:"Low–Medium",
+   d:"react-hook-form + resolvers + zod are installed but forms are hand-rolled. Either standardize on them or drop the dependencies.",
+   files:"package.json · auth/editor forms", dep:"none", cmd:"grep -rln 'react-hook-form' src | head"},
+  {id:"store-any-casts", g:"medium", t:"Tighten any-casts in cabana-store.ts", eff:"Low",
+   d:"Supabase updates use any casts; replace with generated TablesUpdate<> types.",
+   files:"src/lib/cabana-store.ts", dep:"none", cmd:"grep -n 'as any' src/lib/cabana-store.ts"},
+  /* LOW */
+  {id:"wrangler-name", g:"low", t:"Name the wrangler app", eff:"Low (M0)",
+   d:'wrangler.jsonc is still "tanstack-start-app" (template default); no routes/observability config.',
+   files:"wrangler.jsonc", dep:"none", cmd:"cat wrangler.jsonc"},
+  {id:"gemini-drift", g:"low", t:"Resolve GEMINI.md / CLAUDE.md duplication", eff:"Low",
+   d:"Two agent-instruction files covering the same ground guarantees drift; consolidate or generate one from the other.",
+   files:"GEMINI.md · CLAUDE.md", dep:"none", cmd:"diff <(head -50 GEMINI.md) <(head -50 CLAUDE.md)"},
+  {id:"username-shadow", g:"low", t:"Fix $username slug shadowing", eff:"Low",
+   d:"Unknown top-level slugs resolve into the creator page path instead of a proper 404.",
+   files:"src/routes/$username.tsx", dep:"none", cmd:"open http://localhost:3000/definitely-not-a-user"},
+  {id:"coming-soon", g:"low", t:"Sweep coming-soon remnants", eff:"Low",
+   d:"coming-soon.ts is still wired into Footer, MediaKit, SettingsPanel, and $username.",
+   files:"src/lib/coming-soon.ts + importers", dep:"demo-label task", cmd:"grep -rln 'coming-soon' src"},
+  /* FUTURE (GATED) */
+  {id:"phase-11c", g:"future", t:"Phase 11C — audience insights (gated)", eff:"Medium",
+   d:"Demographics / geography / devices / exports. Requires explicit approval + the standard migration/RLS/behavioral-test gate.",
+   files:"new pure module · analytics surfaces", dep:"approval", cmd:"full gate + bun run db:validate"},
+  {id:"phase-9c", g:"future", t:"Phase 9C — delivery providers (gated)", eff:"Medium (M4)",
+   d:"Replace simulated outbox outcomes with Resend email + web push; digests, deep links. The engine (claim/backoff/dead-letter) is already tested.",
+   files:"notification-engine adapters · provider config", dep:"approval · M3 scheduler", cmd:"psql -f supabase/tests/notification_engine.sql"},
+  {id:"video", g:"future", t:"Media pipeline — video (M6)", eff:"High",
+   d:"Upload → transcode → thumbnails → signed playback via Cloudflare Stream or Mux; server-side MIME/size validation; EXIF strip. Enum already supports video.",
+   files:"post-actions.ts · PostComposer · storage policies", dep:"provider choice · M3 ops", cmd:"n/a — design first"},
+  {id:"payments-ga", g:"future", t:"Payments GA — Stripe + Connect (hard-gated, M7)", eff:"Very High",
+   d:"Checkout, signature-verified idempotent webhooks settling into the existing append-only ledger, KYC, refunds/disputes, taxes, real payouts. Prerequisites: platform_subscriptions rename + remote schema reconciliation.",
+   files:"new webhook tier · money-actions.ts · gated migrations", dep:"explicit approval · Supabase credentials", cmd:"gated design review first"},
+  {id:"remote-reconcile", g:"future", t:"Remote schema reconciliation (human step)", eff:"Medium",
+   d:"Diff the reconstructed baseline against a live supabase db dump, then migration repair. Needs credentials and mutates remote history — deliberately manual.",
+   files:"supabase/ (remote project dwnricswfskypqqfknnh)", dep:"Supabase token / DB password", cmd:"supabase db dump (manual, deliberate)"},
+  {id:"trust-scale", g:"future", t:"Trust & scale — appeals, verification, admin analytics (M8)", eff:"High",
+   d:"Appeals workflow, creator identity verification, automated moderation hooks, admin user management, platform analytics, E2E + load tests.",
+   files:"moderation modules · new admin surfaces · e2e harness", dep:"M7 for money-adjacent trust", cmd:"n/a — milestone scope"}
+];
+
+var MISSING = [
+  {t:"Payments", s:"gate", d:"No Stripe/Connect, checkout, webhooks, refunds, invoices, or taxes — hard-gated by standing constraint. Foundation ready: append-only ledger, entitlements, authorize-vs-settle payouts."},
+  {t:"Video", s:"miss", d:"No upload path, transcoding, thumbnails, or streaming. post_media_kind enum already includes video/audio; images ship today."},
+  {t:"OAuth / magic links / MFA", s:"miss", d:"Email + password only. No signInWithOAuth, no OTP, no 2FA (admins first), no explicit email-verification branch."},
+  {t:"Email delivery", s:"gate", d:"Outbox models the email channel and the processor is tested — delivery is simulated until Phase 9C providers (Resend named as the future choice)."},
+  {t:"Push delivery", s:"gate", d:"Push channel modeled in preferences/outbox; no web-push implementation or device-token registry."},
+  {t:"Search infrastructure", s:"miss", d:"Discovery search works over public projections with deterministic ranking, but no Postgres FTS/trigram indexes — won't scale."},
+  {t:"Moderation automation", s:"miss", d:"Manual queue only: no appeals, no automated content scanning, no spam/fraud heuristics, no creator verification (verified is a placeholder false)."},
+  {t:"Deployment / CD", s:"miss", d:"No deploy workflow, preview envs, domains, or rollback procedure. CI is strong; CD does not exist."},
+  {t:"Monitoring & logging", s:"miss", d:"No Sentry-class error tracking, structured logs, uptime checks, or alerting. Hand-rolled error capture + branded 500 page only."},
+  {t:"Security hardening", s:"miss", d:"No rate limiting, captcha, CSP, or MFA; client-only route guards; ?redirect= unvalidated (needs verification); public user_id leak."},
+  {t:"Scheduling & automation", s:"miss", d:"scheduled post status + scheduled_at exist in schema; no composer UI, no publisher job, no creator automations."},
+  {t:"Fan surfaces", s:"miss", d:"No saved-posts page (post_saves exists), no collections, no fan billing/history UI, no card management (gated)."},
+  {t:"Messaging extensions", s:"gate", d:"No attachments, paid messages (enum values not writable), group/broadcast DMs, or real typing presence."},
+  {t:"Admin platform tools", s:"miss", d:"No user management (suspend/ban), no platform-wide analytics; legacy demo tabs still shipping."},
+  {t:"E2E & component testing", s:"miss", d:"332 unit tests + 14 SQL suites, but zero hook/component tests and zero end-to-end coverage."}
+];
+
+var DEBT = {
+  critical: [
+    {t:"Remote schema never reconciled", p:"Baseline was reconstructed, not dumped; no diff against live project; migration history unrepaired.", i:"Production deploys unsafe; baseline can't be treated as byte-exact.", fx:"supabase db dump diff + migration repair (deliberate human step, needs credentials).", f:"supabase/ · remote dwnricswfskypqqfknnh"},
+    {t:"Client-side-only route guards", p:"/dashboard, /account, /admin gate via client redirects; no server loader guard.", i:"Guarded shells flash for wrong principals; admin-surface launch blocker. Data itself stays RLS-safe.", fx:"TanStack Start loader/middleware guards (M1).", f:"dashboard.tsx · account.tsx · admin.tsx · server.ts"},
+    {t:"creator_profiles public SELECT leaks user_id", p:"Legacy read path predates the Phase 2C safe views.", i:"Account UUIDs exposed on a public surface.", fx:"Move public reads to public_creator_profiles (app-code only).", f:"cabana-store.ts · $username.tsx"}
+  ],
+  high: [
+    {t:"CI missing user_roles_policy.sql", p:"Newest suite runs locally in db-validate.sh but not in ci.yml.", i:"Migration 0526 has no CI regression coverage.", fx:"Add one psql step to the db-validate job (M0).", f:".github/workflows/ci.yml"},
+    {t:"?redirect= consumed unvalidated", p:"Debt register flags dashboard.tsx (needs re-verification).", i:"Open-redirect / phishing primitive on the login flow.", fx:"Same-origin path-only allow-list.", f:"dashboard.tsx · login.tsx"},
+    {t:"Misleading demo labels", p:'Settings shows "Stripe · connected: true"; admin tabs show realistic fake payouts.', i:"Demo state reads as production behavior — violates the repo's demo-discipline rule.", fx:"Label, wire, or remove (M2 sweep).", f:"SettingsPanel.tsx · admin.tsx"},
+    {t:"subscriptions naming collision", p:"SaaS-plan table shares the name fan billing wants.", i:"Wrong-table writes would be billing bugs by construction.", fx:"Gated rename to platform_subscriptions before real money (M7 prerequisite).", f:"migration · types regen · cabana-store.ts"},
+    {t:"No rate limiting / captcha", p:"Signup, reports, analytics inserts, and messages are unthrottled.", i:"Spam and abuse vectors on every public write.", fx:"Turnstile-class captcha + per-user limits (M1/M3).", f:"server functions · insert policies"}
+  ],
+  medium: [
+    {t:"Duplicate messaging surfaces", p:"/dashboard/messages renders DemoMessages while /messages is real.", i:"Users and agents confuse mock and live inboxes.", fx:"Redirect or embed the real UI; then delete cabana-demo-data.", f:"dashboard.messages.tsx · components/cabana/demo/"},
+    {t:"Pagination unwired in UI", p:"RPCs take cursors; hooks never expose load-more.", i:"Long feeds/threads silently truncate.", fx:"Wire useInfiniteQuery-style load-more (M2).", f:"use-posts.ts · use-messaging.ts · use-notifications.ts"},
+    {t:"Heavy build chunks", p:"~0.9–1.05 MB assets: router, dashboard.performance (recharts).", i:"Bundle weight on every dashboard visit.", fx:"Lazy-load analytics; audit shared chunks.", f:"dashboard/analytics/*"},
+    {t:"Stale checkpoint docs", p:"PROJECT_STATE is a Phase-7 snapshot; TECH_DEBT lists resolved rows; maps predate the social shell.", i:"Agents act on stale facts; verification time wasted.", fx:"Banner or refresh (M0).", f:"docs/*"},
+    {t:"post_count placeholders", p:"Public views returned 0 at Phase 2C; never explicitly closed.", i:"/discover ranking skewed if still stubbed.", fx:"Verify; gated view migration if needed (M5).", f:"view definitions · cabana-discovery.ts"},
+    {t:"Duplicate profile renderers", p:"/td and /eldondolla are bespoke static pages bypassing the data model.", i:"Divergent profile logic.", fx:"Shared renderer with variants, or retire.", f:"td.tsx · eldondolla.tsx · $username.tsx"},
+    {t:"RHF + Zod installed, unused", p:"Forms are hand-rolled despite the deps.", i:"Dead weight or missed standardization.", fx:"Adopt or remove.", f:"package.json · form components"},
+    {t:"any-casts in cabana-store", p:"Supabase updates bypass generated types.", i:"Type safety gap in the oldest data layer.", fx:"Use TablesUpdate<> generics.", f:"cabana-store.ts"}
+  ],
+  low: [
+    {t:"wrangler app template-named", p:'"tanstack-start-app"; no routes/observability config.', i:"Deploy hygiene.", fx:"Name it; add config as deploy work starts (M0/M3).", f:"wrangler.jsonc"},
+    {t:"GEMINI.md / CLAUDE.md duplication", p:"Two agent-instruction files, same ground.", i:"Guaranteed drift.", fx:"Consolidate or generate one from the other.", f:"GEMINI.md · CLAUDE.md"},
+    {t:"coming-soon remnants", p:"Still imported by Footer, MediaKit, SettingsPanel, $username.", i:"Dead-ish code paths.", fx:"Sweep with the demo-label task.", f:"coming-soon.ts + importers"},
+    {t:"$username shadows unknown slugs", p:"Route precedence gives wrong 404 semantics.", i:"Bad-URL UX.", fx:"Guard unknown handles to a proper 404.", f:"$username.tsx"},
+    {t:"Non-atomic link reorder / eager writes", p:"N independent updates on reorder; editors write per keystroke (register items, unverified recently).", i:"Race-y saves, chatty network.", fx:"Batch + debounce.", f:"cabana-store.ts · ProfileEditor · LinkManager"}
+  ]
+};
+
+var SERVICES = [
+  {t:"Supabase", s:"done", d:"Deeply integrated: Auth, Postgres + RLS, storage, realtime, generated types. The platform's backbone."},
+  {t:"Cloudflare Workers", s:"done", d:"Deploy target via wrangler + vite plugin. Images/Stream/R2 not used; no bindings configured."},
+  {t:"Stripe", s:"miss", d:"Placeholders only: legacy stripe_* columns, docs-page references, a hardcoded 'connected: true' settings label, admin demo tab. Named in ledger comments as the future settlement layer. Gated (M7)."},
+  {t:"Resend", s:"miss", d:"Named in migration comments as the excluded future email provider; outbox email channel modeled. Phase 9C."},
+  {t:"Mux / Cloudflare Stream", s:"miss", d:"No video infrastructure at all. Provider decision belongs to milestone M6."},
+  {t:"Sentry", s:"miss", d:"Hand-rolled error-capture + branded 500 page instead. Recommended in milestone M3 (ops floor)."},
+  {t:"Monitoring / Better Stack", s:"miss", d:"No uptime checks, alerting, or structured logging anywhere."},
+  {t:"Analytics (PostHog)", s:"part", d:"No product-analytics tool; first-party analytics_events covers link-in-bio page/link/product events only."},
+  {t:"Persona / Veriff (KYC)", s:"miss", d:"Explicitly out of scope until payments approval (M7)."},
+  {t:"Turnstile (captcha)", s:"miss", d:"No captcha anywhere; signup, reports, and analytics inserts are unprotected."},
+  {t:"Firebase / OneSignal (push)", s:"miss", d:"Push channel modeled in outbox/preferences; providers named only as exclusions. Phase 9C."},
+  {t:"Trigger.dev / Inngest", s:"miss", d:"Homegrown outbox is the job queue; no scheduler invokes it yet (M3)."},
+  {t:"FFmpeg / Sharp", s:"miss", d:"No server-side media processing: no MIME-signature validation, resizing, or EXIF stripping."},
+  {t:"OpenAI / Anthropic", s:"miss", d:"AI Studio feature was removed outright (commit fcbc67c). No AI integrations remain."}
+];
+
+var ROADMAP = [
+  {lane:"Now", color:"#93e6f8", items:[
+    {t:"M0 · Truth & hygiene", cx:"Low", risk:"Low", dep:"none", f:"CLAUDE.md · ci.yml · docs/* · README.md · wrangler.jsonc",
+     d:"Commit the CLAUDE.md sync; add user_roles_policy.sql to CI; record the verified gate in the handoff; add a README; refresh stale docs; name the wrangler app."},
+    {t:"M1 · Security hardening", cx:"Medium", risk:"Medium", dep:"M0", f:"cabana-store.ts · $username.tsx · dashboard/account/admin routes · server.ts",
+     d:"Safe-view migration for public creator reads (user_id leak); ?redirect= allow-list; server route guards; CSP + security headers. App-code only."}
+  ]},
+  {lane:"Next", color:"#a5b4fc", items:[
+    {t:"M2 · Beta UX completeness", cx:"Medium", risk:"Low–Medium", dep:"M0", f:"use-* hooks · feed components · PostComposer · dashboard.messages.tsx",
+     d:"Wire cursor pagination everywhere; saved-posts page; scheduling UI decision; retire the demo messages screen; label demo surfaces; lazy-load recharts."},
+    {t:"M3 · Ops floor", cx:"Medium", risk:"Medium", dep:"M0", f:"server.ts · error-capture.ts · deploy workflow · wrangler.jsonc",
+     d:"Error tracking, structured logs, alerting; CD workflow with preview + prod promotion + rollback; secrets strategy; schedule the outbox processor."}
+  ]},
+  {lane:"Later", color:"#e6a8f0", items:[
+    {t:"M4 · Notification delivery (9C, gated)", cx:"Medium", risk:"Medium", dep:"M3 scheduler · approval", f:"notification-engine adapters · outbox RPC swap",
+     d:"Resend email + web push replacing simulated outcomes; digests; deep links; preference honoring end-to-end."},
+    {t:"M5 · Search & counts integrity", cx:"Medium", risk:"Medium", dep:"M0 · migration gate", f:"view migration · cabana-discovery.ts",
+     d:"Real post_count/engagement counts in public views; Postgres FTS behind the existing discovery actions."},
+    {t:"M6 · Media pipeline", cx:"High", risk:"High", dep:"M3 · provider choice", f:"post-actions.ts · PostComposer · storage policies",
+     d:"Video via Cloudflare Stream or Mux (upload → transcode → signed playback); server-side upload validation; EXIF strip."}
+  ]},
+  {lane:"Future", color:"#ffd9a3", items:[
+    {t:"M7 · Payments GA (hard-gated)", cx:"Very High", risk:"Very High", dep:"M1 · M3 · M5 · explicit approval · credentials", f:"webhook tier · money-actions.ts · gated migrations",
+     d:"Prerequisites first: platform_subscriptions rename + remote schema reconciliation. Then Stripe + Connect, signed idempotent webhooks settling into the existing ledger, KYC, refunds/disputes, taxes, real payouts."},
+    {t:"M8 · Trust & scale", cx:"High", risk:"Medium–High", dep:"M7 for money-adjacent trust", f:"moderation modules · admin surfaces · e2e harness",
+     d:"Appeals, creator verification, automated moderation, admin user management + platform analytics; E2E suite; load tests; DR runbook."}
+  ]}
+];
+
+var PROMPTS = [
+  {t:"Next Claude Prompt", sub:"executes milestone M0", body:
+"Read CLAUDE.md and docs/CLAUDE_SESSION_HANDOFF.md before touching anything.\n\nContext: the July 6 2026 audit found the repo green (332/332 tests, coverage 99.52/95.75/100/100, lint 0 errors/6 expected warnings, tsc clean, build green) with Phase 11B complete. Execute milestone M0 — Truth & hygiene:\n\n1. Review and commit the pending CLAUDE.md sync (git diff CLAUDE.md first).\n2. Add supabase/tests/user_roles_policy.sql to the db-validate job in .github/workflows/ci.yml (it already runs in scripts/db-validate.sh).\n3. Update docs/CLAUDE_SESSION_HANDOFF.md with the verified 2026-07-06 gate results.\n4. Add a root README.md: what CABANA is, the Bun command set, links to CLAUDE.md and docs/.\n5. Add stale-checkpoint banners to docs/CABANA_PROJECT_STATE.md and mark already-resolved rows in docs/CABANA_TECH_DEBT.md.\n6. Rename the wrangler app in wrangler.jsonc from tanstack-start-app to cabana.\n\nConstraints: no schema changes or new migrations; demo-only integer-cents money; never edit src/routeTree.gen.ts or auto-generated Supabase files; validate Supabase locally only, never push remote. Finish by re-running lint, tsc --noEmit, test, and build, and record the results in the handoff."},
+  {t:"Next Engineering Sprint", sub:"executes milestone M1 (security)", body:
+"Read CLAUDE.md first. Sprint goal: milestone M1 — security hardening, app-code only, no new migrations.\n\n1. Migrate public creator reads off raw creator_profiles onto the public_creator_profiles view so user_id stops leaking (src/lib/cabana-store.ts useCreatorByHandle + /$username). Owner reads stay on the table.\n2. Verify whether dashboard.tsx still consumes ?redirect= unvalidated; if so, allow-list to same-origin path-only targets (dashboard.tsx, login.tsx).\n3. Implement server-side route guards for /dashboard, /account, and /admin using TanStack Start loaders/middleware so guarded shells never render for the wrong principal. Server actions are already independently protected — this closes the UX/consistency gap.\n4. Add CSP and security headers in src/server.ts.\n\nAcceptance: signed-out requests to guarded routes redirect server-side; no raw creator_profiles select remains in the public read path; the full gate passes (lint, tsc --noEmit, test, build); docs/CLAUDE_SESSION_HANDOFF.md updated with what changed.\n\nConstraints: no schema changes; demo-only money; never edit generated files; local Supabase validation only."},
+  {t:"Next Architecture Review", sub:"read-only design pass for M7 readiness", body:
+"Read-only architecture review — do NOT modify any files.\n\nUsing CLAUDE.md, docs/CABANA_API.md, docs/CABANA_DATABASE.md, and the Phase 6/8C ledger implementation (supabase/migrations/20260518 + 20260522, src/lib/cabana-money.ts, cabana-payouts.ts), produce a written design assessment for payments readiness (milestone M7):\n\n1. Webhook tier design: where signature-verified, idempotent Stripe webhooks should live in the TanStack Start + Cloudflare Workers architecture, and how webhook_events should be modeled.\n2. The platform_subscriptions rename plan: migration strategy, generated-types regeneration, and blast radius in cabana-store.ts.\n3. Remote schema reconciliation plan: the exact supabase db dump diff + migration repair sequence, its risks, and rollback posture.\n4. How Stripe Connect settlement maps onto the existing append-only transactions ledger, creator_balances recompute, and the approve-vs-mark-paid payout split (which must remain distinct).\n5. KYC integration seam (Persona/Veriff) and where verification state should live.\n\nDeliverable: a design document with decision points and open questions. No code changes, no migrations — this is a gated-work planning pass only."}
+];
+
+/* ============================== HELPERS ============================== */
+function el(tag, cls, html){ var e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+function badge(status){
+  var map={
+    done:['b-done','●','complete'], live:['b-done','●','live'],
+    part:['b-part','◆','partial'], demo:['b-demo','◐','demo'],
+    miss:['b-miss','✕','missing'], gate:['b-gate','◆','gated'],
+    verify:['b-verify','◆','needs verification'],
+    complete:['b-done','●','complete'], partial:['b-part','◆','partial'],
+    missing:['b-miss','✕','missing'], gated:['b-gate','◆','gated']
+  };
+  var m=map[status]||['b-part','◆',status];
+  return '<span class="badge '+m[0]+'"><i>'+m[1]+'</i> '+m[2]+'</span>';
+}
+function copyText(btn, text, done){
+  function ok(){ var p=btn.textContent; btn.textContent=done||"Copied ✓"; setTimeout(function(){btn.textContent=p;},1600); }
+  function fb(){ var ta=document.createElement("textarea"); ta.value=text; ta.setAttribute("readonly","");
+    ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); ok(); }catch(e){} document.body.removeChild(ta); }
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(ok,fb); } else fb();
+}
+
+/* ============================== RENDER: GAUGES ============================== */
+(function(){
+  var wrap=document.getElementById("gauges");
+  GAUGES.forEach(function(g){
+    var R=34, C=2*Math.PI*R;
+    var d=el("div","gauge"+(g.hero?" hero-g":""));
+    d.setAttribute("data-search","gauge "+g.k);
+    d.innerHTML='<svg width="84" height="84" viewBox="0 0 84 84" role="img" aria-label="'+esc(g.k)+' '+g.v+' percent">'+
+      '<circle class="bg" cx="42" cy="42" r="'+R+'" fill="none" stroke-width="7"/>'+
+      '<circle class="fg" cx="42" cy="42" r="'+R+'" fill="none" stroke-width="7" stroke-linecap="round" '+
+      'stroke-dasharray="'+C.toFixed(1)+'" stroke-dashoffset="'+C.toFixed(1)+'" data-target="'+(C*(1-g.v/100)).toFixed(1)+'"/></svg>'+
+      '<div class="num">'+g.v+'%</div><div class="lab">'+esc(g.k)+'</div>';
+    wrap.appendChild(d);
+  });
+})();
+
+/* ============================== RENDER: ARCHITECTURE ============================== */
+(function(){
+  var wrap=document.getElementById("archCards");
+  ARCH.forEach(function(a){
+    var d=el("details","xcard");
+    d.setAttribute("data-search","architecture "+a.t+" "+a.sum+" "+a.risks);
+    d.innerHTML='<summary>'+badge(a.s)+'<span class="t">'+esc(a.t)+'</span>'+
+      '<span class="pct">'+(a.pct==null?'—':a.pct+'%')+'</span><span class="chev">▶</span></summary>'+
+      '<div class="bd"><p>'+esc(a.sum)+'</p>'+
+      (a.pct!=null?'<div class="minibar"><i style="width:'+a.pct+'%"></i></div>':'<p class="dim" style="font-size:11.5px;margin-top:8px">No discrete audit score — see the readiness gauges.</p>')+
+      '<div class="lab">Risks</div><p>'+esc(a.risks)+'</p>'+
+      '<div class="lab">Dependencies</div><p>'+esc(a.deps)+'</p></div>';
+    wrap.appendChild(d);
+  });
+})();
+
+/* ============================== RENDER: TIMELINE ============================== */
+(function(){
+  var wrap=document.getElementById("timelineList");
+  TIMELINE.forEach(function(m){
+    var it=el("div","tl-item "+m.cls);
+    it.setAttribute("data-search","timeline phase "+m.tag+" "+m.t+" "+m.d);
+    it.innerHTML='<details'+(m.cls==="now"?" open":"")+'><summary><span class="when">'+esc(m.tag)+' · '+esc(m.when)+'</span>'+
+      '<span class="tt">'+esc(m.t)+'</span><span class="chev" style="margin-left:auto;color:var(--ink-3);font-size:11px">▶</span></summary>'+
+      '<div class="bd"><p>'+esc(m.d)+'</p></div></details>';
+    wrap.appendChild(it);
+  });
+})();
+
+/* ============================== RENDER: ROUTES ============================== */
+var routeFilter="all";
+function renderRoutes(){
+  var tb=document.querySelector("#routeTable tbody"); tb.innerHTML="";
+  var shown=0;
+  ROUTES.forEach(function(r){
+    if(routeFilter!=="all" && r.cat.indexOf(routeFilter)===-1) return;
+    var tr=document.createElement("tr");
+    tr.setAttribute("data-search","route "+r.r+" "+r.p+" "+r.n+" "+r.cat.join(" "));
+    tr.innerHTML='<td class="mono">'+esc(r.r)+'</td><td>'+esc(r.p)+'</td><td>'+badge(r.c)+'</td>'+
+      '<td class="mono" style="color:var(--ink-2)">'+esc(r.dep)+'</td><td>'+esc(r.n)+'</td>';
+    tb.appendChild(tr); shown++;
+  });
+  document.getElementById("routeEmpty").style.display=shown?"none":"block";
+  document.getElementById("routeCount").textContent=shown+" of "+ROUTES.length+" route groups · 42 route files total";
+  applySearch();
+}
+document.getElementById("routeFilters").addEventListener("click",function(ev){
+  var b=ev.target.closest(".pill"); if(!b)return;
+  routeFilter=b.dataset.rf;
+  this.querySelectorAll(".pill").forEach(function(p){p.setAttribute("aria-pressed",String(p===b));});
+  renderRoutes();
+});
+
+/* ============================== RENDER: FEATURES ============================== */
+var featFilter="all";
+function renderFeatures(){
+  var tb=document.querySelector("#featTable tbody"); tb.innerHTML="";
+  var shown=0;
+  FEATURES.forEach(function(f){
+    var st=f.s==="verify"?"verify":f.s;
+    if(featFilter!=="all" && st!==featFilter) return;
+    var tr=document.createElement("tr");
+    tr.setAttribute("data-search","feature "+f.f+" "+f.dep+" "+f.pr);
+    tr.innerHTML='<td><b>'+esc(f.f)+'</b></td><td>'+badge(st)+'</td><td>'+esc(f.pr)+'</td>'+
+      '<td>'+esc(f.cx)+'</td><td>'+esc(f.dep)+'</td><td class="mono">'+esc(f.eff)+'</td>';
+    tb.appendChild(tr); shown++;
+  });
+  document.getElementById("featEmpty").style.display=shown?"none":"block";
+  document.getElementById("featCount").textContent=shown+" of "+FEATURES.length+" features";
+  applySearch();
+}
+document.getElementById("featFilters").addEventListener("click",function(ev){
+  var b=ev.target.closest(".pill"); if(!b)return;
+  featFilter=b.dataset.ff;
+  this.querySelectorAll(".pill").forEach(function(p){p.setAttribute("aria-pressed",String(p===b));});
+  renderFeatures();
+});
+
+/* ============================== RENDER: TODO ============================== */
+var LS_KEY="lumina-dashboard:v1:tasks";
+function store(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||"{}"); }catch(e){ return {}; } }
+function saveStore(m){ try{ localStorage.setItem(LS_KEY, JSON.stringify(m)); }catch(e){} }
+var GROUPS=[["critical","Critical","#d03b3b"],["high","High","#ec835a"],["medium","Medium","#fab219"],["low","Low","#6ea8ef"],["future","Future (gated)","#a5b4fc"]];
+var todoFilter="all";
+
+(function buildTodo(){
+  var wrap=document.getElementById("todoGroups");
+  var saved=store();
+  GROUPS.forEach(function(g){
+    var sect=el("div","todo-group");
+    sect.innerHTML='<h4><span class="swatch" style="background:'+g[2]+'"></span>'+g[1]+
+      ' <span class="dim" style="letter-spacing:0;text-transform:none" data-gc="'+g[0]+'"></span></h4>';
+    var ul=el("ul","tasks"); ul.dataset.group=g[0];
+    TASKS.filter(function(t){return t.g===g[0];}).forEach(function(t){
+      var li=el("li"); li.dataset.id=t.id; li.dataset.group=t.g;
+      li.setAttribute("data-search","task "+t.t+" "+t.d+" "+t.files);
+      li.innerHTML='<details class="task"><summary>'+
+        '<input type="checkbox" aria-label="Mark task done"'+(saved[t.id]?" checked":"")+' />'+
+        '<span class="tt">'+esc(t.t)+'</span><span class="eff">'+esc(t.eff)+'</span>'+
+        '<span class="chev" style="color:var(--ink-3);font-size:11px">▶</span></summary>'+
+        '<div class="bd"><p>'+esc(t.d)+'</p><dl class="tmeta">'+
+        '<dt>Files</dt><dd class="mono" style="font-family:var(--mono);font-size:11.5px">'+esc(t.files)+'</dd>'+
+        '<dt>Depends on</dt><dd>'+esc(t.dep)+'</dd>'+
+        '<dt>Validate</dt><dd><code>'+esc(t.cmd)+'</code> <button class="copy-mini" data-copy="'+esc(t.cmd)+'">Copy</button></dd>'+
+        '</dl></div></details>';
+      if(saved[t.id]) li.classList.add("done");
+      ul.appendChild(li);
+    });
+    sect.appendChild(ul); wrap.appendChild(sect);
+  });
+
+  wrap.addEventListener("click",function(ev){
+    var cb=ev.target;
+    if(cb.matches('input[type=checkbox]')){
+      ev.stopPropagation();
+      var li=cb.closest("li");
+      li.classList.toggle("done",cb.checked);
+      var m=store(); m[li.dataset.id]=cb.checked; saveStore(m);
+      updateProgress();
+    }
+    var cp=ev.target.closest(".copy-mini");
+    if(cp){ ev.preventDefault(); ev.stopPropagation(); copyText(cp, cp.getAttribute("data-copy"), "✓"); }
+  });
+})();
+
+function taskItems(){ return Array.prototype.slice.call(document.querySelectorAll("#todoGroups li[data-id]")); }
+function updateProgress(){
+  var items=taskItems();
+  var done=items.filter(function(li){return li.querySelector("input").checked;}).length;
+  var pct=items.length?Math.round(done/items.length*100):0;
+  document.getElementById("todoFill").style.width=pct+"%";
+  document.getElementById("todoLabel").textContent=done+" of "+items.length+" complete · "+pct+"%";
+  document.getElementById("statDone").textContent=done;
+  document.getElementById("statLeft").textContent=items.length-done;
+  document.getElementById("statPct").textContent=pct+"%";
+  GROUPS.forEach(function(g){
+    var gi=items.filter(function(li){return li.dataset.group===g[0];});
+    var gd=gi.filter(function(li){return li.querySelector("input").checked;}).length;
+    var elc=document.querySelector('[data-gc="'+g[0]+'"]');
+    if(elc) elc.textContent="· "+gd+"/"+gi.length;
+  });
+}
+function applyTodoFilter(){
+  var shown=0;
+  taskItems().forEach(function(li){
+    var okG = todoFilter==="all" || todoFilter==="open" ? true : li.dataset.group===todoFilter;
+    var okO = todoFilter==="open" ? !li.querySelector("input").checked : true;
+    var show=okG&&okO;
+    li.hidden=!show; if(show)shown++;
+  });
+  document.getElementById("todoEmpty").style.display=shown?"none":"block";
+  applySearch();
+}
+document.getElementById("todoFilters").addEventListener("click",function(ev){
+  var b=ev.target.closest(".pill"); if(!b)return;
+  todoFilter=b.dataset.tf;
+  this.querySelectorAll(".pill").forEach(function(p){p.setAttribute("aria-pressed",String(p===b));});
+  applyTodoFilter();
+});
+document.getElementById("resetTasks").addEventListener("click",function(){
+  if(!confirm("Reset the checklist? This clears all checkbox state saved in this browser."))return;
+  try{ localStorage.removeItem(LS_KEY); }catch(e){}
+  taskItems().forEach(function(li){ li.querySelector("input").checked=false; li.classList.remove("done"); });
+  updateProgress(); applyTodoFilter();
+});
+
+/* ============================== RENDER: MISSING ============================== */
+(function(){
+  var wrap=document.getElementById("missingCards");
+  MISSING.forEach(function(m){
+    var d=el("details","xcard");
+    d.setAttribute("data-search","missing "+m.t+" "+m.d);
+    d.innerHTML='<summary>'+badge(m.s)+'<span class="t">'+esc(m.t)+'</span><span class="chev" style="margin-left:auto">▶</span></summary>'+
+      '<div class="bd"><p>'+esc(m.d)+'</p></div>';
+    wrap.appendChild(d);
+  });
+})();
+
+/* ============================== RENDER: DEBT KANBAN ============================== */
+(function(){
+  var board=document.getElementById("debtBoard");
+  var cols=[["critical","Critical","#d03b3b"],["high","High","#ec835a"],["medium","Medium","#fab219"],["low","Low","#6ea8ef"]];
+  cols.forEach(function(c){
+    var items=DEBT[c[0]];
+    var col=el("div","kcol");
+    col.innerHTML='<h4><span class="swatch" style="width:9px;height:9px;border-radius:3px;background:'+c[2]+'"></span>'+c[1]+
+      '<span class="n">'+items.length+'</span></h4>';
+    items.forEach(function(it){
+      var card=el("details","kcard");
+      card.setAttribute("data-search","debt "+it.t+" "+it.p+" "+it.f);
+      card.innerHTML='<summary>'+esc(it.t)+'</summary><div class="bd">'+
+        '<div class="lab">Problem</div><p>'+esc(it.p)+'</p>'+
+        '<div class="lab">Impact</div><p>'+esc(it.i)+'</p>'+
+        '<div class="lab">Suggested fix</div><p>'+esc(it.fx)+'</p>'+
+        '<div class="lab">Affected files</div><p style="font-family:var(--mono);font-size:11px">'+esc(it.f)+'</p></div>';
+      col.appendChild(card);
+    });
+    board.appendChild(col);
+  });
+})();
+
+/* ============================== RENDER: SERVICES ============================== */
+(function(){
+  var wrap=document.getElementById("serviceCards");
+  SERVICES.forEach(function(s){
+    var st=s.s==="done"?"done":(s.s==="part"?"part":"miss");
+    var lab=s.s==="done"?"implemented":(s.s==="part"?"partial":"missing");
+    var d=el("details","xcard");
+    d.setAttribute("data-search","service "+s.t+" "+s.d);
+    d.innerHTML='<summary><span class="badge b-'+st+'"><i>'+(st==="done"?"●":st==="part"?"◆":"✕")+'</i> '+lab+'</span>'+
+      '<span class="t">'+esc(s.t)+'</span><span class="chev" style="margin-left:auto">▶</span></summary>'+
+      '<div class="bd"><p>'+esc(s.d)+'</p></div>';
+    wrap.appendChild(d);
+  });
+})();
+
+/* ============================== RENDER: ROADMAP ============================== */
+(function(){
+  var wrap=document.getElementById("roadmapLanes");
+  ROADMAP.forEach(function(l){
+    var lane=el("div","lane");
+    lane.innerHTML='<h4><i style="color:'+l.color+'">●</i> '+esc(l.lane)+'</h4>';
+    l.items.forEach(function(m){
+      var c=el("details","kcard");
+      c.setAttribute("data-search","roadmap milestone "+m.t+" "+m.d);
+      c.innerHTML='<summary>'+esc(m.t)+'</summary><div class="bd">'+
+        '<p>'+esc(m.d)+'</p>'+
+        '<div class="lab">Complexity</div><p>'+esc(m.cx)+' · risk '+esc(m.risk)+'</p>'+
+        '<div class="lab">Dependencies</div><p>'+esc(m.dep)+'</p>'+
+        '<div class="lab">Files likely affected</div><p style="font-family:var(--mono);font-size:11px">'+esc(m.f)+'</p></div>';
+      lane.appendChild(c);
+    });
+    wrap.appendChild(lane);
+  });
+})();
+
+/* ============================== RENDER: PROMPTS ============================== */
+(function(){
+  var wrap=document.getElementById("promptGrid");
+  PROMPTS.forEach(function(p,i){
+    var box=el("div","pbox");
+    box.setAttribute("data-search","prompt "+p.t+" "+p.sub);
+    var head=el("div","ph");
+    head.innerHTML='<span>'+esc(p.t)+' · '+esc(p.sub)+'</span>';
+    var btn=el("button","btn","Copy prompt");
+    btn.type="button";
+    btn.addEventListener("click",function(){ copyText(btn, p.body); });
+    head.appendChild(btn);
+    var pre=el("pre",null,esc(p.body));
+    box.appendChild(head); box.appendChild(pre);
+    wrap.appendChild(box);
+  });
+})();
+
+/* ============================== GLOBAL SEARCH ============================== */
+var searchQ="";
+function applySearch(){
+  var q=searchQ.trim().toLowerCase();
+  var nodes=document.querySelectorAll("[data-search]");
+  var hits=0;
+  nodes.forEach(function(n){
+    if(n.hidden) return; /* respect section-level filters (tasks) */
+    var match=!q || (n.getAttribute("data-search")+" "+n.textContent).toLowerCase().indexOf(q)!==-1;
+    n.classList.toggle("search-hidden",!match);
+    if(q&&match)hits++;
+  });
+  var c=document.getElementById("searchCount");
+  if(q){ c.style.display="inline-block"; c.textContent=hits+" hits"; }
+  else { c.style.display="none"; }
+}
+document.getElementById("globalSearch").addEventListener("input",function(){ searchQ=this.value; applySearch(); });
+document.getElementById("globalSearch").addEventListener("keydown",function(ev){
+  if(ev.key==="Escape"){ this.value=""; searchQ=""; applySearch(); this.blur(); }
+});
+
+/* ============================== SCROLL SPY ============================== */
+(function(){
+  var links={}; document.querySelectorAll("#sideNav a[data-s]").forEach(function(a){ links[a.dataset.s]=a; });
+  if("IntersectionObserver" in window){
+    var obs=new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){
+          Object.keys(links).forEach(function(k){ links[k].classList.remove("active"); });
+          var l=links[e.target.id]; if(l)l.classList.add("active");
+        }
+      });
+    },{rootMargin:"-25% 0px -65% 0px"});
+    document.querySelectorAll("main section[id]").forEach(function(s){ obs.observe(s); });
+  }
+})();
+
+/* ============================== ANIMATE ON LOAD ============================== */
+window.addEventListener("load",function(){
+  var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var ring=document.getElementById("heroRing");
+  var target=515.2*(1-0.58);
+  if(reduce){ ring.style.transition="none"; }
+  requestAnimationFrame(function(){ ring.style.strokeDashoffset=target; });
+  document.querySelectorAll(".gauge circle.fg").forEach(function(c,i){
+    var t=c.getAttribute("data-target");
+    if(reduce){ c.style.transition="none"; c.style.strokeDashoffset=t; return; }
+    setTimeout(function(){ c.style.strokeDashoffset=t; }, 120+i*40);
+  });
+});
+
+/* ============================== COVERAGE METERS ============================== */
+(function(){
+  var wrap=document.getElementById("covMeters");
+  [["Statements",99.52],["Branches",95.75],["Functions",100],["Lines",100]].forEach(function(m){
+    var d=el("div",null);
+    d.style.marginTop="10px";
+    d.innerHTML='<div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px"><b>'+m[0]+'</b>'+
+      '<span style="font-family:var(--mono);font-size:12px;color:var(--ink-2)">'+m[1]+'%</span></div>'+
+      '<div class="track" style="height:6px"><div class="fill" style="width:'+m[1]+'%"></div>'+
+      '<div style="position:absolute;top:-3px;bottom:-3px;left:95%;width:2px;background:var(--ink-3);border-radius:2px"></div></div>';
+    wrap.appendChild(d);
+  });
+})();
+
+/* init */
+renderRoutes();
+renderFeatures();
+updateProgress();
+applyTodoFilter();
+})();
+</script>
+</body>
+</html>
