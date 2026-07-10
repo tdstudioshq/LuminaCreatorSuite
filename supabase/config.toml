@@ -30,8 +30,17 @@ enabled = true
 
 [auth]
 enabled = true
-site_url = "http://127.0.0.1:3000"
-additional_redirect_urls = ["http://127.0.0.1:3000"]
+# Local dev serves on :8080 (Vite). site_url is GoTrue's fallback/redirect base,
+# and every redirect target must be allow-listed here or GoTrue silently rewrites
+# it back to site_url — which pointed reset/confirmation links at a dead :3000 and
+# burned the one-time token. App code stays origin-relative (window.location.origin),
+# so production is governed by the cloud project's own Auth redirect allow-list, not
+# this local-only file.
+site_url = "http://localhost:8080"
+additional_redirect_urls = [
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
+]
 jwt_expiry = 3600
 enable_signup = true
 
