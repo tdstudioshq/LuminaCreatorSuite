@@ -71,7 +71,15 @@ deploy is a separate approved step (then `bun run smoke:prod`).
   filter-flash claims, 0/3 upheld).
 - **Deferred to 9C+:** email/push providers + real delivery (replace the 9A `_result` simulation),
   digests/batching, per-type preference granularity (needs a migration), admin outbox UI.
-- **Next:** deploy (gated, prebuilt) → `bun run smoke:prod`.
+- **DEPLOYED July 10 (approved):** prebuilt production deploy
+  (`lumina-creator-suite-g6sjox3i0`, aliased to cabanagrp.com + www). `bun run smoke:prod`
+  (run `smoke_1783698125934`): **7 PASS · 0 FAIL · 1 SKIP · 1 FLAKY (exit 0)** — REALTIME-MESSAGING
+  passed on retry (by-design FLAKY semantics), ADMIN-FINANCE still SKIPs (cloud ledger has no
+  transactions), CLEANUP-RESIDUE clean. No cloud schema/data touched. Remaining manual step: a
+  signed-in visual pass over the notification center (`/dashboard/notifications`, `/notifications`,
+  badges, preference toggle) — smoke cannot verify UI rendering.
+- **Next:** Tyler's visual pass on the deployed notification center, then pick the next gated phase
+  (11C audience insights / 9C providers / tech debt — all require approval and scoping).
 
 ## Session update — July 10, 2026 (Production smoke-test harness + approved cloud apply of 20260529/30 — GREEN; legacy_reel closed)
 
