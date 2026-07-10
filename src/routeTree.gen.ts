@@ -44,6 +44,7 @@ import { Route as DashboardNotificationsRouteImport } from './routes/dashboard.n
 import { Route as DashboardMessagesRouteImport } from './routes/dashboard.messages'
 import { Route as DashboardMediaKitRouteImport } from './routes/dashboard.media-kit'
 import { Route as DashboardLinksRouteImport } from './routes/dashboard.links'
+import { Route as DashboardLinkInBioRouteImport } from './routes/dashboard.link-in-bio'
 import { Route as DashboardHomeRouteImport } from './routes/dashboard.home'
 import { Route as DashboardEarningsRouteImport } from './routes/dashboard.earnings'
 import { Route as DashboardAnalyticsRouteImport } from './routes/dashboard.analytics'
@@ -230,6 +231,11 @@ const DashboardLinksRoute = DashboardLinksRouteImport.update({
   path: '/links',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardLinkInBioRoute = DashboardLinkInBioRouteImport.update({
+  id: '/link-in-bio',
+  path: '/link-in-bio',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardHomeRoute = DashboardHomeRouteImport.update({
   id: '/home',
   path: '/home',
@@ -312,6 +318,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
   '/dashboard/home': typeof DashboardHomeRoute
+  '/dashboard/link-in-bio': typeof DashboardLinkInBioRoute
   '/dashboard/links': typeof DashboardLinksRoute
   '/dashboard/media-kit': typeof DashboardMediaKitRoute
   '/dashboard/messages': typeof DashboardMessagesRoute
@@ -358,6 +365,7 @@ export interface FileRoutesByTo {
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
   '/dashboard/home': typeof DashboardHomeRoute
+  '/dashboard/link-in-bio': typeof DashboardLinkInBioRoute
   '/dashboard/links': typeof DashboardLinksRoute
   '/dashboard/media-kit': typeof DashboardMediaKitRoute
   '/dashboard/messages': typeof DashboardMessagesRoute
@@ -406,6 +414,7 @@ export interface FileRoutesById {
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
   '/dashboard/home': typeof DashboardHomeRoute
+  '/dashboard/link-in-bio': typeof DashboardLinkInBioRoute
   '/dashboard/links': typeof DashboardLinksRoute
   '/dashboard/media-kit': typeof DashboardMediaKitRoute
   '/dashboard/messages': typeof DashboardMessagesRoute
@@ -455,6 +464,7 @@ export interface FileRouteTypes {
     | '/dashboard/analytics'
     | '/dashboard/earnings'
     | '/dashboard/home'
+    | '/dashboard/link-in-bio'
     | '/dashboard/links'
     | '/dashboard/media-kit'
     | '/dashboard/messages'
@@ -501,6 +511,7 @@ export interface FileRouteTypes {
     | '/dashboard/analytics'
     | '/dashboard/earnings'
     | '/dashboard/home'
+    | '/dashboard/link-in-bio'
     | '/dashboard/links'
     | '/dashboard/media-kit'
     | '/dashboard/messages'
@@ -548,6 +559,7 @@ export interface FileRouteTypes {
     | '/dashboard/analytics'
     | '/dashboard/earnings'
     | '/dashboard/home'
+    | '/dashboard/link-in-bio'
     | '/dashboard/links'
     | '/dashboard/media-kit'
     | '/dashboard/messages'
@@ -840,6 +852,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardLinksRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/link-in-bio': {
+      id: '/dashboard/link-in-bio'
+      path: '/link-in-bio'
+      fullPath: '/dashboard/link-in-bio'
+      preLoaderRoute: typeof DashboardLinkInBioRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/home': {
       id: '/dashboard/home'
       path: '/home'
@@ -947,6 +966,7 @@ interface DashboardRouteChildren {
   DashboardAnalyticsRoute: typeof DashboardAnalyticsRoute
   DashboardEarningsRoute: typeof DashboardEarningsRoute
   DashboardHomeRoute: typeof DashboardHomeRoute
+  DashboardLinkInBioRoute: typeof DashboardLinkInBioRoute
   DashboardLinksRoute: typeof DashboardLinksRoute
   DashboardMediaKitRoute: typeof DashboardMediaKitRoute
   DashboardMessagesRoute: typeof DashboardMessagesRoute
@@ -964,6 +984,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAnalyticsRoute: DashboardAnalyticsRoute,
   DashboardEarningsRoute: DashboardEarningsRoute,
   DashboardHomeRoute: DashboardHomeRoute,
+  DashboardLinkInBioRoute: DashboardLinkInBioRoute,
   DashboardLinksRoute: DashboardLinksRoute,
   DashboardMediaKitRoute: DashboardMediaKitRoute,
   DashboardMessagesRoute: DashboardMessagesRoute,

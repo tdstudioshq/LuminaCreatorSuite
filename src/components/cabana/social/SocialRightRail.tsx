@@ -59,7 +59,7 @@ function SuggestedCreators() {
   ).slice(0, 5);
 
   return (
-    <section className="overflow-hidden rounded-[28px] border border-white/[0.09] bg-[linear-gradient(150deg,oklch(0.19_0.02_280/0.68),oklch(0.14_0.015_280/0.58))] shadow-[0_24px_70px_-50px_oklch(0_0_0/0.95),inset_0_1px_0_oklch(1_0_0/0.08)]">
+    <section className="overflow-hidden rounded-xl border border-white/[0.09] bg-[linear-gradient(150deg,oklch(0.19_0.02_280/0.68),oklch(0.14_0.015_280/0.58))] shadow-[0_24px_70px_-50px_oklch(0_0_0/0.95),inset_0_1px_0_oklch(1_0_0/0.08)]">
       <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
         <div>
           <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-primary">

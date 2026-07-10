@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useChildMatches } from "@tanstack/react-router";
 import { AdminGate } from "@/components/cabana/admin-finance/AdminGate";
 import { FinanceShell } from "@/components/cabana/admin-finance/FinanceShell";
 import { LedgerExplorer } from "@/components/cabana/admin-finance/LedgerExplorer";
@@ -15,6 +15,10 @@ export const Route = createFileRoute("/admin/ledger")({
 });
 
 function LedgerRoute() {
+  // /admin/ledger/$transactionId is a child of this route; the detail page
+  // brings its own AdminGate + FinanceShell, so defer to it when matched.
+  const hasDetail = useChildMatches().length > 0;
+  if (hasDetail) return <Outlet />;
   return (
     <AdminGate redirect="/admin/ledger">
       <FinanceShell

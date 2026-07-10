@@ -77,7 +77,7 @@ function DesktopNav({
         >
           <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-iridescent shadow-glow-sm transition-transform duration-300 group-hover:rotate-3 group-hover:scale-105">
             <Sparkles className="h-5 w-5 text-background" />
-            <span className="absolute inset-[1px] rounded-[15px] border border-white/30" />
+            <span className="absolute inset-[1px] rounded-md border border-white/30" />
           </div>
           <div>
             <div className="font-display text-lg font-semibold tracking-[0.08em]">CABANA</div>
@@ -202,7 +202,7 @@ function ProfileCard({
           await cabanaAuth.logout();
           navigate({ to: "/login" });
         }}
-        className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground outline-none transition-colors hover:bg-foreground/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        className="tap-target flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground outline-none transition-colors hover:bg-foreground/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
         aria-label="Sign out"
         title="Sign out"
       >

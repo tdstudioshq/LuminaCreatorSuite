@@ -37,7 +37,7 @@ export function EmptyThread() {
   return (
     <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden p-10 text-center">
       <div className="pointer-events-none absolute h-72 w-72 rounded-full bg-iridescent opacity-[0.07] blur-[100px]" />
-      <span className="relative mb-6 flex h-20 w-20 items-center justify-center rounded-[26px] border border-white/[0.12] bg-white/[0.055] shadow-[inset_0_1px_0_oklch(1_0_0/0.12),0_30px_80px_-40px_oklch(0.78_0.18_280/0.8)]">
+      <span className="relative mb-6 flex h-20 w-20 items-center justify-center rounded-3xl border border-white/[0.12] bg-white/[0.055] shadow-[inset_0_1px_0_oklch(1_0_0/0.12),0_30px_80px_-40px_oklch(0.78_0.18_280/0.8)]">
         <MessageCircleMore className="h-8 w-8 text-primary" />
       </span>
       <p className="relative font-display text-2xl font-semibold text-foreground">

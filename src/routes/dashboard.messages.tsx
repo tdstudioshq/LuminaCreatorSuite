@@ -1,9 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { DemoMessages } from "@/components/cabana/demo/DemoMessages";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
+// The demo inbox is retired — real direct messages live at /messages.
 export const Route = createFileRoute("/dashboard/messages")({
-  head: () => ({
-    meta: [{ title: "CABANA" }, { name: "robots", content: "noindex, nofollow" }],
-  }),
-  component: DemoMessages,
+  beforeLoad: () => {
+    throw redirect({ to: "/messages" });
+  },
 });

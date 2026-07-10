@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
@@ -10,18 +10,11 @@ import {
   Sparkles,
   ArrowUpRight,
   Loader2,
-  Plus,
-  Pencil,
-  Palette,
-  ExternalLink,
-  Check,
-  Copy,
-  X,
 } from "lucide-react";
-import { toast } from "sonner";
 import { useCabana } from "@/lib/cabana-store";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
 
 type EventRow = { id: string; event_type: string; target_id: string | null; created_at: string };
 
@@ -46,7 +39,12 @@ function useEvents(profileId: string | undefined) {
 
 export function DashHome() {
   const { profile, links, products, loading } = useCabana();
-  const { data: events = [], isLoading: eventsLoading } = useEvents(profile?.id);
+  const {
+    data: events = [],
+    isLoading: eventsLoading,
+    isError: eventsError,
+    refetch: refetchEvents,
+  } = useEvents(profile?.id);
 
   const counts = useMemo(() => {
     let pageViews = 0,
@@ -108,26 +106,15 @@ export function DashHome() {
     { label: "Click-through rate", value: ctr, icon: TrendingUp },
   ];
 
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 5
-      ? "Good night"
-      : hour < 12
-        ? "Good morning"
-        : hour < 18
-          ? "Good afternoon"
-          : "Good evening";
-
   return (
     <div className="space-y-8">
-      <WelcomeLive handle={profile.handle} />
       <header className="flex items-end justify-between flex-wrap gap-4">
         <div>
           <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">
-            Welcome back
+            Link-in-bio
           </div>
           <h1 className="text-4xl md:text-5xl font-display font-semibold tracking-tighter">
-            {greeting}, <span className="text-iridescent">{profile.name || profile.handle}</span>
+            My <span className="text-iridescent">Page</span>
           </h1>
           <p className="text-xs text-muted-foreground mt-2">
             Live at <span className="text-foreground">/{profile.handle}</span>
@@ -144,30 +131,34 @@ export function DashHome() {
         </Button>
       </header>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((s, i) => {
-          const Icon = s.icon;
-          return (
-            <motion.div
-              key={s.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06 }}
-              className="glass rounded-2xl p-5 relative overflow-hidden group"
-            >
-              <div className="flex items-center justify-between mb-4 relative">
-                <div className="w-9 h-9 rounded-xl glass-strong flex items-center justify-center">
-                  <Icon className="w-4 h-4" />
+      {eventsError ? (
+        <QueryErrorState title="Couldn’t load your traffic stats" onRetry={refetchEvents} />
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map((s, i) => {
+            const Icon = s.icon;
+            return (
+              <motion.div
+                key={s.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.06 }}
+                className="glass rounded-2xl p-5 relative overflow-hidden group"
+              >
+                <div className="flex items-center justify-between mb-4 relative">
+                  <div className="w-9 h-9 rounded-xl glass-strong flex items-center justify-center">
+                    <Icon className="w-4 h-4" />
+                  </div>
                 </div>
-              </div>
-              <div className="text-2xl md:text-3xl font-display font-semibold tracking-tight">
-                {s.value}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">{s.label}</div>
-            </motion.div>
-          );
-        })}
-      </div>
+                <div className="text-2xl md:text-3xl font-display font-semibold tracking-tight">
+                  {s.value}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">{s.label}</div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 glass rounded-3xl p-6">
@@ -180,6 +171,10 @@ export function DashHome() {
           {eventsLoading ? (
             <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
+            </div>
+          ) : eventsError ? (
+            <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">
+              Couldn’t load traffic data — use Retry above.
             </div>
           ) : counts.pageViews === 0 ? (
             <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">
@@ -219,106 +214,6 @@ export function DashHome() {
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- * Post-onboarding continuation banner. Shows once, right after the user
- * finishes onboarding (flagged in sessionStorage), so the dashboard reads as
- * "you're live, here's what's next" rather than a hard stop.
- */
-function WelcomeLive({ handle }: { handle: string }) {
-  const [show, setShow] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const publicUrl = `cabanagrp.com/${handle}`;
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (sessionStorage.getItem("cabana:justOnboarded") === "1") {
-      sessionStorage.removeItem("cabana:justOnboarded");
-      setShow(true);
-    }
-  }, []);
-
-  if (!show) return null;
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(`https://${publicUrl}`);
-      setCopied(true);
-      toast.success("Public link copied");
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      toast.error("Couldn't copy the link");
-    }
-  };
-
-  const actions = [
-    { label: "Add link", icon: Plus, to: "/dashboard/links" },
-    { label: "Edit profile", icon: Pencil, to: "/dashboard/profile" },
-    { label: "Customize theme", icon: Palette, to: "/dashboard/profile" },
-  ] as const;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="glass-strong relative overflow-hidden rounded-3xl p-6"
-    >
-      <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-iridescent opacity-20 blur-3xl" />
-      <button
-        type="button"
-        onClick={() => setShow(false)}
-        className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
-        aria-label="Dismiss"
-      >
-        <X className="h-4 w-4" />
-      </button>
-      <div className="relative">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-          <Sparkles className="h-3.5 w-3.5" /> Your CABANA is live
-        </div>
-        <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight">
-          You're all set — here's what's next.
-        </h2>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void copy()}
-            className="flex items-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.04] px-4 py-2 text-sm transition-colors hover:bg-white/[0.07]"
-          >
-            <span className="text-muted-foreground">{publicUrl}</span>
-            {copied ? (
-              <Check className="h-3.5 w-3.5 text-primary" />
-            ) : (
-              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-            )}
-          </button>
-          <Button asChild variant="cta" size="sm" className="!rounded-full">
-            <Link to="/$username" params={{ username: handle }}>
-              <ExternalLink className="h-3.5 w-3.5" /> View public page
-            </Link>
-          </Button>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {actions.map((a) => {
-            const Icon = a.icon;
-            return (
-              <Link
-                key={a.label}
-                to={a.to}
-                className="flex items-center gap-1.5 rounded-full border border-white/[0.08] px-3.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <Icon className="h-3.5 w-3.5" /> {a.label}
-              </Link>
-            );
-          })}
-        </div>
-        <p className="mt-4 text-xs text-muted-foreground">
-          You don't have to finish everything now — come back anytime.
-        </p>
-      </div>
-    </motion.div>
   );
 }
 

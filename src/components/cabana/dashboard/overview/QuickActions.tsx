@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import {
-  BarChart3,
+  LineChart,
   PenSquare,
   Settings as SettingsIcon,
   UsersRound,
@@ -19,19 +19,19 @@ type QuickAction = {
 const ACTIONS: QuickAction[] = [
   {
     to: "/dashboard/posts",
-    label: "Create post",
+    label: "Posts",
     description: "Publish to your feed",
     icon: PenSquare,
   },
   {
     to: "/dashboard/subscribers",
-    label: "Subscriptions",
+    label: "Subscribers",
     description: "Tiers & subscribers",
     icon: UsersRound,
   },
   {
     to: "/dashboard/earnings",
-    label: "Payouts",
+    label: "Earnings",
     description: "Request & track payouts",
     icon: WalletCards,
   },
@@ -39,7 +39,7 @@ const ACTIONS: QuickAction[] = [
     to: "/dashboard/performance",
     label: "Analytics",
     description: "Revenue & engagement",
-    icon: BarChart3,
+    icon: LineChart,
   },
   {
     to: "/dashboard/settings",
