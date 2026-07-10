@@ -175,6 +175,11 @@ jobs:
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
             -v ON_ERROR_STOP=1 -f supabase/tests/high_qa_fixes.sql
 
+      - name: Behavioral checks (audience insights RPC — counts + supporters + RLS)
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 -f supabase/tests/audience_insights.sql
+
       - name: Stop Supabase
         if: always()
         run: supabase stop || true

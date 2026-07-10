@@ -131,7 +131,6 @@ export const ICON_OPTIONS: LinkIconKey[] = [
 // ─────────────────────── Row mappers ───────────────────────
 type CreatorRow = {
   id: string;
-  user_id: string | null;
   handle: string;
   name: string;
   bio: string;
@@ -251,9 +250,13 @@ export function useCreatorByHandle(handle: string | undefined) {
     queryKey: ["creator-by-handle", handle?.toLowerCase()],
     enabled: !!handle,
     queryFn: async () => {
+      // Public read: never select * — an explicit column list keeps the
+      // account's auth user_id (and any future private columns) off the wire.
       const { data, error } = await supabase
         .from("creator_profiles")
-        .select("*")
+        .select(
+          "id, handle, name, bio, avatar_url, banner_url, theme, plan, headline, accent_color, button_style",
+        )
         .ilike("handle", handle!)
         .maybeSingle();
       if (error) throw error;

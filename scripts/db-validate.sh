@@ -71,6 +71,8 @@ if command -v psql >/dev/null 2>&1; then
   psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/post_media_service_grant.sql
   echo "▸ Running High-severity QA fix checks (post_count + purchase/payout concurrency locks)…"
   psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/high_qa_fixes.sql
+  echo "▸ Running Phase 11C behavioral checks (audience insights RPC: counts + supporters + RLS)…"
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/audience_insights.sql
   echo "✓ db:validate passed — fresh rebuild + smoke + behavioral checks succeeded."
 else
   echo "⚠ psql not found — 'supabase db reset' succeeded (migration + seed applied cleanly),"

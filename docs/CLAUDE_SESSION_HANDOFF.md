@@ -16,6 +16,38 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
+## Session update — July 10, 2026 PM (Full audit GREEN + Phase 11C Option B drafted + 🔴 user_id leak fixed — all UNCOMMITTED)
+
+Tyler approved Phase 11C **Option B** (tab within `/dashboard/performance`; **named** top supporters,
+creator-only; engagement aggregates stay anonymous). A full fresh-audit pass verified docs vs. tree
+(10/10 claimed fixes real; docs stale where they disagree, code right), then this work landed —
+**nothing committed, no cloud Supabase touched, NOT deployed**:
+
+- **Migration draft (awaiting Tyler's review):** `supabase/migrations/20260531000000_audience_insights.sql`
+  — ONE creator-scoped SECURITY DEFINER read RPC `creator_audience_insights(_supporter_limit, _window_days)`
+  returning jsonb (11B pattern; no table/column/enum/RLS/trigger change; authenticated-only). Section 1:
+  engaged-follower + recency counts (7/30/90d, COUNT-ONLY — likes/saves identities never returned).
+  Section 2: top supporters named via the `creator_subscribers_list` identity shape (member/creator
+  profile fallback; null-payer spend aggregates to one unnamed "Former member" row), spend summed from
+  the caller's own succeeded `transactions` (`creator_net_cents`; types tip/post_unlock/creator_subscription
+  — fees never re-derived). Column/enum names verified against the real migrations.
+- **Behavioral test:** `supabase/tests/audience_insights.sql` (counts, ranking + per-source cents at the
+  10%+3% fee model, payload-key privacy check, creator isolation, member + anon denial), registered in
+  `scripts/db-validate.sh`. **Not yet run** — no Docker on this host; CI's from-zero rebuild covers it.
+- **🔴 Tech-debt #1 fixed:** `useCreatorByHandle` no longer `select("*")`s `creator_profiles` —
+  explicit column list omitting `user_id` (`src/lib/cabana-store.ts`; `CreatorRow.user_id` removed,
+  unused). NOTE: the register's suggested "swap to `public_creator_profiles`" does NOT work — the view
+  is ID-free and lacks `id`/theme/customization columns the public page needs; column-list is the fix.
+- **Push blocked:** `main` is **9 commits ahead of `origin/main`** (whole 9B series; prod was deployed
+  prebuilt from local). An agent push attempt was permission-denied — Tyler should `git push origin main`.
+- **Gates (post-change):** lint 0 errors (6 pre-existing shadcn warnings), `tsc` clean, build green
+  (`.vercel/output`), **347/347 tests**. `db:validate` needs Docker (not on this host).
+- **Doc staleness found by the audit (not yet reconciled):** `CABANA_TECH_DEBT.md` header still says
+  `5963a18`/"not pushed"; its Top-7 still lists the July-10-closed cloud-apply + legacy_reel items.
+  `CABANA_PROJECT_STATE.md` checkpointed at `5963a18`. Reconcile in a docs pass.
+- **Next:** Tyler reviews the 11C migration + this session's diff → commit → local-Docker `db:validate`
+  → then the 11C pure module (`cabana-audience.ts`) + actions + hook + performance tab (gated).
+
 ## Session update — July 10, 2026 (Phase 9B COMPLETE — User Notification Center; frontend + pure layer only, NO schema change)
 
 Approved start of Phase 9B. Finished the user-facing notification experience over the Phase 7 read
