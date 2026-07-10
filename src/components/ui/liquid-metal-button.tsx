@@ -1,4 +1,4 @@
-import { liquidMetalFragmentShader, ShaderMount } from "@paper-design/shaders";
+import type { ShaderMount } from "@paper-design/shaders";
 import { useEffect, useRef, useState, type ButtonHTMLAttributes } from "react";
 import { useReducedMotion } from "framer-motion";
 
@@ -66,29 +66,47 @@ export function LiquidMetalButton({
 
     const host = shaderHostRef.current;
     let mounted: ShaderMount | null = null;
-    try {
-      mounted = new ShaderMount(
-        host,
-        liquidMetalFragmentShader,
-        SHADER_UNIFORMS,
-        undefined,
-        0, // idle: parked → the library halts its render loop (zero cost)
-      );
-    } catch {
-      // WebGL unavailable: ShaderMount may have appended a canvas before
-      // failing — remove it so the CSS fallback host stays clean.
-      host.replaceChildren();
-      return;
-    }
+    let disposed = false;
+    let claimed = false;
 
-    shaderRef.current = mounted;
-    liveShaderCount += 1;
-    setShaderActive(true);
+    // Lazy-load the WebGL shader lib so @paper-design/shaders stays OUT of the
+    // eager front-door bundle (login/signup/onboarding all import this button).
+    // The CSS fallback is already the default render (shaderActive=false), so
+    // behavior is unchanged — the shader simply upgrades in once the chunk
+    // resolves post-hydration (exactly when it did before, just code-split).
+    void import("@paper-design/shaders")
+      .then(({ liquidMetalFragmentShader, ShaderMount }) => {
+        // Bail if we unmounted before the chunk resolved, or another instance
+        // claimed the single live-shader slot in the meantime.
+        if (disposed || liveShaderCount >= MAX_LIVE_SHADERS) return;
+        try {
+          mounted = new ShaderMount(
+            host,
+            liquidMetalFragmentShader,
+            SHADER_UNIFORMS,
+            undefined,
+            0, // idle: parked → the library halts its render loop (zero cost)
+          );
+        } catch {
+          // WebGL unavailable: ShaderMount may have appended a canvas before
+          // failing — remove it so the CSS fallback host stays clean.
+          host.replaceChildren();
+          return;
+        }
+        shaderRef.current = mounted;
+        liveShaderCount += 1;
+        claimed = true;
+        setShaderActive(true);
+      })
+      .catch(() => {
+        // Shader chunk failed to load (offline/network) — stay on CSS fallback.
+      });
 
     return () => {
+      disposed = true;
       mounted?.dispose();
       shaderRef.current = null;
-      liveShaderCount -= 1;
+      if (claimed) liveShaderCount -= 1;
       setShaderActive(false);
     };
   }, [prefersReducedMotion]);

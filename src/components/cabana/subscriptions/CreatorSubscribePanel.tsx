@@ -56,7 +56,7 @@ export function CreatorSubscribePanel({ username }: { username: string }) {
   return (
     <section
       id="membership"
-      className="mt-5 rounded-[28px] border border-white/[0.09] bg-[linear-gradient(145deg,oklch(0.21_0.025_280/0.65),oklch(0.15_0.018_280/0.52))] p-4 shadow-[0_24px_60px_-48px_oklch(0.78_0.18_280/0.8),inset_0_1px_0_oklch(1_0_0/0.08)] sm:p-5"
+      className="mt-5 rounded-xl border border-white/[0.09] bg-[linear-gradient(145deg,oklch(0.21_0.025_280/0.65),oklch(0.15_0.018_280/0.52))] p-4 shadow-[0_24px_60px_-48px_oklch(0.78_0.18_280/0.8),inset_0_1px_0_oklch(1_0_0/0.08)] sm:p-5"
     >
       <div className="mb-4 flex items-end justify-between gap-4">
         <div>
@@ -82,7 +82,7 @@ export function CreatorSubscribePanel({ username }: { username: string }) {
             type="button"
             onClick={() => void cancel()}
             disabled={sub.pending}
-            className="btn-ghost !py-2.5 text-xs disabled:opacity-50"
+            className="btn-ghost !py-2.5 text-xs disabled:opacity-60"
           >
             {sub.pending ? "Updating…" : "Cancel subscription"}
           </button>
@@ -91,7 +91,7 @@ export function CreatorSubscribePanel({ username }: { username: string }) {
           </p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className={`grid gap-3 ${tiers.length > 1 ? "sm:grid-cols-2" : ""}`}>
           {tiers.map((tier) => (
             <SubscriptionTierCard
               key={tier.id}
@@ -133,7 +133,7 @@ export function CreatorSubscribePanel({ username }: { username: string }) {
               type="button"
               onClick={() => void confirm()}
               disabled={sub.pending}
-              className="btn-luxury !px-5 !py-2.5 text-xs disabled:opacity-50"
+              className="btn-luxury !px-5 !py-2.5 text-xs disabled:opacity-60"
             >
               {sub.pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Confirm (demo)

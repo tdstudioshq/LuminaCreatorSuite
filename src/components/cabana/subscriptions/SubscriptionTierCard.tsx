@@ -14,7 +14,7 @@ export function SubscriptionTierCard({
   disabled?: boolean;
 }) {
   return (
-    <div className="glass-strong flex flex-col gap-3 rounded-3xl p-5">
+    <div className="glass-strong flex h-full flex-col gap-3 rounded-3xl p-5">
       <div className="flex items-center gap-2">
         <Crown className="h-4 w-4 text-iridescent" />
         <span className="text-sm font-medium">{tier.name}</span>
@@ -26,14 +26,14 @@ export function SubscriptionTierCard({
         <span className="text-xs text-muted-foreground">/ month</span>
       </div>
       {current ? (
-        <span className="inline-flex items-center justify-center gap-1.5 rounded-full bg-white/5 px-4 py-2.5 text-xs text-emerald-300/90">
+        <span className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-full bg-white/5 px-4 py-2.5 text-xs text-emerald-300/90">
           <Check className="h-3.5 w-3.5" /> Current plan
         </span>
       ) : (
         <button
           onClick={onSelect}
           disabled={disabled}
-          className="btn-luxury !py-2.5 text-xs disabled:opacity-50"
+          className="btn-luxury mt-auto !py-2.5 text-xs disabled:opacity-60"
         >
           Subscribe
         </button>

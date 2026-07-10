@@ -12,7 +12,7 @@
 // ============================================================================
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Flag, Loader2 } from "lucide-react";
+import { CheckCircle2, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -82,7 +82,7 @@ export function ReportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-strong sm:max-w-md">
+      <DialogContent className="glass-strong max-h-[85vh] overflow-y-auto sm:max-w-md">
         {submitted ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <CheckCircle2 className="h-10 w-10 text-emerald-400" aria-hidden />
@@ -135,8 +135,8 @@ export function ReportDialog({
                 className="btn-luxury"
                 onClick={onSubmit}
                 disabled={!reason || createReport.isPending}
+                loading={createReport.isPending}
               >
-                {createReport.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Submit report
               </Button>
             </DialogFooter>

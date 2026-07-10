@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -96,8 +95,8 @@ export function PayoutActionDialog({
             variant={destructive ? "destructive" : "primary"}
             onClick={onConfirm}
             disabled={review.isPending}
+            loading={review.isPending}
           >
-            {review.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {payoutActionLabel(action)}
           </Button>
         </DialogFooter>

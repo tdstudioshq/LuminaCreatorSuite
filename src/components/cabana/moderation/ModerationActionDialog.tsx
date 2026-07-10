@@ -97,8 +97,8 @@ export function ModerationActionDialog({ report }: { report: ReportItem }) {
             className="btn-luxury w-full"
             onClick={onApply}
             disabled={!target || update.isPending}
+            loading={update.isPending}
           >
-            {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Apply
           </Button>
         </div>

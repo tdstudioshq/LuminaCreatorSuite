@@ -64,7 +64,7 @@ export function PayoutRequestDialog({ availableCents }: { availableCents: number
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button
-          className="btn-luxury !px-4 !py-2 text-xs disabled:opacity-50"
+          className="btn-luxury !px-4 !py-2 text-xs disabled:opacity-60"
           disabled={availableCents < MIN_PAYOUT_CENTS}
         >
           <WalletCards className="h-3.5 w-3.5" /> Request payout
@@ -114,14 +114,14 @@ export function PayoutRequestDialog({ availableCents }: { availableCents: number
           </p>
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter>
           <DialogClose asChild>
             <button className="btn-ghost !px-4 !py-2 text-xs">Cancel</button>
           </DialogClose>
           <button
             onClick={submit}
             disabled={!eligibility.eligible || requestPayout.isPending}
-            className="btn-luxury !px-4 !py-2 text-xs disabled:opacity-50"
+            className="btn-luxury !px-4 !py-2 text-xs disabled:opacity-60"
           >
             {requestPayout.isPending ? "Requesting…" : "Request payout"}
           </button>

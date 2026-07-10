@@ -9,6 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import type { SubscriberAnalyticsView } from "@/lib/cabana-creator-analytics";
+import { ChartEmpty } from "./ChartEmpty";
 
 function CountTooltip({
   active,
@@ -46,6 +47,7 @@ export function SubscriberAnalytics({ subscribers }: { subscribers: SubscriberAn
       tone: "text-rose-400",
     },
   ];
+  const seriesEmpty = subscribers.series.every((d) => d.cents === 0);
 
   return (
     <section className="glass-strong rounded-3xl p-6">
@@ -75,40 +77,47 @@ export function SubscriberAnalytics({ subscribers }: { subscribers: SubscriberAn
         ))}
       </div>
 
-      <div className="h-48 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={subscribers.series} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="hsl(var(--border))"
-              opacity={0.3}
-              vertical={false}
-            />
-            <XAxis
-              dataKey="label"
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-              tickLine={false}
-              axisLine={false}
-              minTickGap={24}
-            />
-            <YAxis
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-              tickLine={false}
-              axisLine={false}
-              width={36}
-              allowDecimals={false}
-            />
-            <Tooltip content={<CountTooltip />} cursor={{ stroke: "hsl(var(--border))" }} />
-            <Line
-              type="monotone"
-              dataKey="cents"
-              stroke="hsl(var(--primary))"
-              strokeWidth={2}
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      {seriesEmpty ? (
+        <ChartEmpty className="h-48 w-full" />
+      ) : (
+        <div className="h-48 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={subscribers.series}
+              margin={{ top: 4, right: 4, bottom: 0, left: -16 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--border)"
+                opacity={0.3}
+                vertical={false}
+              />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                tickLine={false}
+                axisLine={false}
+                minTickGap={24}
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                tickLine={false}
+                axisLine={false}
+                width={36}
+                allowDecimals={false}
+              />
+              <Tooltip content={<CountTooltip />} cursor={{ stroke: "var(--border)" }} />
+              <Line
+                type="monotone"
+                dataKey="cents"
+                stroke="var(--primary)"
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </section>
   );
 }

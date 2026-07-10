@@ -24,12 +24,11 @@ const buttonVariants = cva(
         // ── Metal finishes (share .btn-metal; vary only body + text) ──
         primary: "btn-metal",
         cta: "btn-metal",
-        secondary:
-          "btn-metal [--metal-body:var(--gradient-metal-silver)] [--metal-fg:oklch(0.18_0.02_280)]",
+        secondary: "btn-metal [--metal-body:var(--gradient-metal-silver)]",
         destructive:
-          "btn-metal [--metal-body:var(--gradient-metal-destructive)] [--metal-fg:oklch(0.99_0_0)] [--metal-ring:oklch(0.65_0.22_25/0.9)]",
+          "btn-metal [--metal-body:var(--gradient-metal-destructive)] [--metal-ring:oklch(0.65_0.22_25/0.9)]",
         success:
-          "btn-metal [--metal-body:var(--gradient-metal-success)] [--metal-fg:oklch(0.16_0.02_160)] [--metal-ring:oklch(0.7_0.16_155/0.9)]",
+          "btn-metal [--metal-body:var(--gradient-metal-success)] [--metal-ring:oklch(0.7_0.16_155/0.9)]",
         // ── Low-emphasis finishes ──
         ghost: "btn-ghost",
         icon: "btn-ghost !rounded-full",

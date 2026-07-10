@@ -124,28 +124,37 @@
      utilities so the whole app speaks one metallic language. No idle
      animation: gloss + bevel give static depth; reflections move only on
      hover/press (GPU-cheap background-position/transform). */
-  --metal-radius: 12px;
+  /* Pill shape + a ~1.5px liquid-chrome rim around a dark glossy face — the
+     reference "liquid-metal" button. The shared CSS finish (below) and the
+     single live WebGL shader button are built to the SAME recipe so they read
+     as one material. */
+  --metal-radius: 999px;
+  --metal-rim: 1.5px;
   --metal-ease: var(--ease-spring);
   --metal-dur: 0.34s;
+  /* Glossy top-lighting over the dark face (bright crown → soft shade). */
   --metal-gloss: linear-gradient(
     180deg,
-    oklch(1 0 0 / 0.3) 0%,
-    oklch(1 0 0 / 0.07) 16%,
-    transparent 44%,
-    oklch(0 0 0 / 0.18) 100%
+    oklch(1 0 0 / 0.22) 0%,
+    oklch(1 0 0 / 0.06) 18%,
+    transparent 46%,
+    oklch(0 0 0 / 0.22) 100%
   );
-  --metal-sheen: linear-gradient(
-    100deg,
-    transparent 34%,
-    oklch(1 0 0 / 0.4) 48%,
-    transparent 60%
+  --metal-sheen: linear-gradient(100deg, transparent 34%, oklch(1 0 0 / 0.55) 48%, transparent 60%);
+  --metal-bevel: inset 0 1px 0 oklch(1 0 0 / 0.4), inset 0 -1px 1px oklch(0 0 0 / 0.45);
+  --metal-shadow: 0 1px 2px oklch(0 0 0 / 0.35), 0 9px 20px -8px oklch(0 0 0 / 0.55);
+  --metal-shadow-hover: 0 2px 4px oklch(0 0 0 / 0.35), 0 16px 32px -10px oklch(0 0 0 / 0.6);
+  --metal-shadow-press: inset 0 2px 6px oklch(0 0 0 / 0.55), 0 1px 1px oklch(0 0 0 / 0.35);
+  /* Dark titanium face (the button body). */
+  --metal-face: linear-gradient(
+    180deg,
+    oklch(0.3 0.012 280) 0%,
+    oklch(0.14 0.008 280) 52%,
+    oklch(0.07 0.006 280) 100%
   );
-  --metal-bevel: inset 0 1px 0 oklch(1 0 0 / 0.42), inset 0 -1px 1px oklch(0 0 0 / 0.4);
-  --metal-shadow: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 18px -8px oklch(0 0 0 / 0.5);
-  --metal-shadow-hover: 0 2px 4px oklch(0 0 0 / 0.3), 0 16px 32px -10px oklch(0 0 0 / 0.55);
-  --metal-shadow-press: inset 0 2px 6px oklch(0 0 0 / 0.5), 0 1px 1px oklch(0 0 0 / 0.3);
-  --metal-body: var(--gradient-iridescent);
-  --metal-fg: var(--background);
+  /* --metal-body is now the RIM gradient (chrome by default; variants retint it). */
+  --metal-body: var(--gradient-chrome);
+  --metal-fg: oklch(0.98 0.006 280);
   --metal-ring: oklch(0.85 0.14 280 / 0.9);
   /* Per-variant metal bodies (consumed by Button variants via --metal-body). */
   --gradient-metal-silver: linear-gradient(
@@ -268,6 +277,26 @@ html {
     }
   }
 
+  /* Icon-only controls: guarantee a >=44x44 touch target on coarse pointers
+     WITHOUT changing the visual size — an invisible, centered hit area extends
+     past the glyph. Apply `.tap-target` to small icon buttons. */
+  .tap-target {
+    position: relative;
+  }
+  @media (pointer: coarse) {
+    .tap-target::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      min-width: 44px;
+      min-height: 44px;
+      transform: translate(-50%, -50%);
+    }
+  }
+
   /* Reduce decorative blur orbs on small screens — they pin the GPU on phones */
   @media (max-width: 640px) {
     .animate-float {
@@ -369,22 +398,31 @@ html {
     justify-content: center;
     gap: 8px;
     border-radius: var(--metal-radius);
+    border: var(--metal-rim) solid transparent;
     font-weight: 600;
+    letter-spacing: 0.01em;
     isolation: isolate;
     overflow: hidden;
     color: var(--metal-fg);
+    text-shadow: 0 1px 2px oklch(0 0 0 / 0.5);
+    /* Dark glossy face (padding-box) framed by a chrome rim (border-box). The
+       transparent border reveals the rim gradient; the opaque face + gloss sit
+       inside it, so only a ~1.5px liquid-chrome edge shows — the reference. */
     background:
-      var(--metal-gloss),
-      var(--metal-body);
+      var(--metal-gloss) padding-box,
+      var(--metal-face) padding-box,
+      var(--metal-body) border-box;
+    background-origin: border-box;
+    background-repeat: no-repeat;
     background-size:
       100% 100%,
-      200% 100%;
+      100% 100%,
+      220% 100%;
     background-position:
       0 0,
-      0 0;
-    box-shadow:
-      var(--metal-bevel),
-      var(--metal-shadow);
+      0 0,
+      0 50%;
+    box-shadow: var(--metal-bevel), var(--metal-shadow);
     transition:
       transform var(--metal-dur) var(--metal-ease),
       box-shadow var(--metal-dur) var(--metal-ease),
@@ -392,43 +430,24 @@ html {
       filter var(--metal-dur) var(--metal-ease);
     outline: none;
   }
-  /* Moving reflection highlight; parked off-screen until hover. */
-  .btn-metal::after,
-  .btn-luxury::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: var(--metal-sheen);
-    background-size: 250% 100%;
-    background-position: 150% 0;
-    opacity: 0;
-    transition:
-      background-position 0.6s var(--ease-luxury),
-      opacity var(--metal-dur) var(--metal-ease);
-    pointer-events: none;
-  }
+  /* Hover: lift, brighten, and flow the chrome rim across (GPU-cheap — only
+     background-position + transform + filter move; the rim reads as it does on
+     the live shader). */
   .btn-metal:hover,
   .btn-luxury:hover {
     transform: translateY(-1px);
-    filter: brightness(1.06);
+    filter: brightness(1.08);
     background-position:
       0 0,
-      100% 0;
-    box-shadow:
-      var(--metal-bevel),
-      var(--metal-shadow-hover);
-  }
-  .btn-metal:hover::after,
-  .btn-luxury:hover::after {
-    opacity: 1;
-    background-position: -60% 0;
+      0 0,
+      100% 50%;
+    box-shadow: var(--metal-bevel), var(--metal-shadow-hover);
   }
   .btn-metal:active,
   .btn-luxury:active {
     transform: translateY(0) scale(0.98);
     box-shadow: var(--metal-shadow-press);
-    filter: brightness(0.96) contrast(1.08);
+    filter: brightness(0.94) contrast(1.05);
   }
   .btn-metal:focus-visible,
   .btn-luxury:focus-visible {
@@ -442,15 +461,9 @@ html {
   .btn-luxury:disabled,
   .btn-luxury[aria-disabled="true"] {
     cursor: not-allowed;
-    filter: grayscale(0.55) brightness(0.7);
+    filter: grayscale(0.5) brightness(0.66);
     box-shadow: var(--metal-shadow);
     transform: none;
-  }
-  .btn-metal:disabled:hover::after,
-  .btn-metal[aria-disabled="true"]:hover::after,
-  .btn-luxury:disabled:hover::after,
-  .btn-luxury[aria-disabled="true"]:hover::after {
-    opacity: 0;
   }
 
   /* btn-luxury adds its CTA sizing on top of the shared metal base. */
@@ -469,9 +482,7 @@ html {
     gap: 8px;
     padding: 12px 22px;
     border-radius: var(--metal-radius);
-    background:
-      linear-gradient(180deg, oklch(1 0 0 / 0.08), transparent 60%),
-      oklch(1 0 0 / 0.04);
+    background: linear-gradient(180deg, oklch(1 0 0 / 0.08), transparent 60%), oklch(1 0 0 / 0.04);
     border: 1px solid oklch(1 0 0 / 0.1);
     font-weight: 500;
     font-size: 0.875rem;
@@ -486,11 +497,11 @@ html {
   }
   .btn-ghost:hover {
     transform: translateY(-1px);
-    background:
-      linear-gradient(180deg, oklch(1 0 0 / 0.12), transparent 60%),
-      oklch(1 0 0 / 0.08);
+    background: linear-gradient(180deg, oklch(1 0 0 / 0.12), transparent 60%), oklch(1 0 0 / 0.08);
     border-color: oklch(1 0 0 / 0.2);
-    box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.12), 0 8px 18px -10px oklch(0 0 0 / 0.5);
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 0.12),
+      0 8px 18px -10px oklch(0 0 0 / 0.5);
   }
   .btn-ghost:active {
     transform: translateY(0) scale(0.98);
@@ -520,9 +531,13 @@ html {
     .btn-ghost:active {
       transform: none;
     }
-    .btn-metal::after,
-    .btn-luxury::after {
-      display: none;
+    /* Keep the chrome rim static (no flow) under reduced motion. */
+    .btn-metal:hover,
+    .btn-luxury:hover {
+      background-position:
+        0 0,
+        0 0,
+        0 50%;
     }
   }
 
@@ -560,7 +575,10 @@ html {
     box-shadow: var(--metal-shadow-press);
   }
   .lm-btn:focus-visible {
-    box-shadow: 0 0 0 3px var(--metal-ring), var(--metal-bevel), var(--metal-shadow);
+    box-shadow:
+      0 0 0 3px var(--metal-ring),
+      var(--metal-bevel),
+      var(--metal-shadow);
   }
   .lm-btn:disabled {
     cursor: not-allowed;
@@ -572,6 +590,12 @@ html {
     inset: 0;
     z-index: 0;
     border-radius: inherit;
+    /* The chrome RIM source: the shader canvas mounts here; before/without it a
+       static chrome gradient stands in. The dark face (.lm-btn__gloss) sits on
+       top inset by the rim width, so only the ~1.5px liquid-chrome edge shows —
+       identical recipe to the shared CSS .btn-metal, so the two can't be told
+       apart. */
+    background: var(--metal-body);
   }
   .lm-btn__fill canvas {
     position: absolute !important;
@@ -581,21 +605,37 @@ html {
     display: block !important;
     border-radius: inherit !important;
   }
-  /* CSS fallback body — the metal gradient when no WebGL canvas is present. */
+  /* CSS fallback body — a FULL metal fill at rest (no clipped/half-filled look
+     or seam); the sheen sweeps across as a highlight on hover, mirroring the
+     .btn-metal treatment so the resting button reads as one solid metal pill. */
   .lm-btn--css .lm-btn__fill {
-    background: var(--gradient-iridescent);
-    background-size: 200% 100%;
-    transition: background-position 0.7s var(--ease-luxury);
+    background: var(--metal-body);
   }
-  .lm-btn--css:hover .lm-btn__fill {
-    background-position: 100% 0;
+  .lm-btn--css .lm-btn__fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--metal-sheen);
+    background-size: 200% 100%;
+    background-position: 150% 0;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      background-position 0.7s var(--ease-luxury),
+      opacity var(--metal-dur) var(--ease-luxury);
+  }
+  .lm-btn--css:hover .lm-btn__fill::after {
+    opacity: 1;
+    background-position: -50% 0;
   }
   .lm-btn__gloss {
     position: absolute;
-    inset: 0;
+    inset: var(--metal-rim);
     z-index: 1;
     border-radius: inherit;
-    background: var(--metal-gloss);
+    /* Dark glossy face over the rim source — leaves only the chrome edge. */
+    background: var(--metal-gloss), var(--metal-face);
     pointer-events: none;
   }
   .lm-btn__label {
@@ -607,13 +647,18 @@ html {
     font-size: 1rem;
     font-weight: 600;
     letter-spacing: 0.02em;
-    color: oklch(0.16 0.01 280);
-    text-shadow: 0 1px 1px oklch(1 0 0 / 0.25);
+    color: var(--metal-fg);
+    /* Subtle dark halo so the white label stays crisp over the glossy face. */
+    text-shadow: 0 1px 2px oklch(0 0 0 / 0.55);
   }
   @media (prefers-reduced-motion: reduce) {
     .lm-btn:hover,
     .lm-btn:active {
       transform: none;
+    }
+    /* No positional sheen sweep under reduced-motion — gentle opacity only. */
+    .lm-btn--css .lm-btn__fill::after {
+      transition: opacity var(--metal-dur) var(--ease-luxury);
     }
   }
 }

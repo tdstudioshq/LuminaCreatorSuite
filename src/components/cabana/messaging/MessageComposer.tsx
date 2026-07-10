@@ -20,7 +20,7 @@ export function MessageComposer({ conversationId }: { conversationId: string }) 
   }
 
   return (
-    <div className="flex items-end gap-2 rounded-[24px] border border-white/[0.1] bg-white/[0.045] p-2 shadow-[inset_0_1px_0_oklch(1_0_0/0.08),0_18px_55px_-38px_oklch(0_0_0/0.9)] transition-all focus-within:border-primary/35 focus-within:bg-white/[0.06] focus-within:ring-4 focus-within:ring-primary/10">
+    <div className="flex items-end gap-2 rounded-3xl border border-white/[0.1] bg-white/[0.045] p-2 shadow-[inset_0_1px_0_oklch(1_0_0/0.08),0_18px_55px_-38px_oklch(0_0_0/0.9)] transition-all focus-within:border-primary/35 focus-within:bg-white/[0.06] focus-within:ring-4 focus-within:ring-primary/10">
       <div className="min-w-0 flex-1">
         <textarea
           value={body}
@@ -45,7 +45,7 @@ export function MessageComposer({ conversationId }: { conversationId: string }) 
       <button
         onClick={() => void submit()}
         disabled={send.isPending || body.trim().length === 0}
-        className="btn-luxury mb-0.5 h-10 w-10 shrink-0 !rounded-full !p-0 text-xs disabled:translate-y-0 disabled:opacity-40"
+        className="btn-luxury mb-0.5 h-10 w-10 shrink-0 !rounded-full !p-0 text-xs disabled:translate-y-0 disabled:opacity-60"
         aria-label="Send message"
       >
         {send.isPending ? (

@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 
+import { MotionConfig } from "framer-motion";
 import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
@@ -33,8 +34,8 @@ function NotFoundComponent() {
           <Link to="/" className="btn-luxury !px-5 !py-2.5 text-xs">
             Back to home
           </Link>
-          <Link to="/demo" className="btn-ghost !px-5 !py-2.5 text-xs">
-            See a creator
+          <Link to="/discover" className="btn-ghost !px-5 !py-2.5 text-xs">
+            Explore creators
           </Link>
         </div>
       </div>
@@ -139,8 +140,13 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster richColors position="top-right" theme="dark" />
+      {/* reducedMotion="user" makes framer-motion honor the OS prefers-reduced-motion
+          setting app-wide (the CSS block in styles.css only covers CSS animations);
+          no change for users without the preference. */}
+      <MotionConfig reducedMotion="user">
+        <Outlet />
+        <Toaster richColors position="top-right" theme="dark" />
+      </MotionConfig>
     </QueryClientProvider>
   );
 }
