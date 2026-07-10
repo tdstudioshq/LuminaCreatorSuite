@@ -13,7 +13,8 @@ delete from auth.users
 where email in (
   'notif_creator@example.com',
   'notif_member@example.com',
-  'notif_stranger@example.com'
+  'notif_stranger@example.com',
+  'notif_admin@example.com'
 );
 
 do $$
@@ -21,6 +22,7 @@ declare
   v_creator_id uuid := gen_random_uuid();
   v_member_id uuid := gen_random_uuid();
   v_stranger_id uuid := gen_random_uuid();
+  v_admin_id uuid := gen_random_uuid();
   v_profile_id uuid;
   v_post_id uuid;
   v_conv_id uuid;
@@ -31,7 +33,12 @@ begin
   insert into auth.users (id, email, raw_user_meta_data) values
     (v_creator_id, 'notif_creator@example.com', '{"name":"Creator"}'::jsonb),
     (v_member_id, 'notif_member@example.com', '{"name":"Member","account_type":"member"}'::jsonb),
-    (v_stranger_id, 'notif_stranger@example.com', '{"name":"Stranger","account_type":"member"}'::jsonb);
+    (v_stranger_id, 'notif_stranger@example.com', '{"name":"Stranger","account_type":"member"}'::jsonb),
+    (v_admin_id, 'notif_admin@example.com', '{"name":"Admin"}'::jsonb);
+
+  -- Grant the admin the admin role so the "Admins read all" SELECT policies apply.
+  insert into public.user_roles (user_id, role) values (v_admin_id, 'admin')
+    on conflict do nothing;
 
   select id into v_profile_id from public.creator_profiles where user_id = v_creator_id;
 
@@ -144,6 +151,40 @@ begin
   if cnt <> 0 then raise exception 'stranger sees % notifications (expected 0)', cnt; end if;
   reset role;
 
+  -- 6b. Admin recipient-scoping (leak fix): the "Admins read all" SELECT policies
+  -- let an admin read EVERY user's notifications/activity, so the personal-center
+  -- reads (getNotifications / getActivityFeed / getCreatorDashboard) filter to the
+  -- caller explicitly. Prove both halves — unfiltered exposes others' rows; the
+  -- recipient-scoped query the actions actually run returns only the admin's own.
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_admin_id::text, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+
+  -- Unfiltered read (the hazard) — admin-read-all surfaces the creator's 6
+  -- notifications even though NONE of them belong to the admin.
+  select count(*) into cnt from public.notifications;
+  if cnt < 6 then
+    raise exception 'admin unfiltered notifications = % (expected >= 6 via admin-read-all)', cnt;
+  end if;
+  -- Recipient-scoped read (what getNotifications runs) — only the admin's own (none).
+  select count(*) into cnt from public.notifications where recipient_id = v_admin_id;
+  if cnt <> 0 then
+    raise exception 'recipient-scoped admin notifications = % (expected 0 own → no leak)', cnt;
+  end if;
+
+  -- Same guarantee for the activity feed: unfiltered exposes others; the
+  -- (recipient|actor) scope getActivityFeed applies returns only the admin's own.
+  select count(*) into cnt from public.activity_events;
+  if cnt = 0 then
+    raise exception 'admin unfiltered activity = 0 (expected others'' events via admin-read-all)';
+  end if;
+  select count(*) into cnt from public.activity_events
+    where recipient_id = v_admin_id or actor_id = v_admin_id;
+  if cnt <> 0 then
+    raise exception 'scoped admin activity = % (expected 0 own → no leak)', cnt;
+  end if;
+  reset role;
+
   -- 7. Anonymous denial on every notification table.
   perform set_config('request.jwt.claims', '{}', true);
   set local role anon;
@@ -158,6 +199,6 @@ begin
   if not denied then raise exception 'anon could read notification_outbox'; end if;
   reset role;
 
-  delete from auth.users where id in (v_creator_id, v_member_id, v_stranger_id);
+  delete from auth.users where id in (v_creator_id, v_member_id, v_stranger_id, v_admin_id);
   raise notice 'Phase 7 notifications & activity checks passed.';
 end $$;

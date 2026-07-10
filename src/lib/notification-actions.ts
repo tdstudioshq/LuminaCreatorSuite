@@ -36,30 +36,48 @@ function boolOrUndefined(raw: unknown): boolean | undefined {
   return raw === true;
 }
 
+/** Clamp an optional numeric limit to 1..max. */
+function clampLimit(raw: unknown, fallback: number, max: number): number {
+  if (raw == null) return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) throw new Error("Invalid limit.");
+  return Math.min(max, Math.max(1, Math.trunc(n)));
+}
+
 // ─────────────────────────────── Reads ──────────────────────────────────────
 
-/** The caller's notifications, newest first (RLS-scoped to recipient). */
+// These are PERSONAL-center reads, so they filter to the caller explicitly.
+// RLS stays the enforcement backstop, but it can't define "mine" here: the
+// "Admins read all" SELECT policies would otherwise pour every user's private
+// notifications/activity into an admin's own notification center.
+
+/** The caller's notifications, newest first (limit clamped to 1..200, default 50). */
 export const getNotifications = createServerFn({ method: "GET" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
-  .handler(async ({ context }): Promise<NotificationItem[]> => {
-    const { supabase } = context;
-    const { data, error } = await supabase
+  .inputValidator((raw: { limit?: unknown } | undefined) => ({
+    limit: clampLimit(raw?.limit, 50, 200),
+  }))
+  .handler(async ({ context, data }): Promise<NotificationItem[]> => {
+    const { supabase, userId } = context;
+    const { data: rows, error } = await supabase
       .from("notifications")
       .select("*")
+      .eq("recipient_id", userId)
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(data.limit);
     if (error) throw new Error(error.message);
-    return (data ?? []).map(mapNotification);
+    return (rows ?? []).map(mapNotification);
   });
 
-/** The caller's unread notification count (RLS-scoped). */
+/** The caller's unread notification count. */
 export const getUnreadNotificationCount = createServerFn({ method: "GET" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
   .handler(async ({ context }): Promise<number> => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { count, error } = await supabase
       .from("notifications")
       .select("id", { count: "exact", head: true })
+      .eq("recipient_id", userId)
       .is("read_at", null);
     if (error) throw new Error(error.message);
     return count ?? 0;
@@ -69,10 +87,11 @@ export const getUnreadNotificationCount = createServerFn({ method: "GET" })
 export const getActivityFeed = createServerFn({ method: "GET" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
   .handler(async ({ context }): Promise<ActivityItem[]> => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("activity_events")
       .select("*")
+      .or(`recipient_id.eq.${userId},actor_id.eq.${userId}`)
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw new Error(error.message);

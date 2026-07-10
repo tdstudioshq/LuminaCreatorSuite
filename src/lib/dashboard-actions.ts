@@ -137,10 +137,16 @@ async function readRecentSubscribers(supabase: Db): Promise<DashboardRecentSubsc
   }));
 }
 
-async function readNotifications(supabase: Db): Promise<CreatorDashboardData["notifications"]> {
+async function readNotifications(
+  supabase: Db,
+  userId: string,
+): Promise<CreatorDashboardData["notifications"]> {
+  // Explicit recipient filter: the admin read-all RLS policy must not surface
+  // other users' notifications in the caller's own dashboard activity.
   const { data, error } = await supabase
     .from("notifications")
     .select("*")
+    .eq("recipient_id", userId)
     .order("created_at", { ascending: false })
     .limit(10);
   if (error) throw new Error(error.message);
@@ -166,7 +172,7 @@ export const getCreatorDashboard = createServerFn({ method: "GET" })
         payouts: [],
         subscriberRows: [],
         recentSubscribers: [],
-        notifications: await readNotifications(db),
+        notifications: await readNotifications(db, userId),
       };
     }
 
@@ -177,7 +183,7 @@ export const getCreatorDashboard = createServerFn({ method: "GET" })
         readPayouts(db, creatorProfileId),
         readSubscriberRows(db, creatorProfileId),
         readRecentSubscribers(db),
-        readNotifications(db),
+        readNotifications(db, userId),
       ]);
 
     return { balance, transactions, payouts, subscriberRows, recentSubscribers, notifications };
