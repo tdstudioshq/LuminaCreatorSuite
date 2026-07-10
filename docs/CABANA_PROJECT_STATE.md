@@ -848,7 +848,12 @@ All under the standard migration + RLS + behavioral-test gate; full detail in [`
   `20260523000000`) activates the Phase 7 outbox with simulated delivery (retry/backoff/dead-letter);
   pure logic in `cabana-notification-engine.ts`. No email/push providers (that is Phase 9C, still gated).
 - **Phase 9B — Notification center UI.** No schema change; `components/cabana/notifications/` over the
-  existing realtime hooks at `/dashboard/notifications` + auth-gated `/notifications`.
+  existing realtime hooks at `/dashboard/notifications` + auth-gated `/notifications`. Completed in full
+  July 10, 2026: server-side unread/type filters with the H-08 limit clamp moved into the pure
+  `buildNotificationsListQuery`, mark-all-read as one recipient-scoped UPDATE via the unit-tested
+  `buildMarkAllReadCommand`, click-through marks read, `QueryErrorState`/`EmptyState` states everywhere,
+  and an `evaluatePreference`-gated display (a disabled `in_app` preference suppresses the center and
+  every unread badge; email/push toggles persist with honest "takes effect at 9C launch" labels).
 - **Phase 10 — Discovery & search.** `/discover` is a real public (`noindex`) discovery + global-search
   surface: pure `cabana-discovery.ts`, guest-callable `optionalSupabaseAuth` actions, `DiscoveryPage`.
 - **Phase 11A — Creator dashboard home.** Pure aggregation (`cabana-dashboard.ts`) now at the `/dashboard`

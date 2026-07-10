@@ -83,7 +83,7 @@ App shell (__root.tsx)
 
 ### Notifications (`cabana/notifications/`)
 
-`NotificationsDashboard` (`/dashboard/notifications`), `NotificationsCenter`, `ActivityFeed`, `NotificationSettings`, `NotificationBadge`, `UnreadBadge` (shared unread-count pill; also drives the sidebar Messages badge), `MemberNotificationsPage` (`/notifications`; guest state renders `FoundationPage`), `notification-icons`.
+`NotificationsDashboard` (`/dashboard/notifications`), `NotificationsCenter` (Phase 9B: day groups, All/Unread + type filters served server-side within the H-08 clamp, load-more to 200, click-through marks read, `QueryErrorState`/`EmptyState`, in-app-paused state), `ActivityFeed`, `NotificationSettings` (in_app functional — gates center + badges; email/push persist with honest "takes effect at 9C launch" labels), `NotificationBadge` (preference-gated via `useInAppNotificationsEnabled`), `UnreadBadge` (shared unread-count pill; also drives the sidebar Messages badge), `MemberNotificationsPage` (`/notifications`; guest state renders `FoundationPage`; signed-in adds the preferences card), `notification-icons`.
 
 ### Earnings (`cabana/earnings/`) — DEMO-ONLY money
 
@@ -138,7 +138,7 @@ Truly reusable today: `QueryErrorState`, `EmptyState`, `ScrollFadeRow`, `Confirm
 
 - Batch 2 (Core UX): pagination/load-more for capped lists, retry affordances on messaging/comments/post-detail/admin, autosave flush-on-unmount, Home-vs-Overview IA (+ sidebar Messages → real DMs), onboarding resilience.
 - Batch 3 (A11y): MotionConfig reducedMotion, aria labels/pressed/current, skip link, focus management, dialog a11y, touch targets, post-media alt text.
-- Batch 4 (Creator workflow): post edit, delete confirms elsewhere, upload progress, messaging UX polish, notifications open≠read, price validation, "Saved" indicator.
+- Batch 4 (Creator workflow): post edit, delete confirms elsewhere, upload progress, messaging UX polish, price validation, "Saved" indicator. (notifications open≠read was resolved by Phase 9B — click-through now marks read.)
 - Batch 5 (Design system): migrate ~117 raw buttons onto the unified button system; segmented-control/status-chip/shadow/radius unification.
 - Batch 6 (Marketing & polish): landing-page rebuild (the orphaned marketing suite was deleted in the July 9 cleanup), per-route `<title>`s, terms/privacy, image optimization, 404 CTA.
 
@@ -156,7 +156,7 @@ __root (QueryClient, Toaster, 404/error UI)
 │   ├─ PostDetail (/post/$postId) → PostCard · CommentList → CommentComposer
 │   ├─ DiscoveryPage (/discover)
 │   ├─ MessagesShell (/messages) → ConversationListPane · ConversationView → MessageBubble · MessageComposer
-│   └─ MemberNotificationsPage (/notifications) → FoundationPage (guest)
+│   └─ MemberNotificationsPage (/notifications) → NotificationsCenter · NotificationSettings (guest → FoundationPage)
 ├─ DashboardLayout (DashSidebar · MobileTabs)
 │   ├─ CreatorDashboard + WelcomeLive (/dashboard) · DashHome "My Page" (/dashboard/link-in-bio)
 │   ├─ ProfileEditor · LinkManager · StoreManager · MediaKit · SettingsPanel

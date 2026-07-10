@@ -16,6 +16,63 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
+## Session update — July 10, 2026 (Phase 9B COMPLETE — User Notification Center; frontend + pure layer only, NO schema change)
+
+Approved start of Phase 9B. Finished the user-facing notification experience over the Phase 7 read
+surface + Phase 9A engine. **No migration written, no cloud Supabase touched, NOT deployed** —
+deploy is a separate approved step (then `bun run smoke:prod`).
+
+- **No-schema-change confirmation:** verified `notification_preferences` is per-channel
+  (one row per user: `in_app_enabled`/`email_enabled`/`push_enabled`) — the spec's "per notification
+  type" granularity would require a migration and is **deferred** (not required for this scope; the
+  existing table fully supports channel preferences). Everything else (notifications, dedupe keys,
+  recipient RLS, the column-scoped `read_at` grant) already existed from Phase 7.
+- **Pure layer** (`cabana-notifications.ts`, in the 95% gate): `NOTIFICATION_TYPES` +
+  `isNotificationType`, `buildNotificationsListQuery` (moves the H-08 limit clamp — 1..200, default
+  50 — into the tested pure layer; validates the new `unreadOnly`/`type` filters, throws on unknown
+  type instead of widening the read), and `buildMarkAllReadCommand` (mark-all-read as an explicit
+  recipient-scoped command). **+10 unit tests**, including the required test asserting the
+  mark-all-read write path is scoped to exactly the caller's recipient id + only-unread rows.
+- **Actions** (`notification-actions.ts`): `getNotifications` gains optional server-side
+  `unreadOnly`/`type` filters (validated by the pure builder; still explicitly
+  `.eq("recipient_id", userId)` — the July recipient-scoping security fix is preserved on every
+  personal read/write). `markAllNotificationsRead` stays **one UPDATE** and now applies the pure
+  command verbatim. The local `clampLimit` helper was subsumed by the pure builder.
+- **Hooks** (`use-notifications.ts`): `useNotifications(limit, {unreadOnly, type})` with extended
+  query keys (prefix-matching invalidation still hits them); new `useInAppNotificationsEnabled()`
+  wires the pure `evaluatePreference`. The per-instance realtime channel-topic pattern (July fix)
+  is untouched.
+- **Center UI** (`NotificationsCenter.tsx`): All/Unread segmented filter + type Select (server-side
+  filtering), day-grouped list (existing `groupNotificationsByDay`), header unread count now from
+  the same query as the badges, load-more within the 200 clamp (+ cap disclosure), click-through
+  resolves via `resolveNotificationTarget` **and marks the notification read** (closes the audit's
+  "open≠read" item), `QueryErrorState`/`EmptyState` everywhere (filter-aware empty copy), and an
+  in-app-paused state with a "Turn back on" action when `in_app` is disabled.
+- **Preferences UI** (`NotificationSettings.tsx`): in_app toggle is fully functional (suppresses
+  center + badges via the shared hook and pauses generation at the DB trigger layer); email/push
+  toggles persist to the existing row but are **honestly labeled** "saved now — takes effect when
+  delivery launches" (9C). Not hidden, no fake delivery. Now also rendered for members on
+  `/notifications` (`MemberNotificationsPage`).
+- **Badge consistency:** `NotificationBadge` (dashboard Sidebar + SocialNav rail + mobile tabs) is
+  now preference-gated by the same hook as the center, so badges never advertise notifications the
+  center refuses to display. `ActivityFeed`/`NotificationSettings` hand-rolled error states swapped
+  for the shared `QueryErrorState`.
+- **Docs synced:** `CLAUDE.md` (9B bullet rewritten to the finished state), `CABANA_ROUTE_MAP.md`,
+  `CABANA_COMPONENT_MAP.md` (Batch 4 register: open≠read resolved), `CABANA_PROJECT_STATE.md`.
+- **Gate:** `bun run lint` **0 errors / 6 expected shadcn warnings** · `bunx tsc --noEmit` clean ·
+  `bun run test` **347/347 (16 files)** · coverage **99.54% stmts / 95.88% branch / 100% funcs /
+  100% lines** (≥95%) · `bun run build` green (`.vercel/output`). `db:validate` not required (no
+  SQL change). A 23-agent adversarial review (5 dimensions × 3-refuter verification) ran over the
+  diff pre-commit: 6 raw findings → **3 confirmed (all the same root defect, fixed)** — the header
+  unread count had moved to the decoupled `useUnreadNotificationCount` query with a `?? 0`
+  fallback, so a failed/lagging count query could render a fake "You're all caught up" and disable
+  Mark-all-read over visibly-unread rows; fixed by falling back to `countUnread(items)` (server
+  total when available, never contradicting the rendered list) — and 3 refuted (placeholderData
+  filter-flash claims, 0/3 upheld).
+- **Deferred to 9C+:** email/push providers + real delivery (replace the 9A `_result` simulation),
+  digests/batching, per-type preference granularity (needs a migration), admin outbox UI.
+- **Next:** deploy (gated, prebuilt) → `bun run smoke:prod`.
+
 ## Session update — July 10, 2026 (Production smoke-test harness + approved cloud apply of 20260529/30 — GREEN; legacy_reel closed)
 
 Built the post-deploy production smoke test (`bun run smoke:prod`), ran it against production, and —

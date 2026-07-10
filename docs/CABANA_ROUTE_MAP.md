@@ -83,7 +83,7 @@
 | `/dashboard/subscribers`   | dashboard.subscribers.tsx                    | ✅ real tier manager + subscriber roster (Phase 4/11A, demo)                                        |
 | `/dashboard/messages`      | dashboard.messages.tsx                       | ✅ redirect → `/messages` (real inbox; sidebar item repointed + unread badge; Batch 2)              |
 | `/dashboard/earnings`      | dashboard.earnings.tsx                       | ✅ real earnings dashboard — balance, ledger, tips, sales, payouts (Phase 6, demo)                  |
-| `/dashboard/notifications` | dashboard.notifications.tsx                  | ✅ real notifications center — list, mark read/all, activity, settings (Phase 7/9B)                 |
+| `/dashboard/notifications` | dashboard.notifications.tsx                  | ✅ real notifications center — unread/type filters, click-through mark-read, mark all, activity, settings (Phase 9B) |
 
 ### Member / social surfaces
 
@@ -92,7 +92,7 @@
 | `/feed`          | feed.tsx          | Public route; signed-in feed, guests prompted | ✅ real home feed (RLS-filtered feed RPCs)                            |
 | `/discover`      | discover.tsx      | Public (noindex, guest-callable)              | ✅ real discovery + global search (Phase 10); public projections only |
 | `/messages`      | messages.tsx      | Client auth gate                              | ✅ real inbox (Phase 5)                                               |
-| `/notifications` | notifications.tsx | Client auth gate (guest → foundation)         | ✅ member notifications center (Phase 7/9B)                           |
+| `/notifications` | notifications.tsx | Client auth gate (guest → foundation)         | ✅ member notifications center + preferences (Phase 9B)               |
 
 ### Admin
 
