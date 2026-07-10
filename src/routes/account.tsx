@@ -9,6 +9,7 @@ import {
   defaultMemberProfile,
 } from "@/lib/cabana-account";
 import { SocialShell } from "@/components/cabana/social/SocialShell";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
 
 export const Route = createFileRoute("/account")({
   head: () => ({
@@ -25,7 +26,12 @@ function AccountPage() {
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { user, loading } = useAuthSession();
-  const { accountType, loading: accountLoading } = useAccountType();
+  const {
+    accountType,
+    loading: accountLoading,
+    error: accountError,
+    refetch: refetchAccountType,
+  } = useAccountType();
 
   // Auth gate (client-side, consistent with /dashboard) + creator bounce.
   useEffect(() => {
@@ -37,6 +43,21 @@ function AccountPage() {
       navigate({ to: "/dashboard" });
     }
   }, [loading, user, accountLoading, accountType, navigate, path]);
+
+  // A failed account-type read must not trap the member on a permanent spinner —
+  // surface a retryable error instead.
+  if (!loading && user && accountError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <QueryErrorState
+          title="Couldn’t load your account"
+          message="We couldn’t confirm your account details. Please try again."
+          onRetry={() => refetchAccountType()}
+          className="max-w-sm"
+        />
+      </div>
+    );
+  }
 
   if (loading || !user || accountLoading || accountType !== "member") {
     return (

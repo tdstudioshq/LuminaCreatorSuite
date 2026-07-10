@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { accountHomePath, DEFAULT_ACCOUNT_TYPE } from "@/lib/cabana-account";
+import cabanaLogo from "@/assets/cabana-logo.png";
 
 export const Route = createFileRoute("/auth/callback")({
   head: () => ({
@@ -54,13 +55,16 @@ function AuthCallback() {
       handled.current = true;
 
       // Same lightweight lookup as useAccountType; on any failure fall back to
-      // the default (creator) rather than blocking sign-in.
+      // the default (creator) rather than blocking sign-in. Bounded because the
+      // 10s failsafe below is disarmed once `handled` is set — an unbounded
+      // stall here would strand the spinner with no visible error.
       let accountType: string = DEFAULT_ACCOUNT_TYPE;
       try {
         const { data } = await supabase
           .from("profiles")
           .select("account_type")
           .eq("id", userId)
+          .abortSignal(AbortSignal.timeout(5_000))
           .maybeSingle();
         accountType = data?.account_type ?? DEFAULT_ACCOUNT_TYPE;
       } catch {
@@ -128,7 +132,7 @@ function AuthCallback() {
           ) : (
             <div className="relative flex flex-col items-center gap-5 text-white">
               <img
-                src="/cabana-logo.png"
+                src={cabanaLogo}
                 alt="Cabana"
                 width={96}
                 height={96}

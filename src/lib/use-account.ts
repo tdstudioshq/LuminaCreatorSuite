@@ -47,6 +47,8 @@ export function useAccountType(): {
   loading: boolean;
   signedIn: boolean;
   accountType: AccountType | null;
+  error: Error | null;
+  refetch: () => void;
 } {
   const { userId, ready } = useSessionUserId();
   const query = useQuery({
@@ -63,9 +65,13 @@ export function useAccountType(): {
     },
   });
   return {
-    loading: !ready || (!!userId && (query.isLoading || query.isPending)),
+    // `loading` stays false once the read errors, so callers surface the error
+    // (with `error`/`refetch`) instead of trapping on an indefinite spinner.
+    loading: !ready || (!!userId && query.isLoading && !query.isError),
     signedIn: !!userId,
     accountType: userId ? (query.data ?? null) : null,
+    error: userId ? ((query.error as Error | null) ?? null) : null,
+    refetch: () => void query.refetch(),
   };
 }
 

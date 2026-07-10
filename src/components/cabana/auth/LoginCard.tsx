@@ -1,9 +1,10 @@
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { cabanaAuth, useAuthSession } from "@/lib/cabana-auth";
 import { LiquidMetalButton } from "@/components/ui/liquid-metal-button";
+import cabanaLogo from "@/assets/cabana-logo.png";
 
 /**
  * The CABANA sign-in card (marble backdrop, glass card, chrome ENTER button —
@@ -22,6 +23,12 @@ export function LoginCard() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
+  // False until React has hydrated on the client. Until then the submit button
+  // is disabled, so a too-early Enter/click can't fall through to a native GET
+  // form submit (which would reload the page and silently drop the credentials)
+  // before the `onSubmit` handler is attached.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
 
   useEffect(() => {
     if (user) navigate({ to: redirectTo });
@@ -84,7 +91,7 @@ export function LoginCard() {
           <div className="pointer-events-none absolute inset-x-10 top-0 h-48 rounded-b-full bg-white/15 opacity-60 blur-3xl" />
           <div className="relative flex flex-col items-center gap-6 text-center text-white">
             <img
-              src="/cabana-logo.png"
+              src={cabanaLogo}
               alt="Cabana"
               width={120}
               height={120}
@@ -101,10 +108,12 @@ export function LoginCard() {
                   className="text-sm font-semibold tracking-wide text-white"
                   htmlFor="home-username"
                 >
-                  Username
+                  Email
                 </label>
                 <input
                   id="home-username"
+                  type="email"
+                  inputMode="email"
                   className="h-12 w-full rounded-xl border border-white/30 bg-white/10 px-4 text-white placeholder:text-white/60 focus:border-white/60 focus:outline-none focus:ring-0"
                   placeholder="you@domain.com"
                   value={username}
@@ -132,7 +141,7 @@ export function LoginCard() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((value) => !value)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 transition hover:text-white"
+                    className="tap-target absolute right-3 top-1/2 -translate-y-1/2 text-white/60 transition hover:text-white"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
@@ -142,8 +151,21 @@ export function LoginCard() {
                     )}
                   </button>
                 </div>
+                <div className="flex justify-end">
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs text-white/60 underline-offset-4 transition hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
               </div>
-              <LiquidMetalButton type="submit" disabled={loading} fullWidth className="mt-6 !h-14">
+              <LiquidMetalButton
+                type="submit"
+                disabled={loading || !hydrated}
+                fullWidth
+                className="mt-6 !h-14"
+              >
                 <span className="text-lg font-semibold uppercase tracking-[0.4em]">
                   {loading ? "Signing in…" : "Enter"}
                 </span>
@@ -171,6 +193,15 @@ export function LoginCard() {
                   {googleError}
                 </p>
               )}
+              <p className="text-sm text-white/60">
+                New to CABANA?{" "}
+                <Link
+                  to="/signup"
+                  className="font-semibold text-white underline-offset-4 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                >
+                  Create an account
+                </Link>
+              </p>
             </div>
           </div>
         </div>

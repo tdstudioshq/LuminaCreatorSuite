@@ -56,15 +56,45 @@ export const cabanaAuth = {
    * Starts the Google OAuth flow. On success the browser redirects to Google,
    * then back to `/auth/callback`, which finishes the session and routes the
    * user — so a `{ ok: true }` return only means the redirect was initiated.
+   *
+   * We build the authorize URL with `skipBrowserRedirect` and pre-flight it,
+   * so a provider-side failure (e.g. the provider isn't enabled) surfaces as an
+   * in-app error instead of navigating the browser to a raw JSON error page.
+   * A configured provider answers `/authorize` with a redirect (an opaque
+   * cross-origin response); a failure answers with a readable non-redirect
+   * error. Any ambiguity (network/CORS error while pre-flighting) falls back to
+   * navigating, so a healthy flow never regresses.
    */
   async loginWithGoogle() {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        skipBrowserRedirect: true,
       },
     });
     if (error) return { ok: false as const, error: error.message };
+    const url = data?.url;
+    if (!url) {
+      return { ok: false as const, error: "Could not start Google sign-in. Please try again." };
+    }
+
+    try {
+      const res = await fetch(url, { method: "GET", redirect: "manual" });
+      const redirecting = res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400);
+      if (!redirecting) {
+        return {
+          ok: false as const,
+          error:
+            "Google sign-in isn’t available right now. Please sign in with your email and password.",
+        };
+      }
+    } catch {
+      // Couldn't pre-flight (network/CORS) — don't block a possibly-healthy
+      // provider; fall through to the normal browser redirect.
+    }
+
+    window.location.assign(url);
     return { ok: true as const };
   },
 

@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { AuthShell, AuthField } from "@/components/cabana/auth/AuthShell";
+import { Button } from "@/components/ui/button";
 import { cabanaAuth } from "@/lib/cabana-auth";
 
 export const Route = createFileRoute("/reset-password")({
@@ -65,7 +66,7 @@ function ResetPasswordPage() {
             placeholder="At least 6 characters"
           />
           {error && <div className="text-xs text-destructive">{error}</div>}
-          <button type="submit" disabled={loading} className="btn-luxury w-full justify-center">
+          <Button type="submit" variant="cta" disabled={loading} className="w-full">
             {loading ? (
               "Saving…"
             ) : (
@@ -73,7 +74,7 @@ function ResetPasswordPage() {
                 Update password <ArrowRight className="w-4 h-4" />
               </>
             )}
-          </button>
+          </Button>
         </form>
       )}
     </AuthShell>

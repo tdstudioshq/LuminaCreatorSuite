@@ -119,7 +119,19 @@ export function useSendTip() {
 export function usePurchaseUnlock() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (postId: string) => createMockPurchase({ data: { postId } }),
+    mutationFn: async (postId: string) => {
+      const result = await createMockPurchase({ data: { postId } });
+      // The purchase handler returns `{ ok: true }` only when the RPC actually
+      // ran. When the caller is unauthenticated (no/expired session) the auth
+      // middleware short-circuits with a 401 whose body the server-fn client
+      // *resolves* rather than rejects — so guard on the payload and fail loudly
+      // instead of letting React Query fire `onSuccess` for a purchase that
+      // never happened.
+      if (!result || (result as { ok?: unknown }).ok !== true) {
+        throw new Error("Please sign in to unlock this post.");
+      }
+      return result;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: entitlementsKey });
       qc.invalidateQueries({ queryKey: ["post"] });
