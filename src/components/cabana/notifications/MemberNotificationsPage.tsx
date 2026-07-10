@@ -3,6 +3,7 @@ import { FoundationPage } from "@/components/cabana/foundation/FoundationPage";
 import { SocialShell } from "@/components/cabana/social/SocialShell";
 import { useAuthSession } from "@/lib/cabana-auth";
 import { NotificationsCenter } from "./NotificationsCenter";
+import { NotificationSettings } from "./NotificationSettings";
 
 const capabilities = [
   "Member subscription, post, message, and system activity",
@@ -51,6 +52,7 @@ export function MemberNotificationsPage() {
           <h1 className="font-display text-3xl font-semibold tracking-tighter">Notifications</h1>
         </header>
         <NotificationsCenter />
+        <NotificationSettings />
       </div>
     </SocialShell>
   );
