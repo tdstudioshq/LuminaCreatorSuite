@@ -16,7 +16,7 @@ Remaining:
 
 - 🟠 **Cloud `schema_migrations` ledger doesn't match the repo's migration numbering.** The cloud project's `supabase_migrations.schema_migrations` holds 22 reconcile-era date-stamped versions (`202607031700xx`/`202607040900xx`), not this repo's `202605xx` numbers — so `supabase db push` would attempt to re-apply already-applied migrations. **NEVER run `db push` against cloud**; apply cloud SQL via the Management API pattern only (see the July 9–10 handoff). Resolution path: a dedicated migration-history repair session that reconciles the ledger to the repo's versions (backup first; record the `202605xx` rows / retire the reconcile-era ones) before any CLI-driven migration workflow is trusted.
 - 🟡 `supabase/config.toml` `project_id` still points at the old `dwnricswfskypqqfknnh` project (left intentionally so local db tooling is unaffected) — repoint or document before anyone runs `supabase link` casually.
-- 🟡 `legacy_reel` schema (preserved pre-reconcile `profiles`) pending final Google sign-in confirmation, then `drop schema legacy_reel cascade;`.
+- ~~`legacy_reel` schema pending final Google sign-in confirmation~~ ✅ **closed July 10, 2026** — Tyler confirmed the production Google sign-in round-trip (backfilled `tylerdiorio` admin, AdminGate OK) and approved the drop; the read-only preflight found the schema already absent from cloud (nothing dropped). Backups remain under `supabase/reconcile/backups/`.
 - ~~Migrations `20260529` + `20260530` not yet on the cloud project~~ ✅ **applied to cloud July 10, 2026** (Tyler-approved; local `db:validate` first, then Management API apply, post-verified, confirmed by `bun run smoke:prod` — DB-STATE tracks post_count).
 
 ## 2. Repository / Process Debt

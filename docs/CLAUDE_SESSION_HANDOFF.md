@@ -16,11 +16,21 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
-## Session update — July 10, 2026 (Production smoke-test harness + approved cloud apply of 20260529/30 — GREEN)
+## Session update — July 10, 2026 (Production smoke-test harness + approved cloud apply of 20260529/30 — GREEN; legacy_reel closed)
 
 Built the post-deploy production smoke test (`bun run smoke:prod`), ran it against production, and —
 **with Tyler's explicit approval — applied migrations `20260529` + `20260530` to the cloud DB** (the
-only cloud change; nothing else touched, nothing deployed). Code changes are uncommitted on `main`.
+only cloud change; nothing else touched). Committed + pushed as `cb5b6d2` (CI green: db-baseline,
+verify, prod-deps jobs).
+
+- **legacy_reel closed (July 10):** Tyler confirmed the production Google sign-in round-trip
+  (landed on the backfilled `tylerdiorio` admin account; `/admin/finance` renders behind the
+  AdminGate) and approved `drop schema legacy_reel cascade`. The read-only preflight found the
+  schema **already absent from cloud** (`pg_namespace`: no `legacy_reel`; zero tables/objects) —
+  nothing was dropped this session; it was evidently removed sometime after the July 7–8 notes.
+  The reconcile-era backups of its contents remain locally under `supabase/reconcile/backups/`
+  (`data_profiles_20260707T082223Z.json` + full schema DDL). The last gated reconcile follow-up is
+  now closed.
 
 - **First production run (`smoke_1783659742376`): 7 PASS · 1 FAIL · 1 SKIP.** The FAIL was a
   GENUINE PRODUCTION FINDING, not a script bug: `public_creator_profiles.post_count` stayed 0
