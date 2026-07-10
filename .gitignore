@@ -49,3 +49,6 @@ supabase/reconcile/backups/
 AGENTS.md
 .vercel
 .env*
+# Keep the secret-free template tracked (this negation must follow the .env* rule
+# above — last matching rule wins — or .env.example gets re-ignored).
+!.env.example

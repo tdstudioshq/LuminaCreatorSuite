@@ -8,26 +8,49 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
 // @cloudflare/vite-plugin builds from this — wrangler.jsonc main alone is insufficient.
+
+// Deploy target. Nitro's Vercel preset emits `.vercel/output` (Build Output API
+// with a serverless function) so Vercel can serve the SSR app. Without this the
+// wrapper defaults to `cloudflare-module` and Vercel gets a static bundle → 404.
+// The wrapper force-overrides Nitro's `output` paths with Cloudflare-shaped ones
+// (dist/client, dist/server); we restore the vercel preset's templated paths (it
+// merges ours last, so they win) — functions/__server.func + static under .vercel/output.
+//
+// Hoisted to a const (not an inline literal in defineConfig) so the extra
+// `routeRules` key — valid Nitro config, but absent from the wrapper's narrower
+// `nitro` type — passes tsc via structural assignment (excess-property checks only
+// fire on fresh object literals), while `preset`/`output` stay type-checked.
+// Verified: the build emits these headers into .vercel/output/config.json.
+const nitroConfig = {
+  preset: "vercel",
+  output: {
+    dir: "{{ rootDir }}/.vercel/output",
+    serverDir: "{{ output.dir }}/functions/__server.func",
+    publicDir: "{{ output.dir }}/static/{{ baseURL }}",
+  },
+  // Baseline HTTP security headers on every response. Low-risk subset only —
+  // clickjacking (XFO), MIME-sniff (nosniff), referrer leakage, TLS downgrade
+  // (HSTS), conservative feature policy. CSP is deliberately NOT set here (must be
+  // authored in Report-Only first: inline styles, WebGL shader, Supabase
+  // realtime/storage, Google OAuth redirect).
+  routeRules: {
+    "/**": {
+      headers: {
+        "X-Frame-Options": "SAMEORIGIN",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+      },
+    },
+  },
+};
+
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
-  // Deploy target. Nitro's Vercel preset emits `.vercel/output` (Build Output API
-  // with a serverless function) so Vercel can serve the SSR app. Without this the
-  // wrapper defaults to `cloudflare-module` and Vercel gets a static bundle → 404.
-  //
-  // The wrapper force-overrides Nitro's `output` paths with Cloudflare-shaped ones
-  // (dist/client, dist/server), which breaks the Vercel Build Output layout. We
-  // restore the vercel preset's own templated paths (it merges ours last, so they
-  // win) — functions/__server.func + static under .vercel/output.
-  nitro: {
-    preset: "vercel",
-    output: {
-      dir: "{{ rootDir }}/.vercel/output",
-      serverDir: "{{ output.dir }}/functions/__server.func",
-      publicDir: "{{ output.dir }}/static/{{ baseURL }}",
-    },
-  },
+  nitro: nitroConfig,
   // Dev-server stability: pre-bundle all runtime deps on startup so Vite never
   // discovers a NEW dependency mid-navigation and re-runs its optimizer. That
   // mid-load re-optimization invalidates in-flight optimized chunks, which the
@@ -50,6 +73,7 @@ export default defineConfig({
         "lucide-react",
         "sonner",
         "@supabase/supabase-js",
+        "@paper-design/shaders",
         "recharts",
         "react-icons",
         "react-icons/fa6",
