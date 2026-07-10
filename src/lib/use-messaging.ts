@@ -93,24 +93,30 @@ export function useConversation(conversationId: string | null) {
   });
 }
 
-export function useMessages(conversationId: string | null) {
+export function useMessages(conversationId: string | null, limit = 50) {
   const qc = useQueryClient();
   const cid = conversationId ?? "";
   const query = useQuery({
-    queryKey: messagesKey(cid),
+    // Extends messagesKey(cid), so the prefix-matching invalidations below
+    // (and in the mutation hooks) still hit this query.
+    queryKey: [...messagesKey(cid), limit],
     enabled: !!conversationId,
-    queryFn: () => getMessages({ data: { conversationId: cid } }),
+    queryFn: () => getMessages({ data: { conversationId: cid, limit } }),
+    // Keep the current thread visible while a raised limit refetches.
+    placeholderData: (previous) => previous,
   });
-  useRealtime(
-    !!conversationId,
-    `conversation:${cid}`,
-    [{ table: "messages", filter: `conversation_id=eq.${cid}` }],
-    () => {
-      qc.invalidateQueries({ queryKey: messagesKey(cid) });
-      qc.invalidateQueries({ queryKey: conversationsKey });
-      qc.invalidateQueries({ queryKey: unreadKey });
-    },
-  );
+  // Subscribe WITHOUT a server-side `conversation_id` filter. Realtime rejects a
+  // filtered `postgres_changes` binding on `messages` ("invalid column for
+  // filter conversation_id"), which silently killed live delivery in an open
+  // thread. The unfiltered binding is exactly what the working inbox/unread
+  // channels use; RLS still gates which inserts Realtime delivers (only the
+  // viewer's own conversations), so this is no less secure — we just refetch
+  // this conversation whenever a readable message changes.
+  useRealtime(!!conversationId, `conversation:${cid}`, [{ table: "messages" }], () => {
+    qc.invalidateQueries({ queryKey: messagesKey(cid) });
+    qc.invalidateQueries({ queryKey: conversationsKey });
+    qc.invalidateQueries({ queryKey: unreadKey });
+  });
   return query;
 }
 

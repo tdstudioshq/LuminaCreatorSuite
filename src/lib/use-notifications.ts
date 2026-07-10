@@ -71,13 +71,17 @@ function useNotificationsRealtime(userId: string | undefined) {
 
 // ─────────────────────────────── Reads ──────────────────────────────────────
 
-export function useNotifications() {
+export function useNotifications(limit = 50) {
   const { user, loading } = useAuthSession();
   useNotificationsRealtime(user?.id);
   return useQuery({
-    queryKey: notificationsKey,
+    // Extends notificationsKey, so the prefix-matching realtime/mutation
+    // invalidations still hit this query.
+    queryKey: [...notificationsKey, limit],
     enabled: !loading && !!user,
-    queryFn: () => getNotifications(),
+    queryFn: () => getNotifications({ data: { limit } }),
+    // Keep the current list visible while a raised limit refetches.
+    placeholderData: (previous) => previous,
   });
 }
 

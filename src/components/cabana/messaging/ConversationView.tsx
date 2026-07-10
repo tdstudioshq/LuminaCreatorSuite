@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft, Loader2, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
@@ -9,20 +9,25 @@ import {
   useMarkConversationRead,
   useMessages,
 } from "@/lib/use-messaging";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
 import { MessagesShell } from "./MessagesShell";
 import { MessageBubble } from "./MessageBubble";
 import { MessageComposer } from "./MessageComposer";
+
+// The conversation_messages RPC clamps `_limit` at 100 server-side.
+const MESSAGE_LIMIT_MAX = 100;
 
 export function ConversationView({ conversationId }: { conversationId: string }) {
   const { user, loading } = useAuthSession();
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const header = useConversation(conversationId);
-  const { data: messages, isLoading, isError } = useMessages(conversationId);
+  const [limit, setLimit] = useState(50);
+  const { data: messages, isLoading, isError, refetch } = useMessages(conversationId, limit);
   const markRead = useMarkConversationRead();
   const deleteMessage = useDeleteMessage(conversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const lastCount = useRef(0);
+  const lastNewestId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -30,11 +35,14 @@ export function ConversationView({ conversationId }: { conversationId: string })
     }
   }, [loading, user, navigate, path]);
 
-  // Mark read whenever new messages arrive (and on first load).
+  // Mark read whenever new messages arrive (and on first load). Keyed on the
+  // NEWEST message id — loading earlier history prepends older rows and must
+  // not yank the scroll position to the bottom.
   useEffect(() => {
     if (!user || !messages) return;
-    if (messages.length !== lastCount.current) {
-      lastCount.current = messages.length;
+    const newestId = messages[messages.length - 1]?.id ?? null;
+    if (newestId !== null && newestId !== lastNewestId.current) {
+      lastNewestId.current = newestId;
       markRead.mutate(conversationId);
       // Auto-scroll to the newest message.
       requestAnimationFrame(() => {
@@ -89,9 +97,7 @@ export function ConversationView({ conversationId }: { conversationId: string })
             <Loader2 className="h-5 w-5 animate-spin" />
           </div>
         ) : isError ? (
-          <div className="glass rounded-2xl p-6 text-center text-sm text-muted-foreground">
-            Couldn’t load this conversation.
-          </div>
+          <QueryErrorState title="Couldn’t load this conversation" onRetry={() => void refetch()} />
         ) : !messages || messages.length === 0 ? (
           <div className="mx-auto mt-[16vh] max-w-sm rounded-3xl border border-dashed border-white/[0.1] bg-white/[0.025] p-8 text-center text-sm text-muted-foreground">
             <p className="font-display text-lg font-semibold text-foreground">
@@ -102,19 +108,36 @@ export function ConversationView({ conversationId }: { conversationId: string })
             </p>
           </div>
         ) : (
-          messages.map((m) => (
-            <MessageBubble
-              key={m.id}
-              message={m}
-              onDelete={(id) =>
-                void deleteMessage
-                  .mutateAsync(id)
-                  .catch((e) =>
-                    toast.error(e instanceof Error ? e.message : "Couldn’t delete message."),
-                  )
-              }
-            />
-          ))
+          <>
+            {messages.length >= limit && limit < MESSAGE_LIMIT_MAX ? (
+              <div className="flex justify-center pb-2">
+                <button
+                  type="button"
+                  onClick={() => setLimit(MESSAGE_LIMIT_MAX)}
+                  className="btn-ghost !px-3 !py-1.5 text-xs"
+                >
+                  Load earlier messages
+                </button>
+              </div>
+            ) : messages.length >= MESSAGE_LIMIT_MAX ? (
+              <p className="pb-2 text-center text-[11px] text-muted-foreground/70">
+                Showing the latest 100 messages.
+              </p>
+            ) : null}
+            {messages.map((m) => (
+              <MessageBubble
+                key={m.id}
+                message={m}
+                onDelete={(id) =>
+                  void deleteMessage
+                    .mutateAsync(id)
+                    .catch((e) =>
+                      toast.error(e instanceof Error ? e.message : "Couldn’t delete message."),
+                    )
+                }
+              />
+            ))}
+          </>
         )}
         {/* Typing indicator — visual placeholder for future realtime presence. */}
         <TypingIndicator active={false} name={other?.otherDisplayName ?? ""} />
