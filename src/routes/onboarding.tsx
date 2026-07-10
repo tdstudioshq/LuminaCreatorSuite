@@ -12,19 +12,29 @@ import {
   X,
   Link2,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   useCabana,
   useCabanaMutations,
   LINK_ICONS,
-  FALLBACK_AVATAR,
   type CabanaTheme,
   type CabanaProfile,
   type ButtonStyle,
   type LinkIconKey,
 } from "@/lib/cabana-store";
+import { useAuthSession } from "@/lib/cabana-auth";
+import { PUBLIC_SITE_DOMAIN } from "@/lib/site";
 import { LiquidMetalButton } from "@/components/ui/liquid-metal-button";
+import { Button } from "@/components/ui/button";
+
+const STEPS = ["Identity", "Links", "Look", "Preview"] as const;
 
 export const Route = createFileRoute("/onboarding")({
+  validateSearch: (search: Record<string, unknown>): { step?: number } => {
+    const raw = Number(search.step);
+    if (!Number.isFinite(raw) || raw <= 0) return {};
+    return { step: Math.min(STEPS.length - 1, Math.floor(raw)) };
+  },
   head: () => ({
     meta: [
       { title: "CABANA" },
@@ -35,8 +45,6 @@ export const Route = createFileRoute("/onboarding")({
   }),
   component: OnboardingPage,
 });
-
-const STEPS = ["Identity", "Links", "Look", "Preview"] as const;
 
 // ─────────────────────────── Link platforms ───────────────────────────
 type PlatformKey =
@@ -197,13 +205,37 @@ const sanitizeHandle = (v: string) =>
     .replace(/[^a-z0-9_-]/g, "")
     .slice(0, 30);
 
+// A clean, readable default handle derived from the display name (spaces → hyphen),
+// so new creators start with e.g. "aurora-lane" instead of the timestamped machine
+// handle the signup trigger assigns. Still editable and uniqueness-checked on save.
+const slugFromName = (v: string) =>
+  sanitizeHandle(v.trim().toLowerCase().replace(/\s+/g, "-")).replace(/^-+|-+$/g, "");
+
+// ─────────────────────────── Draft persistence ───────────────────────────
+// Mirrors in-progress wizard state (otherwise lost on refresh) into
+// sessionStorage, keyed by user id. Identity fields already persist
+// server-side on step-0 Continue, so they aren't duplicated here.
+type StoredDraft = {
+  drafts: Draft[];
+  theme: CabanaTheme;
+  accentColor: string;
+  buttonStyle: ButtonStyle;
+  maxStep: number;
+};
+
+const draftKey = (uid: string) => `cabana:onboarding:${uid}`;
+
 // ─────────────────────────── Page ───────────────────────────
 function OnboardingPage() {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuthSession();
   const { profile, links, loading } = useCabana();
   const m = useCabanaMutations();
 
-  const [step, setStep] = useState(0);
+  const search = Route.useSearch();
+  // Never allow jumping (via URL/back-forward) past the furthest step reached.
+  const [maxStep, setMaxStep] = useState(0);
+  const step = Math.min(search.step ?? 0, maxStep);
   const [name, setName] = useState("");
   const [handle, setHandle] = useState("");
   const [headline, setHeadline] = useState("");
@@ -219,23 +251,40 @@ function OnboardingPage() {
   const [savingIdentity, setSavingIdentity] = useState(false);
   const [goingLive, setGoingLive] = useState(false);
   const [handleError, setHandleError] = useState<string | null>(null);
+  // Once the user edits the handle, stop auto-deriving it from the display name.
+  const [handleTouched, setHandleTouched] = useState(false);
+  const [goLiveError, setGoLiveError] = useState<string | null>(null);
+  // Draft ids whose rows were already created by a previous (partially failed)
+  // goLive attempt — retries must not insert them again.
+  const createdDraftIds = useRef<Set<string>>(new Set());
 
   const originalHandle = useRef<string>("");
   const seeded = useRef(false);
+  const restored = useRef(false);
+
+  // Auth guard — mirror the dashboard: guests are sent to login (and back).
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate({ to: "/login", search: { redirect: "/onboarding" } as never });
+    }
+  }, [authLoading, user, navigate]);
 
   // Seed once from the existing creator profile (created at signup).
   useEffect(() => {
-    if (seeded.current || loading || !profile) return;
+    if (seeded.current || loading || !profile || !user) return;
     seeded.current = true;
     setName(profile.name ?? "");
-    setHandle(profile.handle ?? "");
+    // Default the public handle to a clean name-derived slug (dropping the
+    // timestamped machine handle the signup trigger assigns). originalHandle keeps
+    // the DB value so Continue saves the new slug when it differs (uniqueness-checked).
+    setHandle(slugFromName(profile.name ?? ""));
     originalHandle.current = profile.handle ?? "";
     setHeadline(profile.headline ?? "");
     setBio(profile.bio ?? "");
     if (profile.theme) setTheme(profile.theme);
     setAccentColor(profile.accentColor ?? "");
     setButtonStyle(profile.buttonStyle ?? "rounded");
-    if (profile.avatar && profile.avatar !== FALLBACK_AVATAR) setAvatarPreview(profile.avatar);
+    if (profile.avatar) setAvatarPreview(profile.avatar);
 
     if (links.length > 0) {
       const next = PLATFORMS.map<Draft>((p) => ({
@@ -266,7 +315,36 @@ function OnboardingPage() {
       }
       setDrafts([...next, ...customs]);
     }
-  }, [loading, profile, links]);
+
+    // Restore any in-progress wizard draft (refresh/back would otherwise lose it).
+    try {
+      const raw = sessionStorage.getItem(draftKey(user.id));
+      if (raw) {
+        const saved = JSON.parse(raw) as Partial<StoredDraft>;
+        if (Array.isArray(saved.drafts) && saved.drafts.length > 0) setDrafts(saved.drafts);
+        if (saved.theme) setTheme(saved.theme);
+        if (typeof saved.accentColor === "string") setAccentColor(saved.accentColor);
+        if (saved.buttonStyle) setButtonStyle(saved.buttonStyle);
+        if (typeof saved.maxStep === "number") {
+          setMaxStep(Math.min(STEPS.length - 1, Math.max(0, saved.maxStep)));
+        }
+      }
+    } catch {
+      // Corrupted/unavailable storage — start from the server-seeded state.
+    }
+    restored.current = true;
+  }, [loading, profile, links, user]);
+
+  // Persist the in-progress draft after every change (session-scoped).
+  useEffect(() => {
+    if (!restored.current || !user) return;
+    try {
+      const stored: StoredDraft = { drafts, theme, accentColor, buttonStyle, maxStep };
+      sessionStorage.setItem(draftKey(user.id), JSON.stringify(stored));
+    } catch {
+      // Storage unavailable — draft persistence is best-effort.
+    }
+  }, [drafts, theme, accentColor, buttonStyle, maxStep, user]);
 
   const previewLinks = useMemo(
     () => drafts.map(buildDraft).filter((x): x is NonNullable<typeof x> => x !== null),
@@ -289,10 +367,21 @@ function OnboardingPage() {
   };
 
   const onPickAvatar = async (file: File | undefined) => {
-    if (!file || !file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) return;
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("That image is over 5MB");
+      return;
+    }
+    const previous = avatarPreview;
     setAvatarPreview(URL.createObjectURL(file));
     const url = await m.uploadAvatar(file);
-    if (url) setAvatarPreview(url);
+    // uploadAvatar resolves null on failure (it already toasted) — drop the
+    // phantom local preview and fall back to the last saved value.
+    setAvatarPreview(url ?? previous);
   };
 
   const saveIdentity = async () => {
@@ -315,42 +404,82 @@ function OnboardingPage() {
     return true;
   };
 
+  // URL-backed step: push history so browser Back walks steps instead of
+  // exiting the wizard, and refresh resumes where the user left off.
+  const goToStep = (n: number) => {
+    const target = Math.min(STEPS.length - 1, Math.max(0, n));
+    setMaxStep((prev) => Math.max(prev, target));
+    navigate({
+      to: "/onboarding",
+      search: target > 0 ? { step: target } : {},
+      replace: false,
+    });
+  };
+
   const next = async () => {
     if (step === 0) {
       const ok = await saveIdentity();
       if (!ok) return;
     }
-    setStep((s) => Math.min(STEPS.length - 1, s + 1));
+    goToStep(step + 1);
   };
-  const back = () => setStep((s) => Math.max(0, s - 1));
+  const back = () => goToStep(step - 1);
 
   const goLive = async () => {
     setGoingLive(true);
+    setGoLiveError(null);
     // Reconcile links: update existing, create new (empty existing rows are
-    // removed inline via removeDraft when the user clears them).
-    const creates: { title: string; url: string; icon: LinkIconKey; featured?: boolean }[] = [];
+    // removed inline via removeDraft when the user clears them). Drafts whose
+    // creation already succeeded on an earlier attempt are skipped so retrying
+    // after a partial failure can't duplicate them.
+    const creates: { draftId: string; built: NonNullable<ReturnType<typeof buildDraft>> }[] = [];
     const updates: Promise<unknown>[] = [];
     for (const d of drafts) {
       const built = buildDraft(d);
       if (d.existingId) {
         if (built) updates.push(m.updateLink(d.existingId, { title: built.title, url: built.url }));
-      } else if (built) {
-        creates.push(built);
+      } else if (built && !createdDraftIds.current.has(d.id)) {
+        creates.push({ draftId: d.id, built });
       }
     }
-    await Promise.all(updates);
-    if (creates.length) await m.createLinks(creates);
+    // wrap() resolves to null on failure (and already toasted) — collect every
+    // result so a partial failure keeps the user here instead of celebrating.
+    const results: unknown[] = await Promise.all(updates);
+    if (creates.length) {
+      const createRes = await m.createLinks(creates.map((c) => c.built));
+      results.push(createRes);
+      if (createRes !== null) {
+        for (const c of creates) createdDraftIds.current.add(c.draftId);
+      }
+    }
     const look: Partial<Pick<CabanaProfile, "theme" | "accentColor" | "buttonStyle">> = {};
     if (theme !== profile?.theme) look.theme = theme;
     if (accentColor !== (profile?.accentColor ?? "")) look.accentColor = accentColor;
     if (buttonStyle !== (profile?.buttonStyle ?? "rounded")) look.buttonStyle = buttonStyle;
-    if (Object.keys(look).length) await m.setProfile(look);
+    if (Object.keys(look).length) results.push(await m.setProfile(look));
     setGoingLive(false);
-    if (typeof window !== "undefined") sessionStorage.setItem("cabana:justOnboarded", "1");
+    if (results.some((r) => r === null)) {
+      setGoLiveError("Some of your changes didn't save — check your connection and try again.");
+      return;
+    }
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("cabana:justOnboarded", "1");
+      if (user) sessionStorage.removeItem(draftKey(user.id));
+    }
     navigate({ to: "/dashboard" });
   };
 
   const displayHandle = handle || "yourname";
+
+  if (authLoading || !user) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-background">
+        <div className="animate-pulse text-xs uppercase tracking-[0.3em] text-muted-foreground">
+          Securing your studio…
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col overflow-x-hidden bg-background">
@@ -398,9 +527,15 @@ function OnboardingPage() {
             {step === 0 && (
               <IdentityStep
                 name={name}
-                setName={setName}
+                setName={(v) => {
+                  setName(v);
+                  if (!handleTouched) setHandle(slugFromName(v));
+                }}
                 handle={handle}
-                setHandle={(v) => setHandle(sanitizeHandle(v))}
+                setHandle={(v) => {
+                  setHandleTouched(true);
+                  setHandle(sanitizeHandle(v));
+                }}
                 handleError={handleError}
                 headline={headline}
                 setHeadline={setHeadline}
@@ -447,6 +582,13 @@ function OnboardingPage() {
 
       {/* Sticky footer — safe-area aware for mobile Safari */}
       <div className="sticky bottom-0 z-20 border-t border-white/[0.08] bg-background/85 backdrop-blur-xl">
+        {step === STEPS.length - 1 && goLiveError ? (
+          <div className="mx-auto w-full max-w-lg px-5 pt-3">
+            <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
+              {goLiveError}
+            </p>
+          </div>
+        ) : null}
         <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-3 px-5 pb-[calc(0.85rem+env(safe-area-inset-bottom))] pt-3.5">
           <button
             onClick={back}
@@ -459,20 +601,22 @@ function OnboardingPage() {
             <div className="flex items-center gap-2">
               {step === 1 && (
                 <button
-                  onClick={() => setStep((s) => s + 1)}
+                  onClick={() => goToStep(step + 1)}
                   className="min-h-11 rounded-full px-4 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Skip
                 </button>
               )}
-              <button
+              <Button
+                type="button"
+                variant="cta"
                 onClick={() => void next()}
                 disabled={!canContinue || savingIdentity}
-                className="flex min-h-11 items-center gap-2 rounded-full bg-foreground px-6 text-sm font-medium text-background shadow-glow transition-all hover:scale-[1.02] disabled:opacity-40 disabled:shadow-none"
+                className="min-h-11 gap-2 rounded-full px-6"
               >
                 {savingIdentity ? "Saving…" : "Continue"}
                 {!savingIdentity && <ArrowRight className="h-4 w-4" />}
-              </button>
+              </Button>
             </div>
           ) : (
             <LiquidMetalButton
@@ -602,7 +746,7 @@ function IdentityStep({
         </Labeled>
         <Labeled label="Username">
           <div className="flex items-center gap-2 rounded-2xl border border-white/[0.1] bg-white/[0.04] px-4 focus-within:border-primary/60">
-            <span className="shrink-0 text-sm text-muted-foreground">cabanagrp.com/</span>
+            <span className="shrink-0 text-sm text-muted-foreground">{PUBLIC_SITE_DOMAIN}/</span>
             <input
               className="w-full bg-transparent py-3.5 text-base outline-none placeholder:text-muted-foreground/50"
               value={handle}
@@ -850,12 +994,12 @@ function PreviewStep({
   return (
     <div>
       <StepHead
-        title="You're live"
-        sub="This is your public page. Tweak anything from the dashboard."
+        title="Here's your page"
+        sub="One tap from live — this is exactly what visitors will see."
       />
       <div
         data-cabana-theme={theme}
-        className="mx-auto max-w-sm overflow-hidden rounded-[28px] border border-white/[0.1] bg-[oklch(0.14_0.015_280/0.6)] shadow-luxury"
+        className="mx-auto max-w-sm overflow-hidden rounded-xl border border-white/[0.1] bg-[oklch(0.14_0.015_280/0.6)] shadow-luxury"
       >
         <div
           className="h-24 bg-iridescent opacity-80"
