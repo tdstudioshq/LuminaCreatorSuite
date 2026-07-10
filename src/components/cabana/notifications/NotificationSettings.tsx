@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
 import type { NotificationPreferences } from "@/lib/cabana-notifications";
 import {
   useNotificationPreferences,
@@ -8,23 +9,29 @@ import {
 type Field = keyof NotificationPreferences;
 
 const ROWS: { field: Field; label: string; hint: string; placeholder?: boolean }[] = [
-  { field: "inAppEnabled", label: "In-app notifications", hint: "Show notifications in CABANA." },
+  {
+    field: "inAppEnabled",
+    label: "In-app notifications",
+    hint: "Show notifications and unread badges in CABANA. Turning this off also pauses new alerts.",
+  },
   {
     field: "emailEnabled",
     label: "Email notifications",
-    hint: "Queue email delivery (no provider connected yet).",
+    hint: "Saved to your preferences now — takes effect when email delivery launches. No emails are sent yet.",
     placeholder: true,
   },
   {
     field: "pushEnabled",
     label: "Push notifications",
-    hint: "Queue push delivery (no provider connected yet).",
+    hint: "Saved to your preferences now — takes effect when push delivery launches. No pushes are sent yet.",
     placeholder: true,
   },
 ];
 
-/** Per-user notification preferences. Email/push are placeholder channels: they
- *  only enqueue inert outbox rows — there is no delivery provider. */
+/** Per-user notification preferences. In-app is fully functional (it gates the
+ *  center + badges and pauses generation at the DB layer). Email/push persist
+ *  to the same preferences row but only take effect when delivery launches
+ *  (Phase 9C) — there is no provider, so nothing is sent today. */
 export function NotificationSettings() {
   const { data: prefs, isError, error, isLoading, refetch } = useNotificationPreferences();
   const update = useUpdateNotificationPreferences();
@@ -34,7 +41,8 @@ export function NotificationSettings() {
       <div className="mb-4">
         <h3 className="font-display text-lg font-semibold">Notification settings</h3>
         <p className="text-xs text-muted-foreground">
-          Choose how you're notified. Email & push are placeholders for a future delivery pipeline.
+          Choose how you're notified. Email & push preferences save now and take effect when
+          delivery launches — nothing is sent yet.
         </p>
       </div>
 
@@ -43,15 +51,15 @@ export function NotificationSettings() {
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
       ) : isError ? (
-        <SectionError
+        <QueryErrorState
           title="Couldn't load preferences"
-          description={error instanceof Error ? error.message : "Please try again."}
+          message={error instanceof Error ? error.message : "Please try again."}
           onRetry={() => void refetch()}
         />
       ) : !prefs ? (
-        <SectionError
+        <QueryErrorState
           title="No preference data"
-          description="Your notification settings could not be loaded."
+          message="Your notification settings could not be loaded."
           onRetry={() => void refetch()}
         />
       ) : (
@@ -110,25 +118,5 @@ function Toggle({
         }`}
       />
     </button>
-  );
-}
-
-function SectionError({
-  title,
-  description,
-  onRetry,
-}: {
-  title: string;
-  description: string;
-  onRetry: () => void;
-}) {
-  return (
-    <div className="rounded-2xl bg-foreground/[0.03] px-4 py-6 text-center">
-      <p className="text-sm font-medium">{title}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-      <button onClick={onRetry} className="btn-ghost mt-4 !px-3 !py-2 text-xs">
-        Try again
-      </button>
-    </div>
   );
 }
