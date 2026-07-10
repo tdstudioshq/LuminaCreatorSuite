@@ -46,7 +46,7 @@ export function ProfileEditor() {
   if (loading || !profile) {
     return (
       <div className="min-h-[400px] flex items-center justify-center text-muted-foreground">
-        <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading your studio…
+        <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading your studio…
       </div>
     );
   }
@@ -64,14 +64,24 @@ export function ProfileEditor() {
             Tune every detail of your public presence.
           </p>
         </div>
-        <Link
-          to="/$username"
-          params={{ username: profile.handle || "aurora" }}
-          target="_blank"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-full glass-strong text-sm font-medium hover:border-primary/30"
-        >
-          <Eye className="w-4 h-4" /> Preview public page
-        </Link>
+        {profile.handle ? (
+          <Link
+            to="/$username"
+            params={{ username: profile.handle }}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-full glass-strong text-sm font-medium hover:border-primary/30"
+          >
+            <Eye className="w-4 h-4" /> Preview public page
+          </Link>
+        ) : (
+          <span
+            title="Set your handle first"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-full glass-strong text-sm font-medium opacity-50 cursor-not-allowed"
+          >
+            <Eye className="w-4 h-4" /> Preview public page
+          </span>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-5 gap-6">
@@ -81,11 +91,17 @@ export function ProfileEditor() {
             <div className="flex items-center gap-5">
               <div className="relative">
                 <div className="w-24 h-24 rounded-full p-[2px] bg-iridescent">
-                  <img
-                    src={profile.avatar}
-                    alt="Avatar"
-                    className="w-full h-full rounded-full object-cover"
-                  />
+                  {profile.avatar ? (
+                    <img
+                      src={profile.avatar}
+                      alt="Avatar"
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-background flex items-center justify-center font-display text-2xl font-semibold">
+                      {(profile.name || profile.handle || "C").charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={() => fileRef.current?.click()}
@@ -277,7 +293,13 @@ export function ProfileEditor() {
               <div className="absolute inset-0 bg-black/40" />
               <div className="relative z-10 p-6 flex flex-col items-center text-center h-full">
                 <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white/40 mb-4 mt-8">
-                  <img src={profile.avatar} alt="" className="w-full h-full object-cover" />
+                  {profile.avatar ? (
+                    <img src={profile.avatar} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-black/30 flex items-center justify-center font-display text-xl font-semibold text-white">
+                      {(profile.name || profile.handle || "C").charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </div>
                 <div className="font-display text-xl font-semibold text-white">
                   {profile.name || "Your name"}

@@ -11,8 +11,7 @@ import {
   Flag,
   Star,
   TrendingUp,
-  Search,
-  Bell,
+  Banknote,
   Filter,
   MoreHorizontal,
   ArrowUpRight,
@@ -25,6 +24,7 @@ import {
   ScrollText,
 } from "lucide-react";
 import { useHasRole } from "@/lib/cabana-roles";
+import { ScrollFadeRow } from "@/components/cabana/ScrollFadeRow";
 
 export const Route = createFileRoute("/admin")({
   component: AdminGate,
@@ -78,6 +78,9 @@ function Admin() {
       <div className="lg:pl-72">
         <TopBar />
         <main className="px-4 sm:px-6 lg:px-10 pt-6 pb-24 max-w-[1400px] mx-auto">
+          <p className="mb-6 inline-flex rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-[11px] font-medium text-amber-200/90">
+            Demo preview — sample data. Live tools: Reports · Audit · Finance · Payouts.
+          </p>
           <MobileTabs tab={tab} setTab={setTab} />
           {tab === "overview" && <Overview />}
           {tab === "users" && <UsersPanel />}
@@ -161,10 +164,9 @@ function Sidebar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
 
       <div className="mt-6 p-4 rounded-2xl glass border border-border">
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> All systems
-          normal
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Demo preview
         </div>
-        <div className="font-display font-semibold">99.99% uptime</div>
+        <div className="font-display font-semibold">Sample status — not monitoring</div>
       </div>
     </aside>
   );
@@ -180,17 +182,6 @@ function TopBar() {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <div className="hidden md:flex items-center gap-2 glass rounded-full px-3 py-2 w-72">
-          <Search className="w-4 h-4 text-muted-foreground" />
-          <input
-            placeholder="Search creators, payouts, flags…"
-            className="bg-transparent outline-none text-sm w-full"
-          />
-        </div>
-        <button className="w-10 h-10 rounded-full glass flex items-center justify-center relative">
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-accent" />
-        </button>
         <div className="w-10 h-10 rounded-full bg-iridescent shadow-glow-sm flex items-center justify-center text-background font-display font-semibold text-sm">
           A
         </div>
@@ -201,7 +192,7 @@ function TopBar() {
 
 function MobileTabs({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   return (
-    <div className="lg:hidden -mx-4 px-4 mb-6 overflow-x-auto">
+    <ScrollFadeRow className="lg:hidden -mx-4 px-4 mb-6">
       <div className="flex gap-2 min-w-max">
         {NAV.map((item) => {
           const active = tab === item.id;
@@ -209,18 +200,26 @@ function MobileTabs({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
             <button
               key={item.id}
               onClick={() => setTab(item.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${active ? "bg-iridescent text-background shadow-glow-sm" : "glass text-muted-foreground"}`}
+              aria-current={active ? "true" : undefined}
+              className={`tap-target px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${active ? "bg-iridescent text-background shadow-glow-sm" : "glass text-muted-foreground"}`}
             >
               {item.label}
             </button>
           );
         })}
       </div>
-    </div>
+    </ScrollFadeRow>
   );
 }
 
 /* ------------------------------ HELPERS ------------------------------ */
+/** Shared props for demo-tab controls that have no live handler. */
+const demoDisabled = {
+  disabled: true,
+  "aria-disabled": true,
+  title: "Demo preview — not functional",
+} as const;
+
 function PanelTitle({
   title,
   sub,
@@ -285,13 +284,14 @@ function Overview() {
     <div className="space-y-6">
       <PanelTitle
         title="Platform overview"
-        sub="Live snapshot across the CABANA network."
+        sub="Demo preview — sample data, not live network metrics."
         right={
           <div className="flex gap-2">
             {["7d", "30d", "QTD", "All"].map((p, i) => (
               <button
                 key={p}
-                className={`text-xs px-3 py-1.5 rounded-full ${i === 1 ? "bg-iridescent text-background shadow-glow-sm" : "glass text-muted-foreground"}`}
+                {...demoDisabled}
+                className={`text-xs px-3 py-1.5 rounded-full opacity-50 cursor-not-allowed ${i === 1 ? "bg-iridescent text-background shadow-glow-sm" : "glass text-muted-foreground"}`}
               >
                 {p}
               </button>
@@ -299,6 +299,92 @@ function Overview() {
           </div>
         }
       />
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Link
+          to="/admin/reports"
+          className="group glass rounded-2xl p-5 flex items-center justify-between gap-3 hover:border-foreground/20 border border-transparent transition"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-iridescent flex items-center justify-center shadow-glow-sm">
+              <ClipboardList className="w-4 h-4 text-background" />
+            </div>
+            <div>
+              <div className="font-semibold">Moderation queue</div>
+              <div className="text-xs text-muted-foreground">
+                Real, RLS-scoped reports · triage with audit
+              </div>
+            </div>
+          </div>
+          <ArrowUpRight className="w-4 h-4 text-muted-foreground transition group-hover:translate-x-0.5" />
+        </Link>
+        <Link
+          to="/admin/audit"
+          className="group glass rounded-2xl p-5 flex items-center justify-between gap-3 hover:border-foreground/20 border border-transparent transition"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl glass flex items-center justify-center">
+              <ScrollText className="w-4 h-4 text-foreground" />
+            </div>
+            <div>
+              <div className="font-semibold">Audit log</div>
+              <div className="text-xs text-muted-foreground">Append-only action trail</div>
+            </div>
+          </div>
+          <ArrowUpRight className="w-4 h-4 text-muted-foreground transition group-hover:translate-x-0.5" />
+        </Link>
+        <Link
+          to="/admin/finance"
+          className="group glass rounded-2xl p-5 flex items-center justify-between gap-3 hover:border-foreground/20 border border-transparent transition"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-iridescent flex items-center justify-center shadow-glow-sm">
+              <DollarSign className="w-4 h-4 text-background" />
+            </div>
+            <div>
+              <div className="font-semibold">Finance overview</div>
+              <div className="text-xs text-muted-foreground">
+                Real revenue, earnings & payout status (admin)
+              </div>
+            </div>
+          </div>
+          <ArrowUpRight className="w-4 h-4 text-muted-foreground transition group-hover:translate-x-0.5" />
+        </Link>
+        <Link
+          to="/admin/ledger"
+          className="group glass rounded-2xl p-5 flex items-center justify-between gap-3 hover:border-foreground/20 border border-transparent transition"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl glass flex items-center justify-center">
+              <CreditCard className="w-4 h-4 text-foreground" />
+            </div>
+            <div>
+              <div className="font-semibold">Ledger explorer</div>
+              <div className="text-xs text-muted-foreground">
+                Read-only transactions · search · CSV
+              </div>
+            </div>
+          </div>
+          <ArrowUpRight className="w-4 h-4 text-muted-foreground transition group-hover:translate-x-0.5" />
+        </Link>
+        <Link
+          to="/admin/payouts"
+          className="group glass rounded-2xl p-5 flex items-center justify-between gap-3 hover:border-foreground/20 border border-transparent transition"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl glass flex items-center justify-center">
+              <Banknote className="w-4 h-4 text-foreground" />
+            </div>
+            <div>
+              <div className="font-semibold">Payout review</div>
+              <div className="text-xs text-muted-foreground">
+                Approve, hold & settle payout requests
+              </div>
+            </div>
+          </div>
+          <ArrowUpRight className="w-4 h-4 text-muted-foreground transition group-hover:translate-x-0.5" />
+        </Link>
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Active creators" value="14,829" delta="8.4%" up Icon={Users} />
@@ -325,6 +411,7 @@ function Overview() {
                   +18.6% MoM
                 </span>
               </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">Demo revenue trend</p>
             </div>
             <div className="flex gap-2">
               <Legend dot="bg-iridescent" label="Subs" />
@@ -394,17 +481,17 @@ function Chart() {
         <div key={i} className="flex-1 flex flex-col items-center gap-1 group">
           <div className="w-full flex flex-col items-center justify-end h-full gap-0.5">
             <motion.div
-              initial={{ height: 0 }}
-              whileInView={{ height: `${h}%` }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ scaleY: 0 }}
+              animate={{ scaleY: 1 }}
+              transition={{ delay: i * 0.05, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              style={{ height: `${Math.round(h * 0.9)}px`, transformOrigin: "bottom" }}
               className="w-full rounded-t-md bg-iridescent opacity-90"
             />
             <motion.div
-              initial={{ height: 0 }}
-              whileInView={{ height: `${b[i]}%` }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05 + 0.1, duration: 0.7 }}
+              initial={{ scaleY: 0 }}
+              animate={{ scaleY: 1 }}
+              transition={{ delay: i * 0.05 + 0.1, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              style={{ height: `${Math.round(b[i] * 0.9)}px`, transformOrigin: "bottom" }}
               className="w-full rounded-b-md bg-foreground/20"
             />
           </div>
@@ -477,9 +564,12 @@ function UsersPanel() {
     <div>
       <PanelTitle
         title="User management"
-        sub="14,829 total accounts · 9,210 monthly active"
+        sub="Demo preview — sample accounts, not live users."
         right={
-          <button className="btn-ghost !py-2 text-xs">
+          <button
+            {...demoDisabled}
+            className="btn-ghost !py-2 text-xs opacity-50 cursor-not-allowed"
+          >
             <Filter className="w-3.5 h-3.5" /> Filters
           </button>
         }
@@ -514,7 +604,10 @@ function UsersPanel() {
               <StatusPill s={u.status} />
             </div>
             <div className="text-sm text-muted-foreground">{u.joined}</div>
-            <button className="w-8 h-8 rounded-lg glass flex items-center justify-center justify-self-end">
+            <button
+              {...demoDisabled}
+              className="w-8 h-8 rounded-lg glass flex items-center justify-center justify-self-end opacity-50 cursor-not-allowed"
+            >
               <MoreHorizontal className="w-4 h-4" />
             </button>
           </motion.div>
@@ -545,7 +638,7 @@ function Verification() {
   ];
   return (
     <div>
-      <PanelTitle title="Creator verification" sub="47 pending requests · 4h average review time" />
+      <PanelTitle title="Creator verification" sub="Demo preview — sample verification queue." />
       <div className="grid lg:grid-cols-3 gap-4">
         {requests.map((r) => (
           <motion.div
@@ -583,10 +676,16 @@ function Verification() {
               </div>
             </div>
             <div className="mt-5 flex gap-2">
-              <button className="btn-luxury flex-1 !py-2.5 text-xs">
+              <button
+                {...demoDisabled}
+                className="btn-luxury flex-1 !py-2.5 text-xs opacity-50 cursor-not-allowed"
+              >
                 <CheckCircle2 className="w-4 h-4" /> Approve
               </button>
-              <button className="btn-ghost flex-1 !py-2.5 text-xs">
+              <button
+                {...demoDisabled}
+                className="btn-ghost flex-1 !py-2.5 text-xs opacity-50 cursor-not-allowed"
+              >
                 <XCircle className="w-4 h-4" /> Decline
               </button>
             </div>
@@ -608,7 +707,7 @@ function Subscriptions() {
   const total = tiers.reduce((s, t) => s + t.count, 0);
   return (
     <div className="space-y-6">
-      <PanelTitle title="Subscription tracking" sub="Live MRR, churn and tier distribution." />
+      <PanelTitle title="Subscription tracking" sub="Demo preview — sample subscription data." />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="MRR" value="$482,910" delta="12.1%" up Icon={DollarSign} />
         <StatCard label="Active subs" value="14,829" delta="6.8%" up Icon={CreditCard} />
@@ -687,7 +786,7 @@ function Payouts() {
   };
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Link
           to="/admin/finance"
           className="group glass rounded-2xl p-5 flex items-center justify-between gap-3 hover:border-foreground/20 border border-transparent transition"
@@ -722,11 +821,35 @@ function Payouts() {
           </div>
           <ArrowUpRight className="w-4 h-4 text-muted-foreground transition group-hover:translate-x-0.5" />
         </Link>
+        <Link
+          to="/admin/payouts"
+          className="group glass rounded-2xl p-5 flex items-center justify-between gap-3 hover:border-foreground/20 border border-transparent transition"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl glass flex items-center justify-center">
+              <Banknote className="w-4 h-4 text-foreground" />
+            </div>
+            <div>
+              <div className="font-semibold">Payout review</div>
+              <div className="text-xs text-muted-foreground">
+                Approve, hold & settle payout requests
+              </div>
+            </div>
+          </div>
+          <ArrowUpRight className="w-4 h-4 text-muted-foreground transition group-hover:translate-x-0.5" />
+        </Link>
       </div>
       <PanelTitle
         title="Payouts"
         sub="Demo preview — live revenue & ledger are under Finance overview above."
-        right={<button className="btn-luxury !py-2 text-xs">Run batch payout</button>}
+        right={
+          <button
+            {...demoDisabled}
+            className="btn-luxury !py-2 text-xs opacity-50 cursor-not-allowed"
+          >
+            Run batch payout
+          </button>
+        }
       />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
@@ -767,7 +890,12 @@ function Payouts() {
               </span>
             </div>
             <div className="md:text-right">
-              <button className="btn-ghost !px-3 !py-1.5 text-xs">Review</button>
+              <button
+                {...demoDisabled}
+                className="btn-ghost !px-3 !py-1.5 text-xs opacity-50 cursor-not-allowed"
+              >
+                Review
+              </button>
             </div>
           </div>
         ))}
@@ -856,8 +984,18 @@ function Flagged() {
             </div>
             <p className="text-sm text-foreground/80 mt-4">{f.reason}</p>
             <div className="mt-4 flex gap-2">
-              <button className="btn-ghost flex-1 !py-2 text-xs">Dismiss</button>
-              <button className="btn-luxury flex-1 !py-2 text-xs">Investigate</button>
+              <button
+                {...demoDisabled}
+                className="btn-ghost flex-1 !py-2 text-xs opacity-50 cursor-not-allowed"
+              >
+                Dismiss
+              </button>
+              <button
+                {...demoDisabled}
+                className="btn-luxury flex-1 !py-2 text-xs opacity-50 cursor-not-allowed"
+              >
+                Investigate
+              </button>
             </div>
           </motion.div>
         ))}
@@ -878,9 +1016,12 @@ function Featured() {
     <div>
       <PanelTitle
         title="Featured creators"
-        sub="Curated rotation on CABANA discover."
+        sub="Demo preview — sample discover rotation."
         right={
-          <button className="btn-luxury !py-2 text-xs">
+          <button
+            {...demoDisabled}
+            className="btn-luxury !py-2 text-xs opacity-50 cursor-not-allowed"
+          >
             <Crown className="w-4 h-4" /> Add to rotation
           </button>
         }
@@ -912,8 +1053,16 @@ function Featured() {
               {c.h} · {c.tag}
             </div>
             <div className="mt-4 flex gap-2">
-              <button className="btn-ghost flex-1 !py-2 text-xs">Preview</button>
-              <button className="btn-ghost !px-3 !py-2">
+              <button
+                {...demoDisabled}
+                className="btn-ghost flex-1 !py-2 text-xs opacity-50 cursor-not-allowed"
+              >
+                Preview
+              </button>
+              <button
+                {...demoDisabled}
+                className="btn-ghost !px-3 !py-2 opacity-50 cursor-not-allowed"
+              >
                 <MoreHorizontal className="w-4 h-4" />
               </button>
             </div>
@@ -928,7 +1077,7 @@ function Featured() {
 function Growth() {
   return (
     <div className="space-y-6">
-      <PanelTitle title="Growth metrics" sub="Funnel, retention and acquisition trends." />
+      <PanelTitle title="Growth metrics" sub="Demo preview — sample funnel and retention data." />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Signups (30d)" value="8,420" delta="22.4%" up Icon={Users} />
         <StatCard label="Activation rate" value="68.2%" delta="3.1%" up Icon={BarChart3} />

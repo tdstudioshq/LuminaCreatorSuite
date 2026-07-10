@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { PostCard } from "@/components/cabana/posts/PostCard";
+import { FeedBatchScope } from "@/components/cabana/posts/FeedBatchScope";
+import { EmptyState } from "@/components/cabana/EmptyState";
 import { SocialShell } from "@/components/cabana/social/SocialShell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -176,7 +178,7 @@ export function DiscoveryPage() {
             />
             <CreatorsSection
               title="Featured creators"
-              description="A curated starting point built from popularity, verification, and freshness."
+              description="A curated starting point built from popularity and freshness."
               creators={snapshot.data?.featuredCreators ?? []}
               badge="Featured"
               icon={Sparkles}
@@ -192,6 +194,7 @@ export function DiscoveryPage() {
               posts={snapshot.data?.trendingPosts ?? []}
               badge="Trending"
               icon={TrendingUp}
+              isLoading={snapshot.isFetching}
             />
             <CreatorsSection
               title="Trending creators"
@@ -307,17 +310,28 @@ function DiscoveryMixedFeed({
       {items.length === 0 ? (
         <EmptyFeedState />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {items.map((item, index) =>
-            item.kind === "post" ? (
-              <div key={item.post.postId} className={index % 3 === 0 ? "lg:col-span-2" : ""}>
-                <PostCard post={item.post} index={index} />
-              </div>
-            ) : (
-              <CreatorCard key={item.creator.profileId} creator={item.creator} badge="Featured" />
-            ),
-          )}
-        </div>
+        <FeedBatchScope
+          mediaPostIds={items
+            .flatMap((it) => (it.kind === "post" ? [it.post] : []))
+            .filter((p) => !p.locked && p.media.length > 0)
+            .map((p) => p.postId)}
+          engagementPostIds={items
+            .flatMap((it) => (it.kind === "post" ? [it.post] : []))
+            .filter((p) => !p.locked)
+            .map((p) => p.postId)}
+        >
+          <div className="grid gap-4 lg:grid-cols-2">
+            {items.map((item, index) =>
+              item.kind === "post" ? (
+                <div key={item.post.postId} className={index % 3 === 0 ? "lg:col-span-2" : ""}>
+                  <PostCard post={item.post} index={index} />
+                </div>
+              ) : (
+                <CreatorCard key={item.creator.profileId} creator={item.creator} badge="Featured" />
+              ),
+            )}
+          </div>
+        </FeedBatchScope>
       )}
       {hasMore && (
         <div className="flex justify-center">
@@ -355,7 +369,7 @@ function CreatorsSection({
         icon={icon}
       />
       {creators.length === 0 ? (
-        <InlineEmptyState label={emptyLabel ?? `No ${title.toLowerCase()} yet.`} />
+        <InlineEmptyState label={emptyLabel ?? `No ${title.toLowerCase()} yet.`} icon={icon} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {creators.map((creator) => (
@@ -374,6 +388,7 @@ function PostsSection({
   badge,
   icon,
   emptyLabel,
+  isLoading = false,
 }: {
   title: string;
   description: string;
@@ -381,6 +396,7 @@ function PostsSection({
   badge: string;
   icon: LucideIcon;
   emptyLabel?: string;
+  isLoading?: boolean;
 }) {
   return (
     <section className="space-y-4">
@@ -391,14 +407,25 @@ function PostsSection({
         badge={badge}
         icon={icon}
       />
-      {posts.length === 0 ? (
-        <InlineEmptyState label={emptyLabel ?? `No ${title.toLowerCase()} yet.`} />
-      ) : (
+      {isLoading ? (
         <div className="space-y-4">
-          {posts.map((post, index) => (
-            <PostCard key={post.postId} post={post} index={index} />
+          {[0, 1].map((i) => (
+            <Skeleton key={i} className="h-56 w-full rounded-xl" />
           ))}
         </div>
+      ) : posts.length === 0 ? (
+        <InlineEmptyState label={emptyLabel ?? `No ${title.toLowerCase()} yet.`} icon={icon} />
+      ) : (
+        <FeedBatchScope
+          mediaPostIds={posts.filter((p) => !p.locked && p.media.length > 0).map((p) => p.postId)}
+          engagementPostIds={posts.filter((p) => !p.locked).map((p) => p.postId)}
+        >
+          <div className="space-y-4">
+            {posts.map((post, index) => (
+              <PostCard key={post.postId} post={post} index={index} />
+            ))}
+          </div>
+        </FeedBatchScope>
       )}
     </section>
   );
@@ -415,7 +442,7 @@ function SuggestedCreatorsSection({ suggestions }: { suggestions: DiscoverySugge
         icon={UserPlus}
       />
       {suggestions.length === 0 ? (
-        <InlineEmptyState label="No suggested creators yet." />
+        <InlineEmptyState label="No suggested creators yet." icon={UserPlus} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {suggestions.map(({ creator, reason }) => (
@@ -539,11 +566,6 @@ function CreatorCard({
             >
               {creator.displayName}
             </Link>
-            {creator.verified && (
-              <Badge variant="outline" className="rounded-full border-iridescent/30 text-[10px]">
-                Verified
-              </Badge>
-            )}
             <Badge variant="outline" className="rounded-full text-[10px]">
               {badge}
             </Badge>
@@ -720,12 +742,10 @@ function EmptyResultsState({ query }: { query: string }) {
   );
 }
 
-function InlineEmptyState({ label }: { label: string }) {
-  return (
-    <section className="rounded-3xl border border-dashed border-border/60 bg-foreground/[0.02] p-6 text-sm text-muted-foreground">
-      {label}
-    </section>
-  );
+function InlineEmptyState({ label, icon: Icon = Sparkles }: { label: string; icon?: LucideIcon }) {
+  // Standardized empty state (Batch 2) — a visible icon + message instead of the
+  // near-invisible faint card that read as a blank void.
+  return <EmptyState icon={Icon} title={label} />;
 }
 
 function StatPill({ icon: Icon, label }: { icon: LucideIcon; label: string }) {

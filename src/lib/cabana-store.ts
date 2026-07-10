@@ -128,9 +128,6 @@ export const ICON_OPTIONS: LinkIconKey[] = [
   "x",
 ];
 
-export const FALLBACK_AVATAR =
-  "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=600&q=80";
-
 // ─────────────────────── Row mappers ───────────────────────
 type CreatorRow = {
   id: string;
@@ -186,7 +183,7 @@ function mapProfile(row: CreatorRow): CabanaProfile {
     name: row.name,
     handle: row.handle,
     bio: row.bio,
-    avatar: row.avatar_url || FALLBACK_AVATAR,
+    avatar: row.avatar_url || "",
     banner: row.banner_url || "",
     theme,
     plan: row.plan,
@@ -218,7 +215,7 @@ function mapProduct(row: ProductRow): CabanaProduct {
     price: row.price,
     type: row.type,
     sales: row.sales,
-    img: row.image_url || FALLBACK_AVATAR,
+    img: row.image_url || "",
     position: row.position,
   };
 }

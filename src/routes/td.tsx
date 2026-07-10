@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { useState } from "react";
 import { Check, ArrowUpRight, Sparkles, Globe, Mail, Crown, Phone } from "lucide-react";
 import { SOCIAL_ICONS } from "@/components/social/social-icons";
 import cabanaLogo from "@/assets/cabana-logo.webp";
@@ -67,8 +66,6 @@ const LINKS = [
 ];
 
 function TDProfile() {
-  const [followed, setFollowed] = useState(false);
-
   return (
     <div className="relative min-h-screen overflow-x-hidden">
       <div aria-hidden className="fixed inset-0 -z-10 pointer-events-none">
@@ -128,23 +125,15 @@ function TDProfile() {
             transition={{ delay: 0.5, duration: 0.7 }}
             className="mt-4 grid grid-cols-[1fr_auto] gap-2"
           >
-            <button
-              onClick={() => setFollowed(!followed)}
-              className={`btn-luxury !w-full !py-4 ${followed ? "!bg-none" : ""}`}
-              style={
-                followed
-                  ? {
-                      background: "oklch(1 0 0 / 0.06)",
-                      color: "var(--foreground)",
-                      border: "1px solid oklch(1 0 0 / 0.12)",
-                      boxShadow: "none",
-                    }
-                  : {}
-              }
+            <a
+              href="https://instagram.com/tdstudiosco"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-luxury !w-full !py-4"
             >
-              {followed ? "Following" : "Follow Tyler"}
-              {!followed && <Sparkles className="w-4 h-4" />}
-            </button>
+              Follow on Instagram
+              <Sparkles className="w-4 h-4" />
+            </a>
             <a
               href="mailto:tyler@tdstudiosny.com"
               className="btn-ghost !px-4 flex items-center justify-center"

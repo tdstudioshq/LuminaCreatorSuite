@@ -1,23 +1,31 @@
-import { Globe, CreditCard, Plug, Check } from "lucide-react";
+import { Globe, CreditCard, Plug } from "lucide-react";
 import { SOCIAL_ICONS } from "@/components/social/social-icons";
 import { comingSoon } from "@/lib/coming-soon";
+import { useCabana } from "@/lib/cabana-store";
 import { Button } from "@/components/ui/button";
 
 const integrations = [
-  { name: "Stripe", desc: "Accept payments worldwide", icon: CreditCard, connected: true },
-  { name: "Mailchimp", desc: "Sync newsletter audience", icon: Plug, connected: false },
-  { name: "Shopify", desc: "Import storefront", icon: Plug, connected: false },
-  { name: "Calendly", desc: "Booking integration", icon: Plug, connected: true },
+  {
+    name: "Stripe",
+    desc: "Accept payments worldwide",
+    icon: CreditCard,
+    status: "After payments launch",
+  },
+  { name: "Mailchimp", desc: "Sync newsletter audience", icon: Plug, status: "Coming soon" },
+  { name: "Shopify", desc: "Import storefront", icon: Plug, status: "Coming soon" },
+  { name: "Calendly", desc: "Booking integration", icon: Plug, status: "Coming soon" },
 ];
 
 const socials = [
-  { name: "Instagram", handle: "@aurora", icon: SOCIAL_ICONS.instagram, connected: true },
-  { name: "YouTube", handle: "/aurora", icon: SOCIAL_ICONS.youtube, connected: true },
-  { name: "Spotify", handle: "Aurora", icon: SOCIAL_ICONS.spotify, connected: false },
-  { name: "Telegram", handle: "t.me/aurora", icon: SOCIAL_ICONS.telegram, connected: true },
+  { name: "Instagram", icon: SOCIAL_ICONS.instagram },
+  { name: "YouTube", icon: SOCIAL_ICONS.youtube },
+  { name: "Spotify", icon: SOCIAL_ICONS.spotify },
+  { name: "Telegram", icon: SOCIAL_ICONS.telegram },
 ];
 
 export function SettingsPanel() {
+  const { profile } = useCabana();
+  const handle = profile?.handle;
   return (
     <div className="space-y-6">
       <div>
@@ -25,7 +33,7 @@ export function SettingsPanel() {
           Settings
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Domain, payments, integrations and accounts.
+          Domain, integrations and connected accounts.
         </p>
       </div>
 
@@ -36,16 +44,18 @@ export function SettingsPanel() {
         </div>
         <div className="grid sm:grid-cols-[1fr_auto] gap-3">
           <input
-            defaultValue="aurora.cabana.co"
+            key={handle ?? "no-handle"}
+            defaultValue={handle ? `${handle}.cabana.co` : undefined}
+            placeholder="yourname.cabana.co"
             className="bg-foreground/5 border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary/50"
           />
           <Button onClick={() => comingSoon("Custom domain verification")} variant="cta">
             Verify
           </Button>
         </div>
-        <div className="text-xs text-emerald-300 mt-3 flex items-center gap-1.5">
-          <Check className="w-3 h-3" /> SSL active • CDN enabled
-        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Custom domains are coming soon — verification is not yet available.
+        </p>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-4">
@@ -64,13 +74,13 @@ export function SettingsPanel() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium">{i.name}</div>
-                    <div className="text-xs text-muted-foreground truncate">{i.desc}</div>
+                    <div className="text-xs text-muted-foreground">{i.desc}</div>
                   </div>
                   <button
                     onClick={() => comingSoon(`${i.name} integration`)}
-                    className={`text-xs px-3 py-1.5 rounded-full ${i.connected ? "bg-emerald-400/15 text-emerald-300" : "bg-iridescent text-background"}`}
+                    className="shrink-0 whitespace-nowrap text-xs px-3 py-1.5 rounded-full border border-border bg-foreground/[0.05] text-muted-foreground"
                   >
-                    {i.connected ? "Connected" : "Connect"}
+                    {i.status}
                   </button>
                 </div>
               );
@@ -93,13 +103,13 @@ export function SettingsPanel() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium">{s.name}</div>
-                    <div className="text-xs text-muted-foreground truncate">{s.handle}</div>
+                    <div className="text-xs text-muted-foreground">Not linked</div>
                   </div>
                   <button
                     onClick={() => comingSoon(`${s.name} account linking`)}
-                    className={`text-xs px-3 py-1.5 rounded-full ${s.connected ? "bg-emerald-400/15 text-emerald-300" : "bg-iridescent text-background"}`}
+                    className="shrink-0 whitespace-nowrap text-xs px-3 py-1.5 rounded-full border border-border bg-foreground/[0.05] text-muted-foreground"
                   >
-                    {s.connected ? "Linked" : "Link"}
+                    Coming soon
                   </button>
                 </div>
               );

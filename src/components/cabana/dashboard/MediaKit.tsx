@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Download, FileText, Sparkles } from "lucide-react";
-import auroraImg from "@/assets/aurora-hero.jpg";
+import { useCabana } from "@/lib/cabana-store";
 import { comingSoon } from "@/lib/coming-soon";
 import { Button } from "@/components/ui/button";
 
@@ -22,6 +22,11 @@ const demographics = [
 const geo = ["United States 42%", "United Kingdom 14%", "Brazil 9%", "Germany 7%", "France 6%"];
 
 export function MediaKit() {
+  const { profile } = useCabana();
+  const displayName = profile?.name || (profile?.handle ? `@${profile.handle}` : "Your name");
+  const tagline = profile?.headline || (profile?.handle ? `@${profile.handle}` : "Your headline");
+  const heroImage = profile?.avatar || profile?.banner || "";
+  const heroInitial = (profile?.name || profile?.handle || "C").charAt(0).toUpperCase();
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between flex-wrap gap-3">
@@ -32,6 +37,9 @@ export function MediaKit() {
           <h1 className="text-3xl md:text-4xl font-display font-semibold tracking-tighter">
             Media Kit
           </h1>
+          <span className="mt-2 inline-flex rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-[11px] font-medium text-amber-200/90">
+            Sample data — demo preview
+          </span>
         </div>
         <Button
           onClick={() => comingSoon("Media kit PDF export")}
@@ -46,20 +54,31 @@ export function MediaKit() {
       <div className="glass-strong rounded-[2rem] overflow-hidden shadow-luxury">
         <div className="grid md:grid-cols-2">
           <div className="relative aspect-[4/5] md:aspect-auto md:min-h-[420px]">
-            <img src={auroraImg} alt="Aurora" className="w-full h-full object-cover" />
+            {heroImage ? (
+              <img src={heroImage} alt={displayName} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-iridescent flex items-center justify-center">
+                <span className="text-8xl font-display font-semibold text-white/90">
+                  {heroInitial}
+                </span>
+              </div>
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
             <div className="absolute bottom-6 left-6 right-6">
               <div className="text-xs uppercase tracking-[0.3em] text-white/70">Creator</div>
               <div className="text-4xl font-display font-semibold text-white tracking-tighter">
-                Aurora
+                {displayName}
               </div>
-              <div className="text-sm text-white/80">Lifestyle • Fashion • Music</div>
+              <div className="text-sm text-white/80">{tagline}</div>
             </div>
           </div>
 
           <div className="p-8 space-y-6">
             <div>
-              <h3 className="font-display text-lg font-semibold mb-3">Reach & Performance</h3>
+              <h3 className="font-display text-lg font-semibold mb-3">
+                Reach & Performance{" "}
+                <span className="text-xs font-normal text-muted-foreground">· sample</span>
+              </h3>
               <div className="grid grid-cols-2 gap-3">
                 {metrics.map((m) => (
                   <div key={m.label} className="glass rounded-2xl p-4">
@@ -73,7 +92,9 @@ export function MediaKit() {
             </div>
 
             <div>
-              <h3 className="font-display text-lg font-semibold mb-3">Audience</h3>
+              <h3 className="font-display text-lg font-semibold mb-3">
+                Audience <span className="text-xs font-normal text-muted-foreground">· sample</span>
+              </h3>
               <div className="space-y-2.5">
                 {demographics.map((d, i) => (
                   <div key={d.label}>
@@ -95,7 +116,10 @@ export function MediaKit() {
             </div>
 
             <div>
-              <h3 className="font-display text-lg font-semibold mb-3">Top Geographies</h3>
+              <h3 className="font-display text-lg font-semibold mb-3">
+                Top Geographies{" "}
+                <span className="text-xs font-normal text-muted-foreground">· sample</span>
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {geo.map((g) => (
                   <span key={g} className="text-xs px-3 py-1.5 rounded-full glass">
@@ -113,7 +137,7 @@ export function MediaKit() {
         <div className="flex-1">
           <div className="font-medium">Brand-ready presentation deck</div>
           <div className="text-xs text-muted-foreground">
-            Auto-generated from your latest 30 days of metrics.
+            Sample metrics for preview — real analytics integration is coming soon.
           </div>
         </div>
         <button

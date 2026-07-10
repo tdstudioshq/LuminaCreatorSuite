@@ -5,12 +5,14 @@ import { useCabana, useCabanaMutations, type CabanaProduct } from "@/lib/cabana-
 import { Button } from "@/components/ui/button";
 import { useDebouncedField } from "@/hooks/use-debounced-callback";
 import { ConfirmDeleteButton } from "@/components/cabana/dashboard/ConfirmDeleteButton";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
+import { EmptyState } from "@/components/cabana/EmptyState";
 
 const TYPES: CabanaProduct["type"][] = ["Physical", "Download", "Membership"];
 const TYPE_ICON = { Physical: Tag, Download: Download, Membership: Repeat } as const;
 
 export function StoreManager() {
-  const { products, loading } = useCabana();
+  const { products, loading, error, refetch } = useCabana();
   const m = useCabanaMutations();
   const [editing, setEditing] = useState<string | null>(null);
 
@@ -34,6 +36,24 @@ export function StoreManager() {
         <div className="glass rounded-3xl p-10 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin" /> Loading products…
         </div>
+      ) : error ? (
+        <QueryErrorState title="Couldn’t load your products" onRetry={refetch} />
+      ) : products.length === 0 ? (
+        <EmptyState
+          icon={Tag}
+          title="No products yet"
+          description="Sell physical, digital, or membership products from your storefront."
+          action={
+            <Button
+              onClick={() => m.addProduct()}
+              variant="cta"
+              size="sm"
+              className="!rounded-full"
+            >
+              <Plus className="w-4 h-4" /> New product
+            </Button>
+          }
+        />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
           {products.map((p, i) => {
@@ -48,11 +68,17 @@ export function StoreManager() {
                 className="glass rounded-3xl overflow-hidden group relative"
               >
                 <div className="relative aspect-[4/5] overflow-hidden">
-                  <img
-                    src={p.img}
-                    alt={p.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
+                  {p.img ? (
+                    <img
+                      src={p.img}
+                      alt={p.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-white/5 flex items-center justify-center text-muted-foreground">
+                      <Camera className="w-6 h-6" />
+                    </div>
+                  )}
                   <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full glass-strong text-[10px] flex items-center gap-1">
                     <Badge className="w-2.5 h-2.5" /> {p.type}
                   </div>
@@ -76,13 +102,6 @@ export function StoreManager() {
               </motion.div>
             );
           })}
-        </div>
-      )}
-
-      {!loading && products.length === 0 && (
-        <div className="glass rounded-3xl p-10 text-center text-sm text-muted-foreground">
-          No products yet. Click <span className="text-foreground font-medium">New product</span> to
-          start.
         </div>
       )}
 
@@ -129,7 +148,13 @@ function ProductDrawer({ product, onClose }: { product: CabanaProduct; onClose: 
 
         <div className="flex gap-4 mb-5">
           <div className="relative shrink-0">
-            <img src={product.img} className="w-24 h-32 rounded-2xl object-cover" alt="" />
+            {product.img ? (
+              <img src={product.img} className="w-24 h-32 rounded-2xl object-cover" alt="" />
+            ) : (
+              <div className="w-24 h-32 rounded-2xl bg-white/5 flex items-center justify-center text-muted-foreground">
+                <Camera className="w-5 h-5" />
+              </div>
+            )}
             <button
               onClick={() => fileRef.current?.click()}
               className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full glass-strong flex items-center justify-center hover:scale-110 transition-transform"
