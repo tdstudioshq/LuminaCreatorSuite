@@ -3,13 +3,14 @@ import { Link } from "@tanstack/react-router";
 import { formatDistanceToNow } from "date-fns";
 import { Loader2, MessagesSquare, Search, SquarePen } from "lucide-react";
 import { useConversations } from "@/lib/use-messaging";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
 
 /**
  * Middle pane of the messages layout: the scrollable conversation list with
  * the active thread highlighted. Structure-only; reuses existing glass styling.
  */
 export function ConversationListPane({ activeId }: { activeId?: string }) {
-  const { data: conversations, isLoading, isError } = useConversations();
+  const { data: conversations, isLoading, isError, refetch } = useConversations();
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
   const visibleConversations = (conversations ?? []).filter((conversation) =>
@@ -55,9 +56,11 @@ export function ConversationListPane({ activeId }: { activeId?: string }) {
             <Loader2 className="h-5 w-5 animate-spin" />
           </div>
         ) : isError ? (
-          <p className="p-6 text-center text-sm text-muted-foreground">
-            Couldn’t load your messages.
-          </p>
+          <QueryErrorState
+            title="Couldn’t load your messages"
+            onRetry={() => void refetch()}
+            className="m-4"
+          />
         ) : !conversations || conversations.length === 0 ? (
           <div className="flex flex-col items-center gap-2 p-10 text-center text-sm text-muted-foreground">
             <MessagesSquare className="h-6 w-6" />

@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
 import { Constants } from "@/integrations/supabase/types";
 import {
   type TransactionStatus,
@@ -26,6 +27,10 @@ import { useAdminTransactions } from "@/lib/use-admin-finance";
 const TYPES = Constants.public.Enums.transaction_type;
 const STATUSES = Constants.public.Enums.transaction_status;
 
+// Fetch window sizes — the server action clamps to MAX_LIMIT (1000).
+const INITIAL_LIMIT = 500;
+const MAX_LIMIT = 1000;
+
 /** Trigger a client-side CSV download of the given transactions. */
 function downloadCsv(rows: Parameters<typeof transactionsToCsv>[0]): void {
   const csv = transactionsToCsv(rows);
@@ -39,11 +44,13 @@ function downloadCsv(rows: Parameters<typeof transactionsToCsv>[0]): void {
 }
 
 export function LedgerExplorer() {
-  const { data, isLoading, isError } = useAdminTransactions();
+  const [limit, setLimit] = useState(INITIAL_LIMIT);
+  const { data, isLoading, isError, refetch } = useAdminTransactions(limit);
   const [type, setType] = useState<TransactionType | "all">("all");
   const [status, setStatus] = useState<TransactionStatus | "all">("all");
   const [search, setSearch] = useState("");
 
+  const filtersActive = type !== "all" || status !== "all" || search.trim() !== "";
   const filtered = useMemo(
     () => filterTransactions(data ?? [], { type, status, search }),
     [data, type, status, search],
@@ -57,12 +64,10 @@ export function LedgerExplorer() {
     );
   }
   if (isError) {
-    return (
-      <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">
-        Couldn’t load the ledger.
-      </div>
-    );
+    return <QueryErrorState title="Couldn’t load the ledger" onRetry={() => refetch()} />;
   }
+
+  const atWindowCap = (data?.length ?? 0) >= limit;
 
   return (
     <div className="space-y-4">
@@ -106,7 +111,9 @@ export function LedgerExplorer() {
           variant="ghost"
           onClick={() => downloadCsv(filtered)}
           disabled={filtered.length === 0}
-          title="Export filtered rows as CSV"
+          title={
+            atWindowCap ? "Exports the currently loaded window only" : "Export filtered rows as CSV"
+          }
         >
           <Download className="h-4 w-4" /> CSV
         </Button>
@@ -116,9 +123,26 @@ export function LedgerExplorer() {
         {filtered.length} of {data?.length ?? 0} transactions
       </p>
 
+      {atWindowCap && (
+        <p className="text-[11px] text-muted-foreground/70">
+          Showing the most recent {data?.length ?? 0} transactions — filters, totals and CSV export
+          cover only this window.
+          {limit < MAX_LIMIT && (
+            <button
+              onClick={() => setLimit(MAX_LIMIT)}
+              className="ml-1.5 underline underline-offset-2 hover:text-foreground"
+            >
+              Load more
+            </button>
+          )}
+        </p>
+      )}
+
       {filtered.length === 0 ? (
         <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">
-          No transactions match these filters.
+          {filtersActive
+            ? "No transactions match these filters."
+            : "No transactions in the ledger yet."}
         </div>
       ) : (
         <div className="glass overflow-x-auto rounded-2xl">

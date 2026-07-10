@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Loader2, ShieldCheck } from "lucide-react";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   type ReportItem,
@@ -15,13 +16,16 @@ import { ReportRow } from "./ReportRow";
 type Filter = "all" | ReportStatus;
 const FILTERS: Filter[] = ["all", "open", "reviewing", "resolved", "dismissed"];
 
+// The server action fetches at most this many reports (its query limit).
+const REPORTS_FETCH_LIMIT = 200;
+
 /**
  * Staff moderation queue: status-filtered list of reports with a detail +
  * triage drawer. Fetches the RLS-scoped report set once and filters/sorts in
  * the pure layer so the tab counts and ordering stay deterministic.
  */
 export function ReportQueue() {
-  const { data: reports, isLoading, isError, error } = useReports();
+  const { data: reports, isLoading, isError, error, refetch } = useReports();
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<ReportItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -50,9 +54,11 @@ export function ReportQueue() {
   }
   if (isError) {
     return (
-      <p className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-        {error instanceof Error ? error.message : "Could not load reports."}
-      </p>
+      <QueryErrorState
+        title="Couldn’t load reports"
+        message={error instanceof Error ? error.message : undefined}
+        onRetry={() => refetch()}
+      />
     );
   }
 
@@ -70,6 +76,13 @@ export function ReportQueue() {
           ))}
         </TabsList>
       </Tabs>
+
+      {(reports ?? []).length >= REPORTS_FETCH_LIMIT && (
+        <p className="text-[11px] text-muted-foreground/70">
+          Showing the most recent {(reports ?? []).length} reports — older reports are not included
+          in this view.
+        </p>
+      )}
 
       {visible.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-border glass py-16 text-center">

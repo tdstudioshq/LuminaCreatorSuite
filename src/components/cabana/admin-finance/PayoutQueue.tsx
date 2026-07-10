@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Loader2, Wallet } from "lucide-react";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
 import { Button } from "@/components/ui/button";
 import { creatorLabel, formatCents } from "@/lib/cabana-finance";
 import {
@@ -28,7 +29,7 @@ const STATUS_STYLES: Record<PayoutRequestStatus, string> = {
 };
 
 export function PayoutQueue() {
-  const { data, isLoading, isError } = useAdminPayoutRequests();
+  const { data, isLoading, isError, refetch } = useAdminPayoutRequests();
   const [tab, setTab] = useState<Tab>("all");
   const [pending, setPending] = useState<{
     request: AdminPayoutRequest;
@@ -49,11 +50,7 @@ export function PayoutQueue() {
     );
   }
   if (isError) {
-    return (
-      <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">
-        Couldn’t load payout requests.
-      </div>
-    );
+    return <QueryErrorState title="Couldn’t load payout requests" onRetry={() => refetch()} />;
   }
 
   return (

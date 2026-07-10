@@ -8,6 +8,7 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
 import {
   creatorLabel,
   formatCents,
@@ -21,6 +22,10 @@ import {
   useAdminPayouts,
   useAdminTransactions,
 } from "@/lib/use-admin-finance";
+
+// The transactions action fetches at most this many rows (its default clamp);
+// headline stats are summed client-side over that window.
+const TXN_FETCH_LIMIT = 500;
 
 export function FinanceOverview() {
   const txns = useAdminTransactions();
@@ -36,9 +41,14 @@ export function FinanceOverview() {
   }
   if (txns.isError || payouts.isError || earnings.isError) {
     return (
-      <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">
-        Couldn’t load finance data.
-      </div>
+      <QueryErrorState
+        title="Couldn’t load finance data"
+        onRetry={() => {
+          void txns.refetch();
+          void payouts.refetch();
+          void earnings.refetch();
+        }}
+      />
     );
   }
 
@@ -79,6 +89,12 @@ export function FinanceOverview() {
             hint="Not yet settled"
           />
         </div>
+        {(txns.data?.length ?? 0) >= TXN_FETCH_LIMIT && (
+          <p className="text-[11px] text-muted-foreground/70">
+            Stats cover the most recent {txns.data?.length ?? 0} transactions — see the ledger for
+            the full history.
+          </p>
+        )}
       </section>
 
       {/* Payout status */}

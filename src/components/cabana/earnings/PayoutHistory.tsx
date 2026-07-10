@@ -6,7 +6,7 @@ import { HistoryCard } from "./HistoryCard";
 
 /** Mock payout (disbursement) history. No real payouts are ever issued. */
 export function PayoutHistory() {
-  const { data, isLoading } = usePayouts();
+  const { data, isLoading, isError, refetch } = usePayouts();
   const rows = data ?? [];
 
   return (
@@ -14,6 +14,8 @@ export function PayoutHistory() {
       title="Payouts"
       count={rows.length}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={refetch}
       isEmpty={rows.length === 0}
       emptyLabel="No payouts requested yet."
     >

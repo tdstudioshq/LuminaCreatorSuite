@@ -18,13 +18,16 @@ import {
   ICON_OPTIONS,
   type CabanaLink,
 } from "@/lib/cabana-store";
+import { toast } from "sonner";
 import { useDebouncedCallback, useDebouncedField } from "@/hooks/use-debounced-callback";
 import { isValidHttpUrl, normalizeUrl } from "@/lib/cabana-validation";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteButton } from "@/components/cabana/dashboard/ConfirmDeleteButton";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
+import { EmptyState } from "@/components/cabana/EmptyState";
 
 export function LinkManager() {
-  const { links, loading } = useCabana();
+  const { links, loading, error, refetch } = useCabana();
   const m = useCabanaMutations();
   const [editing, setEditing] = useState<string | null>(null);
   const [localOrder, setLocalOrder] = useState<CabanaLink[] | null>(null);
@@ -53,7 +56,9 @@ export function LinkManager() {
             Link Manager
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Drag to reorder. Click edit to update. Schedule for later.
+            {links.length > 0
+              ? "Drag to reorder. Click edit to update."
+              : "Add the links your audience should see."}
           </p>
         </div>
         <Button onClick={() => m.addLink()} variant="cta" size="sm" className="!rounded-full">
@@ -65,6 +70,19 @@ export function LinkManager() {
         <div className="glass rounded-3xl p-10 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin" /> Loading links…
         </div>
+      ) : error ? (
+        <QueryErrorState title="Couldn’t load your links" onRetry={refetch} />
+      ) : links.length === 0 ? (
+        <EmptyState
+          icon={LINK_ICONS.globe}
+          title="No links yet"
+          description="Add the links, socials, and destinations your audience should see."
+          action={
+            <Button onClick={() => m.addLink()} variant="cta" size="sm" className="!rounded-full">
+              <Plus className="w-4 h-4" /> Add link
+            </Button>
+          }
+        />
       ) : (
         <Reorder.Group axis="y" values={items} onReorder={setLocalOrder} className="space-y-3">
           {items.map((link) => {
@@ -132,13 +150,6 @@ export function LinkManager() {
           })}
         </Reorder.Group>
       )}
-
-      {!loading && links.length === 0 && (
-        <div className="glass rounded-3xl p-10 text-center text-sm text-muted-foreground">
-          No links yet. Click <span className="text-foreground font-medium">Add link</span> to
-          start.
-        </div>
-      )}
     </div>
   );
 }
@@ -154,7 +165,7 @@ function LinkEditForm({ link, onClose }: { link: CabanaLink; onClose: () => void
       />
       <UrlField value={link.url} onCommit={(v) => m.updateLink(link.id, { url: v })} />
       <Input
-        label="Schedule label (optional)"
+        label="Note shown on this link (optional)"
         value={link.scheduled ?? ""}
         onChange={(v) => m.updateLink(link.id, { scheduled: v || undefined })}
       />
@@ -231,9 +242,28 @@ function UrlField({ value, onCommit }: { value: string; onCommit: (v: string) =>
   const [local, setLocal] = useState(value);
   useEffect(() => setLocal(value), [value]);
 
+  // Tracks the last value the commit path discarded as invalid, so we can warn
+  // (once, via toast) when the field closes with an unsaved invalid URL — the
+  // inline error unmounts with the form, which would otherwise be silent.
+  const lastInvalid = useRef<string | null>(null);
   const commit = useDebouncedCallback((next: string) => {
-    if (isValidHttpUrl(next)) onCommit(normalizeUrl(next));
+    if (isValidHttpUrl(next)) {
+      lastInvalid.current = null;
+      onCommit(normalizeUrl(next));
+    } else {
+      lastInvalid.current = next.trim().length > 0 ? next : null;
+    }
   }, 500);
+  // Runs after the debounce hook's unmount flush (declared above), so it sees
+  // the final committed-or-discarded state.
+  useEffect(
+    () => () => {
+      if (lastInvalid.current !== null) {
+        toast.error(`URL not saved — "${lastInvalid.current}" isn't a valid link.`);
+      }
+    },
+    [],
+  );
 
   const invalid = local.trim().length > 0 && !isValidHttpUrl(local);
 

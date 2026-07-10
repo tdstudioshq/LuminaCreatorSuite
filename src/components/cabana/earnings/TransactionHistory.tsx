@@ -15,7 +15,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export function TransactionHistory() {
-  const { data, isLoading } = useTransactions();
+  const { data, isLoading, isError, refetch } = useTransactions();
   const rows = data ?? [];
 
   return (
@@ -23,6 +23,8 @@ export function TransactionHistory() {
       title="Transaction ledger"
       count={rows.length}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={refetch}
       isEmpty={rows.length === 0}
       emptyLabel="No transactions yet. Tips and purchases will appear here."
     >

@@ -4,7 +4,7 @@ import { useTips } from "@/lib/use-money";
 import { HistoryCard } from "./HistoryCard";
 
 export function TipHistory() {
-  const { data, isLoading } = useTips();
+  const { data, isLoading, isError, refetch } = useTips();
   const rows = data ?? [];
 
   return (
@@ -12,6 +12,8 @@ export function TipHistory() {
       title="Tips received"
       count={rows.length}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={refetch}
       isEmpty={rows.length === 0}
       emptyLabel="No tips yet."
     >

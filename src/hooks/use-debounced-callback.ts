@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * Returns a stable debounced wrapper around `callback`. The latest callback is
- * always invoked, and any pending call is cancelled on unmount.
+ * always invoked, and any pending call is FLUSHED (invoked immediately with its
+ * pending args) on unmount — so an edit typed just before closing an editor is
+ * saved rather than silently dropped.
  */
 export function useDebouncedCallback<A extends unknown[]>(
   callback: (...args: A) => void,
@@ -14,9 +16,16 @@ export function useDebouncedCallback<A extends unknown[]>(
   });
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingArgs = useRef<A | null>(null);
   useEffect(
     () => () => {
-      if (timer.current) clearTimeout(timer.current);
+      if (timer.current) {
+        clearTimeout(timer.current);
+        timer.current = null;
+        const args = pendingArgs.current;
+        pendingArgs.current = null;
+        if (args) callbackRef.current(...args);
+      }
     },
     [],
   );
@@ -25,7 +34,12 @@ export function useDebouncedCallback<A extends unknown[]>(
     () =>
       (...args: A) => {
         if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => callbackRef.current(...args), delayMs);
+        pendingArgs.current = args;
+        timer.current = setTimeout(() => {
+          timer.current = null;
+          pendingArgs.current = null;
+          callbackRef.current(...args);
+        }, delayMs);
       },
     [delayMs],
   );

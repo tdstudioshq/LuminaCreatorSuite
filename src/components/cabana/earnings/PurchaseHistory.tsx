@@ -6,7 +6,7 @@ import { HistoryCard } from "./HistoryCard";
 
 /** Sales: one-time purchases (post unlocks) of the creator's content. */
 export function PurchaseHistory() {
-  const { data, isLoading } = usePurchases();
+  const { data, isLoading, isError, refetch } = usePurchases();
   const rows = data ?? [];
 
   return (
@@ -14,6 +14,8 @@ export function PurchaseHistory() {
       title="Sales"
       count={rows.length}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={refetch}
       isEmpty={rows.length === 0}
       emptyLabel="No content sales yet. Publish a paid post to start selling unlocks."
     >

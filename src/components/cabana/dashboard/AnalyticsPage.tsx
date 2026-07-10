@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { TrendingUp, Eye, MousePointerClick, ShoppingBag, BarChart3, Loader2 } from "lucide-react";
 import { useCabana } from "@/lib/cabana-store";
 import { supabase } from "@/integrations/supabase/client";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
 
 type EventRow = {
   id: string;
@@ -45,7 +46,12 @@ function buildSeries(events: EventRow[], days: number) {
 
 export function AnalyticsPage() {
   const { profile, links, products, loading } = useCabana();
-  const { data: events = [], isLoading: eventsLoading } = useAnalyticsEvents(profile?.id);
+  const {
+    data: events = [],
+    isLoading: eventsLoading,
+    isError: eventsError,
+    refetch: refetchEvents,
+  } = useAnalyticsEvents(profile?.id);
 
   const counts = useMemo(() => {
     let pageViews = 0;
@@ -99,18 +105,22 @@ export function AnalyticsPage() {
     );
   }
 
+  if (eventsError) {
+    return <QueryErrorState title="Couldn’t load your analytics" onRetry={refetchEvents} />;
+  }
+
   return (
     <div className="space-y-8">
       <header>
         <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">
-          Analytics
+          Link-in-bio
         </div>
         <h1 className="text-4xl md:text-5xl font-display font-semibold tracking-tighter">
-          Performance <span className="text-iridescent italic font-light">overview</span>
+          Link <span className="text-iridescent italic font-light">analytics</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-2 max-w-md">
-          Real events from your CABANA — page views, link and product clicks across the last 30
-          days.
+          Real events from your link-in-bio page — page views, link and product clicks across the
+          last 30 days.
         </p>
       </header>
 

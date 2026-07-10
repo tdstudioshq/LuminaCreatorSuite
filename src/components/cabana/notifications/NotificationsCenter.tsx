@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { CheckCheck, Loader2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -20,8 +21,12 @@ import { NotificationIcon } from "./notification-icons";
  * The real in-app notifications list (Phase 7). Data is RLS-scoped to the
  * recipient and updates live via Supabase Realtime (see use-notifications).
  */
+// The getNotifications server action clamps the limit at 200.
+const NOTIFICATIONS_LIMIT_MAX = 200;
+
 export function NotificationsCenter() {
-  const { data, isError, error, isLoading, refetch } = useNotifications();
+  const [limit, setLimit] = useState(50);
+  const { data, isError, error, isLoading, refetch } = useNotifications(limit);
   const markAll = useMarkAllNotificationsRead();
   const items = data ?? [];
   const unread = countUnread(items);
@@ -39,7 +44,7 @@ export function NotificationsCenter() {
         <button
           onClick={() => markAll.mutate()}
           disabled={unread === 0 || markAll.isPending}
-          className="btn-ghost !px-3 !py-2 text-xs disabled:opacity-40"
+          className="btn-ghost !px-3 !py-2 text-xs disabled:opacity-60"
         >
           <CheckCheck className="h-3.5 w-3.5" /> Mark all read
         </button>
@@ -74,6 +79,20 @@ export function NotificationsCenter() {
               </ul>
             </div>
           ))}
+          {items.length >= limit && limit < NOTIFICATIONS_LIMIT_MAX ? (
+            <div className="flex justify-center border-t border-border/40 px-6 py-3">
+              <button
+                onClick={() => setLimit((l) => Math.min(NOTIFICATIONS_LIMIT_MAX, l + 50))}
+                className="btn-ghost !px-3 !py-1.5 text-xs"
+              >
+                Load more
+              </button>
+            </div>
+          ) : items.length >= NOTIFICATIONS_LIMIT_MAX ? (
+            <p className="border-t border-border/40 px-6 py-3 text-center text-[11px] text-muted-foreground/70">
+              Showing the latest 200 notifications.
+            </p>
+          ) : null}
         </div>
       )}
     </section>
@@ -150,7 +169,7 @@ function NotificationRow({ item }: { item: NotificationItem }) {
           <button
             onClick={() => (item.isRead ? markUnread.mutate(item.id) : markRead.mutate(item.id))}
             disabled={markRead.isPending || markUnread.isPending}
-            className="btn-ghost !px-3 !py-1.5 text-[11px] disabled:opacity-40"
+            className="btn-ghost !px-3 !py-1.5 text-[11px] disabled:opacity-60"
           >
             {item.isRead ? "Mark unread" : "Mark read"}
           </button>

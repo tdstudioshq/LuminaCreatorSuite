@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Plus, Users } from "lucide-react";
+import { Layers, Loader2, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { formatMoney } from "@/lib/cabana-money";
 import {
@@ -8,13 +8,15 @@ import {
   useSetTierActive,
   useUpsertTier,
 } from "@/lib/use-subscriptions";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
+import { EmptyState } from "@/components/cabana/EmptyState";
 
 export function SubscribersDashboard() {
   return (
     <div className="space-y-8">
       <div>
         <p className="eyebrow mb-1.5 text-muted-foreground">Membership</p>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Subscribers</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tighter">Subscribers</h1>
         <p className="mt-2 max-w-prose text-sm text-muted-foreground">
           Define subscription tiers and see who supports you. Subscriptions are{" "}
           <strong className="text-foreground">demo-only</strong> — no real charges or payouts.
@@ -27,7 +29,7 @@ export function SubscribersDashboard() {
 }
 
 function TierManager() {
-  const { data: tiers, isLoading } = useMyTiers();
+  const { data: tiers, isLoading, isError, refetch } = useMyTiers();
   const upsert = useUpsertTier();
   const setActive = useSetTierActive();
   const [name, setName] = useState("");
@@ -74,7 +76,7 @@ function TierManager() {
         <button
           onClick={() => void addTier()}
           disabled={upsert.isPending}
-          className="btn-luxury !px-4 !py-2.5 text-xs disabled:opacity-50"
+          className="btn-luxury !px-4 !py-2.5 text-xs disabled:opacity-60"
         >
           <Plus className="h-4 w-4" /> Add tier
         </button>
@@ -84,10 +86,14 @@ function TierManager() {
         <div className="flex justify-center py-6 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
+      ) : isError ? (
+        <QueryErrorState title="Couldn’t load your tiers" onRetry={refetch} />
       ) : !tiers || tiers.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No tiers yet. Add one to let fans subscribe.
-        </p>
+        <EmptyState
+          icon={Layers}
+          title="No tiers yet"
+          description="Add a tier above to let fans subscribe to your members-only posts."
+        />
       ) : (
         <ul className="space-y-2">
           {tiers.map((tier) => (
@@ -108,7 +114,7 @@ function TierManager() {
                     )
                 }
                 disabled={setActive.isPending}
-                className="btn-ghost ml-auto !px-3 !py-1.5 text-[11px] disabled:opacity-50"
+                className="btn-ghost ml-auto !px-3 !py-1.5 text-[11px] disabled:opacity-60"
               >
                 {tier.isActive ? "Deactivate" : "Activate"}
               </button>
@@ -121,7 +127,7 @@ function TierManager() {
 }
 
 function SubscriberList() {
-  const { data: subscribers, isLoading } = useCreatorSubscribers();
+  const { data: subscribers, isLoading, isError, refetch } = useCreatorSubscribers();
   return (
     <section className="space-y-3">
       <h2 className="text-sm font-medium text-muted-foreground">Your subscribers</h2>
@@ -129,11 +135,14 @@ function SubscriberList() {
         <div className="flex justify-center py-6 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
+      ) : isError ? (
+        <QueryErrorState title="Couldn’t load your subscribers" onRetry={refetch} />
       ) : !subscribers || subscribers.length === 0 ? (
-        <div className="glass flex flex-col items-center gap-2 rounded-2xl p-8 text-center text-sm text-muted-foreground">
-          <Users className="h-5 w-5" />
-          No subscribers yet.
-        </div>
+        <EmptyState
+          icon={Users}
+          title="No subscribers yet"
+          description="Share your page and add a tier to grow your subscriber base."
+        />
       ) : (
         <ul className="space-y-2">
           {subscribers.map((s, i) => (

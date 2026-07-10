@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { formatMoney } from "@/lib/cabana-money";
 import { useBalance } from "@/lib/use-money";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
 import { PayoutRequestDialog } from "./PayoutRequestDialog";
 
 /**
@@ -9,7 +10,7 @@ import { PayoutRequestDialog } from "./PayoutRequestDialog";
  * (never stored as truth). Hosts the mock payout-request dialog.
  */
 export function BalanceCard() {
-  const { data: balance, isLoading } = useBalance();
+  const { data: balance, isLoading, isError, refetch } = useBalance();
 
   const available = balance?.availableCents ?? 0;
   const stats = [
@@ -32,31 +33,47 @@ export function BalanceCard() {
         </div>
         {isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-        ) : (
+        ) : isError ? null : (
           <PayoutRequestDialog availableCents={available} />
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        {stats.map((s, i) => (
-          <motion.div
-            key={s.label}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.04 }}
-            className={`rounded-2xl p-5 ${s.emphasis ? "bg-foreground/[0.06]" : "glass"}`}
-          >
-            <div className="text-xs text-muted-foreground">{s.label}</div>
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+          {stats.map((s) => (
             <div
-              className={`mt-2 font-display font-semibold tabular-nums ${
-                s.emphasis ? "text-3xl text-iridescent" : "text-2xl"
-              }`}
+              key={s.label}
+              className={`animate-pulse rounded-2xl p-5 ${s.emphasis ? "bg-foreground/[0.06]" : "glass"}`}
             >
-              {formatMoney(s.value)}
+              <div className="h-3 w-16 rounded bg-foreground/10" />
+              <div className="mt-3 h-7 w-24 rounded bg-foreground/10" />
             </div>
-          </motion.div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : isError ? (
+        <QueryErrorState title="Couldn’t load your balance" onRetry={refetch} />
+      ) : (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+          {stats.map((s, i) => (
+            <motion.div
+              key={s.label}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className={`rounded-2xl p-5 ${s.emphasis ? "bg-foreground/[0.06]" : "glass"}`}
+            >
+              <div className="text-xs text-muted-foreground">{s.label}</div>
+              <div
+                className={`mt-2 font-display font-semibold tabular-nums ${
+                  s.emphasis ? "text-3xl text-iridescent" : "text-2xl"
+                }`}
+              >
+                {formatMoney(s.value)}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
