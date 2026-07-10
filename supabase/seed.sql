@@ -5,8 +5,11 @@
 -- Provides the ownerless `aurora` demo creator so the /demo and /$username
 -- routes render on a freshly rebuilt instance. NOT applied to production.
 --
--- Deterministic UUIDs keep reruns stable. The validate_creator_handle trigger
--- permits the reserved `aurora` handle precisely because user_id is null.
+-- Deterministic UUIDs keep reruns stable. They are synthetic but RFC-4122-v4
+-- valid — version nibble `4`, variant nibble in [8-b] (e.g. `…-4000-8000-…`) —
+-- so the strict UUID validators in the admin finance/payout actions accept them
+-- without loosening (keep new seed ids in that form). The validate_creator_handle
+-- trigger permits the reserved `aurora` handle precisely because user_id is null.
 -- ============================================================================
 
 insert into public.creator_profiles (id, user_id, handle, name, bio, avatar_url, theme, plan)
@@ -31,15 +34,15 @@ on conflict (id) do nothing;
 
 insert into public.products (id, profile_id, title, price, type, image_url, sales, position)
 values
-  ('00000000-0000-4000-c000-000000000001', '00000000-0000-4000-a000-000000000001', 'Signed vinyl', '$48', 'Physical', 'https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?auto=format&fit=crop&w=600&q=80', 312, 0),
-  ('00000000-0000-4000-c000-000000000002', '00000000-0000-4000-a000-000000000001', 'Studio presets', '$24', 'Download', 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80', 184, 1)
+  ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-a000-000000000001', 'Signed vinyl', '$48', 'Physical', 'https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?auto=format&fit=crop&w=600&q=80', 312, 0),
+  ('00000000-0000-4000-8000-000000000002', '00000000-0000-4000-a000-000000000001', 'Studio presets', '$24', 'Download', 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80', 184, 1)
 on conflict (id) do nothing;
 
 -- A published Phase 6 `purchase` post so the (demo) unlock flow has something to
 -- buy on a fresh instance. A signed-in member can unlock it via create_mock_purchase.
 insert into public.posts (id, creator_profile_id, caption, visibility, status, published_at, price_cents, currency)
 values (
-  '00000000-0000-4000-d000-000000000001',
+  '00000000-0000-4000-9000-000000000001',
   '00000000-0000-4000-a000-000000000001',
   'Unreleased acoustic session — unlock to listen.',
   'purchase',
@@ -54,7 +57,7 @@ on conflict (id) do nothing;
 -- moderation queue has reports to triage on a fresh instance. Local/staging only.
 insert into auth.users (id, email, raw_user_meta_data)
 values (
-  '00000000-0000-4000-e000-000000000001',
+  '00000000-0000-4000-a100-000000000001',
   'demo.reporter@cabana.local',
   '{"name":"Demo Reporter","account_type":"member"}'::jsonb
 )
@@ -65,14 +68,14 @@ on conflict (id) do nothing;
 insert into public.reports (id, reporter_user_id, subject_type, subject_id, reason, details, status)
 values
   (
-    '00000000-0000-4000-f000-000000000001',
-    '00000000-0000-4000-e000-000000000001',
-    'post', '00000000-0000-4000-d000-000000000001',
+    '00000000-0000-4000-b100-000000000001',
+    '00000000-0000-4000-a100-000000000001',
+    'post', '00000000-0000-4000-9000-000000000001',
     'spam', 'This unlock post reads like a scam.', 'open'
   ),
   (
-    '00000000-0000-4000-f000-000000000002',
-    '00000000-0000-4000-e000-000000000001',
+    '00000000-0000-4000-b100-000000000002',
+    '00000000-0000-4000-a100-000000000001',
     'creator', '00000000-0000-4000-a000-000000000001',
     'impersonation', 'Suspected impersonation of a verified artist.', 'reviewing'
   )
@@ -84,11 +87,11 @@ on conflict (id) do nothing;
 insert into public.payout_requests (id, creator_profile_id, amount_cents, currency, status, note)
 values
   (
-    '00000000-0000-4000-c000-000000000001',
+    '00000000-0000-4000-8000-000000000001',
     '00000000-0000-4000-a000-000000000001', 5000, 'USD', 'requested', 'First withdrawal'
   ),
   (
-    '00000000-0000-4000-c000-000000000002',
+    '00000000-0000-4000-8000-000000000002',
     '00000000-0000-4000-a000-000000000001', 12000, 'USD', 'on_hold', 'Awaiting verification'
   )
 on conflict (id) do nothing;
@@ -98,13 +101,13 @@ insert into public.payouts (
 )
 values
   (
-    '00000000-0000-4000-c100-000000000001',
+    '00000000-0000-4000-8100-000000000001',
     '00000000-0000-4000-a000-000000000001',
-    '00000000-0000-4000-c000-000000000001', 5000, 'USD', 'processing', now()
+    '00000000-0000-4000-8000-000000000001', 5000, 'USD', 'processing', now()
   ),
   (
-    '00000000-0000-4000-c100-000000000002',
+    '00000000-0000-4000-8100-000000000002',
     '00000000-0000-4000-a000-000000000001',
-    '00000000-0000-4000-c000-000000000002', 12000, 'USD', 'processing', now()
+    '00000000-0000-4000-8000-000000000002', 12000, 'USD', 'processing', now()
   )
 on conflict (id) do nothing;

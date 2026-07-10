@@ -14,6 +14,10 @@ import { attachSupabaseToken } from "@/integrations/supabase/auth-client-middlew
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { type AdminPayoutRequest, type PayoutAction, PAYOUT_ACTIONS } from "@/lib/cabana-payouts";
 
+// Structural UUID check: 8-4-4-4-12 hex, RFC-4122 version (1-5) + variant
+// ([89ab]) nibbles. Validation stays strict on purpose — demo/seed payout ids
+// are synthetic but RFC-4122-v4-valid (see supabase/seed.sql), so mock data
+// conforms to the format rather than the validator bending to accept it.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function uuid(raw: unknown, label: string): string {
@@ -43,7 +47,9 @@ function first<T>(embed: unknown): T | null {
   return (embed as T | null) ?? null;
 }
 
-type EmbeddedCreator = { handle: string | null; display_name: string | null };
+// creator_profiles TABLE column is `name` (`display_name` only exists on the
+// public_creator_profiles VIEW, which can't be embedded here).
+type EmbeddedCreator = { handle: string | null; name: string | null };
 type EmbeddedPayout = {
   status: AdminPayoutRequest["payoutStatus"];
   paid_at: string | null;
@@ -57,7 +63,7 @@ function mapRequest(r: Record<string, unknown>): AdminPayoutRequest {
     id: r.id as string,
     creatorProfileId: r.creator_profile_id as string,
     creatorHandle: creator?.handle ?? null,
-    creatorDisplayName: creator?.display_name ?? null,
+    creatorDisplayName: creator?.name ?? null,
     amountCents: r.amount_cents as number,
     currency: r.currency as string,
     status: r.status as AdminPayoutRequest["status"],
@@ -81,7 +87,7 @@ export const getAdminPayoutRequests = createServerFn({ method: "GET" })
     const { data: rows, error } = await supabase
       .from("payout_requests")
       .select(
-        "id, creator_profile_id, amount_cents, currency, status, note, decided_at, created_at, updated_at, creator_profiles(handle, display_name), payouts(status, paid_at, failure_reason)",
+        "id, creator_profile_id, amount_cents, currency, status, note, decided_at, created_at, updated_at, creator_profiles(handle, name), payouts(status, paid_at, failure_reason)",
       )
       .order("created_at", { ascending: false })
       .limit(500);

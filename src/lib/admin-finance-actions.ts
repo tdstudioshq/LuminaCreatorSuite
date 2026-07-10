@@ -18,6 +18,10 @@ import { attachSupabaseToken } from "@/integrations/supabase/auth-client-middlew
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { AdminPayout, AdminTransaction, CreatorEarning } from "@/lib/cabana-finance";
 
+// Structural UUID check: 8-4-4-4-12 hex, RFC-4122 version (1-5) + variant
+// ([89ab]) nibbles. Validation stays strict on purpose — demo/seed ledger ids
+// are synthetic but RFC-4122-v4-valid (see supabase/seed.sql), so mock data
+// conforms to the format rather than the validator bending to accept it.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function uuid(raw: unknown, label: string): string {
@@ -32,15 +36,17 @@ function clampLimit(raw: unknown, fallback = 500): number {
 
 // The embedded creator_profiles projection may come back as an object (to-one)
 // or, defensively, a single-element array; normalize either to {handle, name}.
-type EmbeddedCreator = { handle: string | null; display_name: string | null };
+// Note: the creator_profiles TABLE column is `name` (`display_name` exists only
+// on the public_creator_profiles VIEW, which can't be embedded here).
+type EmbeddedCreator = { handle: string | null; name: string | null };
 
 function creatorOf(embed: unknown): { handle: string | null; displayName: string | null } {
   const row = (Array.isArray(embed) ? embed[0] : embed) as EmbeddedCreator | null | undefined;
-  return { handle: row?.handle ?? null, displayName: row?.display_name ?? null };
+  return { handle: row?.handle ?? null, displayName: row?.name ?? null };
 }
 
 const TXN_SELECT =
-  "id, type, status, gross_cents, platform_fee_cents, processor_fee_cents, creator_net_cents, currency, reference_type, reference_id, payer_user_id, creator_profile_id, mock_provider_reference, created_at, creator_profiles(handle, display_name)";
+  "id, type, status, gross_cents, platform_fee_cents, processor_fee_cents, creator_net_cents, currency, reference_type, reference_id, payer_user_id, creator_profile_id, mock_provider_reference, created_at, creator_profiles(handle, name)";
 
 function mapTransaction(r: Record<string, unknown>): AdminTransaction {
   const creator = creatorOf(r.creator_profiles);
@@ -106,7 +112,7 @@ export const getAdminPayouts = createServerFn({ method: "GET" })
     const { data: rows, error } = await supabase
       .from("payouts")
       .select(
-        "id, creator_profile_id, amount_cents, currency, status, requested_at, paid_at, failure_reason, created_at, creator_profiles(handle, display_name)",
+        "id, creator_profile_id, amount_cents, currency, status, requested_at, paid_at, failure_reason, created_at, creator_profiles(handle, name)",
       )
       .order("created_at", { ascending: false })
       .limit(500);
@@ -138,7 +144,7 @@ export const getAdminCreatorEarnings = createServerFn({ method: "GET" })
     const { data: rows, error } = await supabase
       .from("creator_balances")
       .select(
-        "creator_profile_id, currency, pending_cents, available_cents, lifetime_gross_cents, lifetime_fees_cents, lifetime_net_cents, lifetime_paid_out_cents, creator_profiles(handle, display_name)",
+        "creator_profile_id, currency, pending_cents, available_cents, lifetime_gross_cents, lifetime_fees_cents, lifetime_net_cents, lifetime_paid_out_cents, creator_profiles(handle, name)",
       )
       .limit(1000);
     if (error) throw new Error(error.message);
