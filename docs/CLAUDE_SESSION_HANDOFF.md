@@ -1,6 +1,6 @@
 # CABANA — Claude Agent Session Handoff
 
-> Prepared June 25, 2026
+> Prepared June 25, 2026 · Last updated July 8, 2026
 >
 > Workspace: `/Users/tdstudiosny/LuminaCreatorSuite`
 
@@ -15,6 +15,214 @@ Use these documents as the source of truth:
 1. [`CABANA_ARCHITECTURE.md`](../CABANA_ARCHITECTURE.md)
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
+
+## Session update — July 9, 2026 (Ground-truth audit → Phase 0 fixes → themed commits → hygiene → docs)
+
+Acted on the July 9 ground-truth audit: pre-commit correctness fixes, then split the entire
+~123-file working set into small themed commits, a repo-hygiene pass, and this docs sync.
+**Still frontend/docs + additive SQL only — no cloud Supabase schema or data touched; NOT deployed.**
+The whole set is now COMMITTED on `main` (it was previously uncommitted at `6c35f5b`).
+
+- **Phase 0 — pre-commit correctness fixes:**
+  - **UUID validation un-loosened.** `admin-finance-actions.ts` / `admin-payout-actions.ts` had relaxed
+    the RFC-4122 variant nibble to `[0-9a-f]` to accept non-v4 seed ids. Restored the strict `[89ab]`
+    variant and instead made the seed data v4-compliant (`seed.sql` / `smoke.sql`:
+    `-4000-{c,d,e,f}000-` → valid `8/9/a/b` variants, collision-checked). Validation no longer bends
+    to mock data.
+  - **Batched media auth proven.** `getPostMediaUrlsBatch` already authorized each post via
+    `can_view_post` before any service-role signing; extracted that ordering into the pure
+    `resolveBatchPostMedia` (`cabana-posts.ts`) with a defense-in-depth "drop over-returned rows"
+    guard, and added unit tests proving an unauthorized post id in a batch yields no signed URL while
+    authorized ids still resolve.
+  - **M-18 version-pinned.** Documented that `auth-client-middleware.ts`'s non-OK-`Response`→throw
+    coercion depends on TanStack Start's internal `ctx.result` shape (pinned `@tanstack/react-start
+    ^1.167.50`), so a future upgrade re-verifies it.
+  - **Notification leak test.** Added a behavioral test (`notifications.sql`) proving an admin reads
+    every user's notifications unfiltered (the "Admins read all" policy) but only their own through
+    the recipient-scoped query the actions now run.
+- **Phase 1 — themed commits (12 code/db).** Split into, in order: `fix(security)` recipient scoping ·
+  `fix(admin)` creator embeds + UUID/seeds · `feat(api)` H-08 batching · `fix(auth)` M-18 + funnel ·
+  `feat(deploy)` security headers + env template · `fix(realtime)` channel topics · `feat(ux)`
+  error-state honesty · `feat(ui)` trust/demo labeling · `refactor(nav)` · `feat(onboarding)` ·
+  `feat(ui)` buttons/motion · `feat(db)` migrations 20260529 + 20260530.
+  ⚠️ `git add -p` is unavailable in this environment (interactive), so cross-theme files were assigned
+  to their dominant theme with secondary changes noted in each commit body (not hunk-split).
+- **Phase 2 — hygiene.**
+  - **Lockfiles:** kept BOTH. `bun.lock` is load-bearing (CI's main job runs `bun install
+    --frozen-lockfile`; local dev installs/runs via bun), `pnpm-lock.yaml` is for Vercel's hoisted
+    prod build + the `verify-prod-deps` CI job. NOT drift — deleting `bun.lock` would red CI.
+  - **Cloudflare config:** kept `wrangler.jsonc` + `@cloudflare/vite-plugin`. Verified the Vercel
+    build passes WITHOUT `wrangler.jsonc` and the framework config doesn't statically import the
+    plugin, but the plugin is locked in BOTH frozen lockfiles — removing it needs a dual-lockfile
+    regen for zero build benefit, and the deploy coupling has a documented 404 failure mode.
+    Deferred to a dedicated change gated on a real Vercel preview deploy.
+  - **Dead files removed (verified zero-reference; tsc+build green after):** retired marketing landing
+    set (Hero, BrandShowcase, Features, FinalCTA, Footer, Analytics, LogoMarquee) + their art;
+    `cabana-demo-data.ts` (its only consumer DemoMessages.tsx was deleted this cycle); orphaned images
+    (`src/assets/creator-*`/`product-*`, `public/oliviac.jpg`, `public/dani/danibackground.jpg`, the
+    whole `public/images/socials/` set).
+  - **Naming convention (flagged, not renamed):** `cabana-store.ts` / `cabana-auth.ts` /
+    `cabana-roles.ts` embed hooks rather than following the pure/`*-actions`/`use-*` trio;
+    `cabana-analytics.ts` (link-in-bio tracker) sits confusingly close to `cabana-creator-analytics.ts`.
+- **Phase 3 — docs sync (this commit):** handoff (this block), CLAUDE.md (dropped the deleted
+  `cabana-demo-data` reference), and CABANA_PROJECT_STATE / ROUTE_MAP / COMPONENT_MAP / DATABASE /
+  TECH_DEBT refreshed to reality.
+- **Migrations (committed, NOT applied to cloud — gated):** `20260529000000_post_media_service_grant.sql`
+  and `20260530000000_high_qa_fixes.sql` + their behavioral tests, wired into CI/db-validate.
+  Validated only by reading + CI's from-zero Docker rebuild — **not run locally (no Docker in this
+  sandbox).**
+- **Gate (full, this session):** `bunx tsc --noEmit` clean · `bun run lint` **0 errors / 6 expected
+  shadcn warnings** · `bun run test` **337/337 (16 files)** · coverage **99.53% stmts / 95.8% branch /
+  100% funcs / 100% lines** (≥95%) · `bun run build` green (`.vercel/output`).
+- **Still pending approval (do NOT execute without sign-off):** (1) apply
+  `supabase/reconcile/03_fix_storage_policies.sql` to cloud (avatar upload broken until then);
+  (2) apply migrations `20260529` + `20260530` to cloud + a `supabase migration repair` for cloud
+  history; (3) production redeploy (`vercel deploy --prebuilt`); (4) drop the `legacy_reel` schema.
+- **Next:** push `main` to origin, confirm CI green (incl. the Docker db-validate job on the two new
+  migrations), then work the approval checklist item by item.
+
+## Session update — July 8, 2026 (High-severity QA fixes + `/init` doc audit)
+
+Frontend/docs + additive SQL only; **no cloud Supabase schema or data touched** (cloud
+`rpzaeqoqcaxxavltgvpe` untouched). All work remains **uncommitted** on `main` (tip `6c35f5b`),
+stacked on the Batch 1 + Batch 2 working set below.
+
+- **High-severity QA fixes (behavioral audit follow-up) — three corrective, additive-only SQL fixes,
+  no new tables/columns/enums/RLS/policies:** migration `20260530000000_high_qa_fixes.sql` +
+  behavioral test `supabase/tests/high_qa_fixes.sql`.
+  - **H5** — `public_creator_profiles.post_count` was hardcoded `0`, so every discovery/search card
+    showed a fabricated "0 posts". Replaced with a real count of the creator's **published** posts
+    (count-only; the view stays a public projection — no gated content exposed, same shape as the
+    existing `follower_count` subquery).
+  - **H8** — `create_mock_purchase` guarded idempotency with a bare `select exists` on
+    `content_entitlements`, so two concurrent unlocks both passed and each wrote a transaction +
+    purchase (double-charge/double-credit; only the entitlement deduped). Added a transaction-scoped
+    advisory lock on `(buyer, post)` to serialize the critical section; the existing entitlement
+    guard then makes the second call a clean no-op.
+  - **H9** — `request_payout` did recalc → read available → check → insert with no serialization, so
+    two concurrent requests over-reserved and drove `available_cents` negative. Added a
+    transaction-scoped per-creator advisory lock so requests serialize and the second re-reads the
+    reduced balance. (Advisory locks release at transaction end — each PostgREST RPC is its own
+    transaction — so no unlock/deadlock surface; each function takes a single lock.)
+- **Also in the uncommitted set:** `20260529000000_post_media_service_grant.sql` +
+  `supabase/tests/post_media_service_grant.sql` (corrective: `grant select on public.post_media to
+service_role` — hosted Supabase grants it via platform ACLs but from-zero rebuilds don't, so
+  `getPostMediaUrls` failed with `42501` and post images never rendered).
+- **`/init` documentation audit:** re-audited `CLAUDE.md` against the tree and corrected three stale
+  spots introduced by the Batch 2 IA change + QA fixes: (1) the Phase 11A routing statement now
+  reads "the creator business home is the `/dashboard` index; `/dashboard/home` redirects to it;
+  legacy `DashHome` moved to `/dashboard/link-in-bio`" and documents the `WelcomeLive` /
+  `cabana:justOnboarded` banner (the old text still claimed `DashHome` lived at `/dashboard`);
+  (2) migration `20260530000000_high_qa_fixes.sql` appended to the ordered chain with its H5/H8/H9
+  summary; (3) `high_qa_fixes.sql` added to the behavioral-tests list. Prettier-clean.
+- **⚠️ SQL NOT validated locally this session** — no Docker in this sandbox, so `bun run db:validate`
+  did not run. The two new migrations + tests are additive/corrective and rely on **CI's from-zero
+  rebuild** for validation. Neither migration has been applied to cloud (gated — do NOT `db push`
+  without explicit approval).
+- **Gate (this session):** `bunx tsc --noEmit` clean · `bun run lint` **0 errors / 6 expected shadcn
+  react-refresh warnings** · `bun run test` **332/332 (16 files)** · `bun run build` green
+  (`.vercel/output` emitted, ~5s). Handoff-gate satisfied for the TS layer.
+- **Current program state:** July 2026 UI/UX audit polish program — **Batch 1 (Trust & Honesty) DONE,
+  Batch 2 (Core UX) DONE, High-severity QA fixes DONE** (all uncommitted). **Next: a fresh read-only
+  QA playtest, then the audit chain (UI/UX audit → fix → QA → design-consistency → fix → QA →
+  production-readiness), then commit/push/deploy — all gated.** Batch 3 (Accessibility) remains the
+  next planned polish batch but is gated on approval. **No new features** until the app is hardened.
+
+## Session update — July 8, 2026 (UI/UX audit → Batch 1 Trust & Honesty + doc sync)
+
+Frontend + docs only; **no Supabase schema or data touched** (cloud untouched; the local Docker
+stack was rebuilt from zero for browser verification, then stopped). All work left
+**uncommitted** for review alongside the July 7–8 QA bug-fix working set.
+
+- **Read-only UI/UX production-readiness audit** (multi-agent: 21 auditors + adversarial
+  verification + coverage critic): 303 raw findings → **249 confirmed** (+6 critic) / 49
+  duplicates / 5 refuted. **0 Critical, 9 High, ~116 Medium, ~130 Low**; section scores 5–7.5,
+  overall ≈6.5/10 (weakest: links/store/media-kit/settings). Top themes: fake-presented-as-real,
+  failures rendering as fake zeros, silent list caps, two auth visual languages, reduced-motion
+  ignored, unconfirmed deletes, shared "CABANA" tab titles. The prior QA pass's Critical/High
+  fixes were independently re-verified as present in the working tree.
+- **Approved batch plan** (Tyler): **1 Trust & Honesty (DONE) → 2 Core UX (DONE) →
+  3 Accessibility → 4 Creator Workflow → 5 Design System → 6 Marketing & Polish.** Each batch:
+  implement → full gate → stop for approval. **Next: Batch 3 (Accessibility — gated, do not
+  start without approval):** MotionConfig reducedMotion, aria labels/pressed on icon-only and
+  segmented controls, aria-current fuzzy-match fix, skip link, route-change focus management,
+  dialog a11y (ProductDrawer/GlobalNav sheet), touch targets, 14px-input iOS zoom, post-media
+  alt text.
+- **Batch 2 — Core UX (COMPLETE, verified):** ~30 files across six work streams; browser-tested
+  on the local Docker stack (11 scripted Playwright checks incl. volume-seeded load-more flows —
+  all pass, zero console errors).
+  - **IA:** `/dashboard` is now the real creator business home (WelcomeLive banner extracted to
+    `dashboard/WelcomeLive.tsx` and moved there; `/dashboard/home` → redirect). The link-in-bio
+    overview (`DashHome`) lives at new **`/dashboard/link-in-bio`** retitled "My Page" (greeting
+    hero removed). Sidebar restructured into grouped sections (Creator studio / Link-in-bio /
+    Account); **Messages now points at real `/messages`** with a live unread badge
+    (`useUnreadMessages`); `/dashboard/messages` → redirect; `DemoMessages.tsx` deleted.
+    "Analytics" (→ `/dashboard/performance`) and "Link Analytics" (→ `/dashboard/analytics`,
+    h1 "Link analytics") labels un-crossed; QuickActions labels match the sidebar verbatim.
+  - **Autosave:** `use-debounced-callback.ts` now FLUSHES pending edits on unmount (was cancel)
+    — closing an editor within the 500 ms window saves instead of silently dropping; LinkManager
+    UrlField toasts when an invalid URL would be silently discarded at close.
+  - **Caps → load-more + disclosure** (RPC server clamps: feed 50, comments/messages 100):
+    home feed + creator-profile feed 20→50 ("Load more posts", cap note at 50, filtered header
+    count fixed to "{visible} of {total}"); comments 30→100; conversation history 50→100
+    ("Load earlier messages", auto-scroll now keys on newest-message id so prepending doesn't
+    yank); notifications 50→200; admin ledger 500→1000 with an explicit "window" disclosure on
+    totals/CSV (+CSV title). Deeper cursor pagination documented as follow-up, not built.
+  - **Retry + defaults:** `QueryClient` now `retry: 1, staleTime: 30s` (kills ~15 s failure
+    spinners); `QueryErrorState` retries wired into ConversationListPane, ConversationView,
+    CommentList, LedgerExplorer, FinanceOverview, PayoutQueue, ReportQueue, AuditLogTable;
+    `usePost` `retry: false` + PostDetail error state gains Retry with honest copy.
+  - **Onboarding resilience:** client auth guard (guest → `/login?redirect=/onboarding`);
+    URL-backed step (`?step=`, browser Back walks steps, refresh resumes via persisted
+    max-step); link drafts + look choices mirrored to sessionStorage (cleared on success);
+    `goLive` collects mutation results — partial failure keeps the user on Preview with an
+    inline error and no false celebration (created drafts tracked so retry can't duplicate
+    links); Preview retitled "Here's your page"; avatar picker toasts rejections and reverts
+    the preview on failed upload.
+- **Batch 1 — Trust & Honesty (COMPLETE, verified):** 17 files + 1 new component; `+~360/−~115`.
+  - `MediaKit.tsx`: hero bound to the real `useCabana()` profile (branded-initial fallback —
+    never a stock stranger photo); amber "Sample data — demo preview" pill + "· sample" section
+    markers + honest deck caption (sample metric arrays remain, now labeled).
+  - `SettingsPanel.tsx`: fake connection states removed — Stripe rests as "After payments
+    launch", others "Coming soon", socials "Not linked"; `@aurora` handles + "SSL active • CDN
+    enabled" badge deleted; domain input derives from the real handle; honest subtitle +
+    "custom domains coming soon" caption.
+  - `routes/admin.tsx`: hub-wide amber demo pill on every tab; all 8 tab subtitles demo-labeled;
+    fake TopBar search/bell removed; every handler-less control disabled with
+    `title="Demo preview — not functional"`; sidebar "99.99% uptime" → "Sample status — not
+    monitoring"; 5-card real-tools grid (Reports · Audit · Finance · Ledger · Payouts) promoted
+    onto Overview; `/admin/payouts` card added to the Payouts tab.
+  - Aurora fallbacks removed from both "Preview public page" affordances (`Sidebar.tsx`,
+    `ProfileEditor.tsx` — disabled "Set your handle first" state instead; `rel` added);
+    `/td` fake Follow replaced with a real "Follow on Instagram" link; orphaned
+    `src/assets/aurora-hero.jpg` deleted.
+  - **NEW `src/components/cabana/QueryErrorState.tsx`** + error/loading honesty across
+    `BalanceCard` (skeletons while loading, error+Retry, no $0.00 masking),
+    `HistoryCard`/Transaction/Tip/Purchase/PayoutHistory, `SubscribersDashboard`, `LinkManager`,
+    `StoreManager`, legacy `AnalyticsPage`, and `DashHome` (events stats + traffic chart).
+    Convention recorded in `CLAUDE.md`: failed queries must never render fake business data.
+  - `LinkManager` copy: "Schedule for later" promise removed; field relabeled
+    "Note shown on this link (optional)".
+- **Final verification pass** (Tyler-requested): all seven trust areas re-audited; 7 residual
+  issues found and fixed (Settings resting-state pills were inverted; 4 admin subtitles still
+  cited fake numbers as live; `DashHome` zeros-on-error; per-section sample labels; copy).
+  Repo-wide sweeps: `?? []`/`?? 0` patterns classified (none render fake business data on error);
+  aurora references classified (seed/tests/demo fixtures/orphaned Hero.tsx/signup placeholder —
+  all intentional). **Authenticated Playwright walkthrough** on the local Docker stack
+  (`supabase db reset` from all 19 migrations + seed; throwaway admin-creator; Media Kit,
+  Settings, Earnings, DashHome, Admin Overview + Users driven with zero console errors;
+  screenshots in the session scratchpad). Teardown: `.env.local` restored byte-identical,
+  test user deleted, stack stopped.
+- **Doc sync (this session):** `CLAUDE.md` (QueryErrorState + demo-labeling conventions;
+  Vercel/backend topology was already updated July 8), this handoff, `CABANA_TECH_DEBT.md`
+  (false "no test runner"/"no git" rows resolved; UI/UX polish program register added),
+  `CABANA_ROUTE_MAP.md` + `CABANA_COMPONENT_MAP.md` refreshed against the real tree,
+  `CABANA_PROJECT_STATE.md` checkpoint re-stamped (main @ `6c35f5b` + uncommitted working set).
+  Note: `docs/TECH_DEBT.md` / `docs/M8_RECOMMENDATIONS.md` do not exist in this repo — the
+  register is `CABANA_TECH_DEBT.md`.
+- **Gate:** `bunx tsc --noEmit` clean · `bun run lint` 0 errors (6 expected shadcn warnings) ·
+  `bun run test` **332/332** · `bun run build` green (Vercel output). `db:validate` not required
+  (no SQL changes); the local from-zero rebuild ran green incidentally during browser setup.
 
 ## Session update — July 7, 2026 (home/login card redesign + lint fix)
 
@@ -36,7 +244,7 @@ UI/tooling-only session; **no Supabase schema or data touched**, no phase work.
   `.prettierignore`, then auto-fixed 17 real Prettier errors in `src`.
 - **Google OAuth login:** `cabanaAuth.loginWithGoogle()` (`cabana-auth.ts`) calls
   `supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo:
-  `${origin}/auth/callback` } })`. `LoginCard` now shows a "Continue with Google" button (with
+`${origin}/auth/callback` } })`. `LoginCard` now shows a "Continue with Google" button (with
   loading + inline error states) above the email/password+VIP form, which sits under an
   "Admin access" separator. New route `src/routes/auth.callback.tsx` (`noindex`) waits for the
   session (detectSessionInUrl consumes the redirect tokens; 10s timeout → visible error + back
@@ -88,8 +296,8 @@ UI/tooling-only session; **no Supabase schema or data touched**, no phase work.
   3. **Onboarding** — removed the "04 — Define" step and the entire "Generate with AI" flow
      (Define/Generate steps + AISetup/Generating/Field components); STEPS is now Welcome · Identity ·
      Theme · Connect · Preview (Preview retagged "04 — Preview"). `onboarding.tsx`.
-  Fixes 2 & 3 need a **production redeploy** (built, `.vercel/output` ready) — also blocked pending
-  Tyler's authorization. Fix 1 is a cloud-SQL change (no redeploy).
+     Fixes 2 & 3 need a **production redeploy** (built, `.vercel/output` ready) — also blocked pending
+     Tyler's authorization. Fix 1 is a cloud-SQL change (no redeploy).
 - **Profile-first onboarding + customization fields (July 7, uncommitted):** rewrote
   `/onboarding` into a profile-first builder — Identity (avatar · display name · username ·
   headline · bio) → Links (real manual inputs for Instagram/TikTok/YouTube/X/Website/Store/Email/
@@ -104,7 +312,7 @@ UI/tooling-only session; **no Supabase schema or data touched**, no phase work.
   `button_style`, defaulted so older profiles keep working). Wired through `cabana-store`
   (types/mapper/`setProfile`), onboarding, `$username` public page, `DashHome`, and `ProfileEditor`
   (edit later). Types regenerated; behavioral test `supabase/tests/profile_customization.sql` added
-  + wired into `db-validate.sh`. New link icons `mail`/`phone`/`x` + a batch `createLinks` mutation.
+  - wired into `db-validate.sh`. New link icons `mail`/`phone`/`x` + a batch `createLinks` mutation.
 - **Verified end-to-end on local** (mobile viewport, DB-confirmed): identity/headline/theme/accent/
   button/links all persist (e.g. `headline='Photographer & Visual Artist'`, `accent_color='#f9a8d4'`,
   `button_style='pill'`, `theme='rose'`); preview + public page render headline (accent-colored),

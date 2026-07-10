@@ -1,929 +1,2550 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="robots" content="noindex, nofollow" />
-<title>CABANA — Project Status</title>
-<style>
-  /* ============ tokens ============ */
-  :root {
-    --void: #07070c;            /* page plane */
-    --panel: #0e0e16;           /* card base */
-    --glass: rgba(255,255,255,.032);
-    --line: rgba(255,255,255,.08);
-    --line-strong: rgba(255,255,255,.16);
-    --ink: #f2f2f7;
-    --ink-2: #a8a9b8;
-    --ink-3: #7e7f8e;
-    --seq: #6ea8ef;             /* single-hue meter fill (coverage) */
-    --good: #0ca30c;
-    --warn: #fab219;
-    --serious: #ec835a;
-    --crit: #d03b3b;
-    --iri: linear-gradient(115deg,#93e6f8 0%,#a5b4fc 32%,#e6a8f0 64%,#ffd9a3 100%);
-    --display: "Bodoni 72", "Didot", "Playfair Display", Georgia, ui-serif, serif;
-    --body: system-ui, -apple-system, "Segoe UI", sans-serif;
-    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
-    --radius: 14px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body {
-    background:
-      radial-gradient(1100px 480px at 18% -8%, rgba(165,180,252,.075), transparent 60%),
-      radial-gradient(900px 420px at 92% 4%, rgba(230,168,240,.05), transparent 55%),
-      var(--void);
-    color: var(--ink);
-    font: 15px/1.6 var(--body);
-    -webkit-font-smoothing: antialiased;
-    min-height: 100vh;
-  }
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 96px; }
-  a { color: var(--ink-2); }
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>CABANA — Project Status</title>
+    <style>
+      /* ============ tokens ============ */
+      :root {
+        --void: #07070c; /* page plane */
+        --panel: #0e0e16; /* card base */
+        --glass: rgba(255, 255, 255, 0.032);
+        --line: rgba(255, 255, 255, 0.08);
+        --line-strong: rgba(255, 255, 255, 0.16);
+        --ink: #f2f2f7;
+        --ink-2: #a8a9b8;
+        --ink-3: #7e7f8e;
+        --seq: #6ea8ef; /* single-hue meter fill (coverage) */
+        --good: #0ca30c;
+        --warn: #fab219;
+        --serious: #ec835a;
+        --crit: #d03b3b;
+        --iri: linear-gradient(115deg, #93e6f8 0%, #a5b4fc 32%, #e6a8f0 64%, #ffd9a3 100%);
+        --display: "Bodoni 72", "Didot", "Playfair Display", Georgia, ui-serif, serif;
+        --body: system-ui, -apple-system, "Segoe UI", sans-serif;
+        --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+        --radius: 14px;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background:
+          radial-gradient(1100px 480px at 18% -8%, rgba(165, 180, 252, 0.075), transparent 60%),
+          radial-gradient(900px 420px at 92% 4%, rgba(230, 168, 240, 0.05), transparent 55%),
+          var(--void);
+        color: var(--ink);
+        font: 15px/1.6 var(--body);
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+      }
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 0 24px 96px;
+      }
+      a {
+        color: var(--ink-2);
+      }
 
-  /* ============ topbar ============ */
-  .topbar {
-    position: sticky; top: 0; z-index: 40;
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-    background: rgba(7,7,12,.78);
-    border-bottom: 1px solid var(--line);
-  }
-  .topbar-inner {
-    max-width: 1180px; margin: 0 auto; padding: 12px 24px;
-    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  }
-  .wordmark { font-family: var(--display); font-size: 19px; letter-spacing: .30em; font-weight: 400; }
-  .wordmark b { font-weight: 400; background: var(--iri); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .topbar .sub { font-size: 11.5px; color: var(--ink-3); letter-spacing: .14em; text-transform: uppercase; }
-  .topbar .spacer { flex: 1; }
-  .gate { display: flex; gap: 8px; flex-wrap: wrap; }
-  .chip {
-    display: inline-flex; align-items: center; gap: 6px;
-    font: 11px/1 var(--mono); letter-spacing: .04em;
-    color: var(--ink-2); padding: 6px 9px;
-    border: 1px solid var(--line); border-radius: 999px; background: var(--glass);
-    white-space: nowrap;
-  }
-  .chip .ok { color: var(--good); font-weight: 700; }
-  .tb-btn {
-    font: 11.5px var(--body); color: var(--ink-2);
-    background: none; border: 1px solid var(--line); border-radius: 8px;
-    padding: 6px 10px; cursor: pointer;
-  }
-  .tb-btn:hover { border-color: var(--line-strong); color: var(--ink); }
+      /* ============ topbar ============ */
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        background: rgba(7, 7, 12, 0.78);
+        border-bottom: 1px solid var(--line);
+      }
+      .topbar-inner {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 12px 24px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+      .wordmark {
+        font-family: var(--display);
+        font-size: 19px;
+        letter-spacing: 0.3em;
+        font-weight: 400;
+      }
+      .wordmark b {
+        font-weight: 400;
+        background: var(--iri);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .topbar .sub {
+        font-size: 11.5px;
+        color: var(--ink-3);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .topbar .spacer {
+        flex: 1;
+      }
+      .gate {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font: 11px/1 var(--mono);
+        letter-spacing: 0.04em;
+        color: var(--ink-2);
+        padding: 6px 9px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--glass);
+        white-space: nowrap;
+      }
+      .chip .ok {
+        color: var(--good);
+        font-weight: 700;
+      }
+      .tb-btn {
+        font: 11.5px var(--body);
+        color: var(--ink-2);
+        background: none;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 6px 10px;
+        cursor: pointer;
+      }
+      .tb-btn:hover {
+        border-color: var(--line-strong);
+        color: var(--ink);
+      }
 
-  /* ============ hero ============ */
-  .hero { padding: 64px 0 22px; }
-  .eyebrow {
-    font-size: 11px; letter-spacing: .22em; text-transform: uppercase;
-    color: var(--ink-3); display: flex; align-items: center; gap: 10px;
-  }
-  .eyebrow::before { content: ""; width: 26px; height: 1px; background: var(--iri); display: inline-block; }
-  h1 {
-    font-family: var(--display); font-weight: 400;
-    font-size: clamp(34px, 5.4vw, 58px); line-height: 1.06; letter-spacing: .005em;
-    margin: 18px 0 16px; max-width: 21ch;
-  }
-  h1 em { font-style: italic; background: var(--iri); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .hero p.lede { color: var(--ink-2); max-width: 68ch; }
-  .hero p.lede strong { color: var(--ink); font-weight: 600; }
+      /* ============ hero ============ */
+      .hero {
+        padding: 64px 0 22px;
+      }
+      .eyebrow {
+        font-size: 11px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .eyebrow::before {
+        content: "";
+        width: 26px;
+        height: 1px;
+        background: var(--iri);
+        display: inline-block;
+      }
+      h1 {
+        font-family: var(--display);
+        font-weight: 400;
+        font-size: clamp(34px, 5.4vw, 58px);
+        line-height: 1.06;
+        letter-spacing: 0.005em;
+        margin: 18px 0 16px;
+        max-width: 21ch;
+      }
+      h1 em {
+        font-style: italic;
+        background: var(--iri);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .hero p.lede {
+        color: var(--ink-2);
+        max-width: 68ch;
+      }
+      .hero p.lede strong {
+        color: var(--ink);
+        font-weight: 600;
+      }
 
-  /* signature: the migration spine */
-  .spine-block { margin: 40px 0 8px; }
-  .spine-label { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 14px; }
-  .spine-scroll { overflow-x: auto; padding-bottom: 10px; }
-  .spine { display: flex; align-items: flex-start; min-width: 900px; position: relative; }
-  .spine::before {
-    content: ""; position: absolute; top: 7px; left: 8px; right: 8px; height: 2px;
-    background: var(--iri); opacity: .85; transform-origin: left; border-radius: 2px;
-  }
-  .node { flex: 1; min-width: 46px; position: relative; padding-top: 22px; text-align: left; }
-  .node .dot {
-    position: absolute; top: 0; left: 8px; width: 16px; height: 16px; border-radius: 50%;
-    background: var(--panel); border: 2px solid #c3b6f5;
-    box-shadow: 0 0 0 3px var(--void);
-  }
-  .node.ship .dot { background: var(--iri); border-color: transparent; }
-  .node.fix .dot { border-radius: 4px; transform: rotate(45deg); background: var(--panel); border-color: var(--warn); }
-  .node.ghost .dot { background: transparent; border: 2px dashed var(--ink-3); }
-  .node .tag { display: block; font: 10px var(--mono); color: var(--ink-3); letter-spacing: .02em; padding-right: 8px; }
-  .node .name { display: block; font-size: 11px; color: var(--ink-2); line-height: 1.35; padding-right: 8px; }
-  .node.ghost .name, .node.ghost .tag { color: var(--ink-3); font-style: italic; }
-  .spine-legend { display: flex; gap: 18px; margin-top: 10px; font-size: 11px; color: var(--ink-3); flex-wrap: wrap; }
-  .spine-legend span { display: inline-flex; align-items: center; gap: 7px; }
-  .lg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-  .lg-ship { background: var(--iri); }
-  .lg-fix { border-radius: 3px; transform: rotate(45deg); border: 2px solid var(--warn); width: 8px; height: 8px; }
-  .lg-ghost { border: 2px dashed var(--ink-3); background: transparent; }
+      /* signature: the migration spine */
+      .spine-block {
+        margin: 40px 0 8px;
+      }
+      .spine-label {
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        margin-bottom: 14px;
+      }
+      .spine-scroll {
+        overflow-x: auto;
+        padding-bottom: 10px;
+      }
+      .spine {
+        display: flex;
+        align-items: flex-start;
+        min-width: 900px;
+        position: relative;
+      }
+      .spine::before {
+        content: "";
+        position: absolute;
+        top: 7px;
+        left: 8px;
+        right: 8px;
+        height: 2px;
+        background: var(--iri);
+        opacity: 0.85;
+        transform-origin: left;
+        border-radius: 2px;
+      }
+      .node {
+        flex: 1;
+        min-width: 46px;
+        position: relative;
+        padding-top: 22px;
+        text-align: left;
+      }
+      .node .dot {
+        position: absolute;
+        top: 0;
+        left: 8px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--panel);
+        border: 2px solid #c3b6f5;
+        box-shadow: 0 0 0 3px var(--void);
+      }
+      .node.ship .dot {
+        background: var(--iri);
+        border-color: transparent;
+      }
+      .node.fix .dot {
+        border-radius: 4px;
+        transform: rotate(45deg);
+        background: var(--panel);
+        border-color: var(--warn);
+      }
+      .node.ghost .dot {
+        background: transparent;
+        border: 2px dashed var(--ink-3);
+      }
+      .node .tag {
+        display: block;
+        font: 10px var(--mono);
+        color: var(--ink-3);
+        letter-spacing: 0.02em;
+        padding-right: 8px;
+      }
+      .node .name {
+        display: block;
+        font-size: 11px;
+        color: var(--ink-2);
+        line-height: 1.35;
+        padding-right: 8px;
+      }
+      .node.ghost .name,
+      .node.ghost .tag {
+        color: var(--ink-3);
+        font-style: italic;
+      }
+      .spine-legend {
+        display: flex;
+        gap: 18px;
+        margin-top: 10px;
+        font-size: 11px;
+        color: var(--ink-3);
+        flex-wrap: wrap;
+      }
+      .spine-legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .lg-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .lg-ship {
+        background: var(--iri);
+      }
+      .lg-fix {
+        border-radius: 3px;
+        transform: rotate(45deg);
+        border: 2px solid var(--warn);
+        width: 8px;
+        height: 8px;
+      }
+      .lg-ghost {
+        border: 2px dashed var(--ink-3);
+        background: transparent;
+      }
 
-  /* stat tiles */
-  .tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin: 30px 0 10px; }
-  .tile {
-    background: var(--glass); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 16px 16px 13px;
-  }
-  .tile .v { font-size: 30px; font-weight: 650; letter-spacing: -.01em; line-height: 1.1; }
-  .tile .k { font-size: 11.5px; color: var(--ink-3); margin-top: 4px; line-height: 1.35; }
-  .tile .s { font-size: 10.5px; color: var(--ink-3); }
+      /* stat tiles */
+      .tiles {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 10px;
+        margin: 30px 0 10px;
+      }
+      .tile {
+        background: var(--glass);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 16px 16px 13px;
+      }
+      .tile .v {
+        font-size: 30px;
+        font-weight: 650;
+        letter-spacing: -0.01em;
+        line-height: 1.1;
+      }
+      .tile .k {
+        font-size: 11.5px;
+        color: var(--ink-3);
+        margin-top: 4px;
+        line-height: 1.35;
+      }
+      .tile .s {
+        font-size: 10.5px;
+        color: var(--ink-3);
+      }
 
-  /* ============ sections grid ============ */
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 34px; }
-  details.card {
-    grid-column: span 1;
-    background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.018));
-    border: 1px solid var(--line); border-radius: var(--radius);
-    overflow: hidden;
-    transition: border-color .18s ease;
-  }
-  details.card:hover { border-color: var(--line-strong); }
-  details.card.wide { grid-column: span 2; }
-  details.card > summary {
-    list-style: none; cursor: pointer; user-select: none;
-    padding: 18px 20px; display: flex; align-items: baseline; gap: 12px;
-  }
-  details.card > summary::-webkit-details-marker { display: none; }
-  summary .num { font: 11px var(--mono); color: var(--ink-3); letter-spacing: .06em; }
-  summary h2 { font-family: var(--display); font-weight: 400; font-size: 21px; letter-spacing: .015em; }
-  summary .hint { margin-left: auto; font-size: 11px; color: var(--ink-3); white-space: nowrap; }
-  summary .chev { color: var(--ink-3); font-size: 12px; transition: transform .2s ease; margin-left: 8px; }
-  details[open] > summary .chev { transform: rotate(90deg); }
-  .card-body { padding: 2px 20px 20px; color: var(--ink-2); font-size: 14px; border-top: 1px solid var(--line); }
-  .card-body > :first-child { margin-top: 14px; }
-  .card-body p + p, .card-body ul + p, .card-body p + ul { margin-top: 10px; }
-  .card-body ul { list-style: none; }
-  .card-body ul li { padding: 5px 0 5px 18px; position: relative; }
-  .card-body ul li::before { content: "—"; position: absolute; left: 0; color: var(--ink-3); }
-  .card-body strong { color: var(--ink); font-weight: 600; }
-  code {
-    font: 12px var(--mono); color: var(--ink);
-    background: rgba(255,255,255,.06); border: 1px solid var(--line);
-    padding: 1px 5px; border-radius: 5px; white-space: nowrap;
-  }
-  .kv { display: grid; grid-template-columns: 150px 1fr; gap: 6px 14px; margin-top: 12px; font-size: 13.5px; }
-  .kv dt { color: var(--ink-3); }
-  .kv dd { color: var(--ink-2); }
+      /* ============ sections grid ============ */
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-top: 34px;
+      }
+      details.card {
+        grid-column: span 1;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018));
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        overflow: hidden;
+        transition: border-color 0.18s ease;
+      }
+      details.card:hover {
+        border-color: var(--line-strong);
+      }
+      details.card.wide {
+        grid-column: span 2;
+      }
+      details.card > summary {
+        list-style: none;
+        cursor: pointer;
+        user-select: none;
+        padding: 18px 20px;
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+      }
+      details.card > summary::-webkit-details-marker {
+        display: none;
+      }
+      summary .num {
+        font: 11px var(--mono);
+        color: var(--ink-3);
+        letter-spacing: 0.06em;
+      }
+      summary h2 {
+        font-family: var(--display);
+        font-weight: 400;
+        font-size: 21px;
+        letter-spacing: 0.015em;
+      }
+      summary .hint {
+        margin-left: auto;
+        font-size: 11px;
+        color: var(--ink-3);
+        white-space: nowrap;
+      }
+      summary .chev {
+        color: var(--ink-3);
+        font-size: 12px;
+        transition: transform 0.2s ease;
+        margin-left: 8px;
+      }
+      details[open] > summary .chev {
+        transform: rotate(90deg);
+      }
+      .card-body {
+        padding: 2px 20px 20px;
+        color: var(--ink-2);
+        font-size: 14px;
+        border-top: 1px solid var(--line);
+      }
+      .card-body > :first-child {
+        margin-top: 14px;
+      }
+      .card-body p + p,
+      .card-body ul + p,
+      .card-body p + ul {
+        margin-top: 10px;
+      }
+      .card-body ul {
+        list-style: none;
+      }
+      .card-body ul li {
+        padding: 5px 0 5px 18px;
+        position: relative;
+      }
+      .card-body ul li::before {
+        content: "—";
+        position: absolute;
+        left: 0;
+        color: var(--ink-3);
+      }
+      .card-body strong {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      code {
+        font: 12px var(--mono);
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        padding: 1px 5px;
+        border-radius: 5px;
+        white-space: nowrap;
+      }
+      .kv {
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        gap: 6px 14px;
+        margin-top: 12px;
+        font-size: 13.5px;
+      }
+      .kv dt {
+        color: var(--ink-3);
+      }
+      .kv dd {
+        color: var(--ink-2);
+      }
 
-  /* badges — status color never carries meaning alone: glyph + label always */
-  .badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-    padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line);
-    color: var(--ink-2); white-space: nowrap; vertical-align: middle;
-  }
-  .badge i { font-style: normal; font-size: 9px; line-height: 1; }
-  .b-live   { border-color: rgba(12,163,12,.5); }    .b-live i   { color: var(--good); }
-  .b-demo   { border-color: rgba(165,180,252,.4); }  .b-demo i   { color: #a5b4fc; }
-  .b-gated  { border-color: rgba(250,178,25,.45); }  .b-gated i  { color: var(--warn); }
-  .b-verify { border-style: dashed; border-color: rgba(250,178,25,.45); } .b-verify i { color: var(--warn); }
-  .b-risk   { border-color: rgba(236,131,90,.5); }   .b-risk i   { color: var(--serious); }
-  .b-block  { border-color: rgba(208,59,59,.55); }   .b-block i  { color: var(--crit); }
+      /* badges — status color never carries meaning alone: glyph + label always */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        color: var(--ink-2);
+        white-space: nowrap;
+        vertical-align: middle;
+      }
+      .badge i {
+        font-style: normal;
+        font-size: 9px;
+        line-height: 1;
+      }
+      .b-live {
+        border-color: rgba(12, 163, 12, 0.5);
+      }
+      .b-live i {
+        color: var(--good);
+      }
+      .b-demo {
+        border-color: rgba(165, 180, 252, 0.4);
+      }
+      .b-demo i {
+        color: #a5b4fc;
+      }
+      .b-gated {
+        border-color: rgba(250, 178, 25, 0.45);
+      }
+      .b-gated i {
+        color: var(--warn);
+      }
+      .b-verify {
+        border-style: dashed;
+        border-color: rgba(250, 178, 25, 0.45);
+      }
+      .b-verify i {
+        color: var(--warn);
+      }
+      .b-risk {
+        border-color: rgba(236, 131, 90, 0.5);
+      }
+      .b-risk i {
+        color: var(--serious);
+      }
+      .b-block {
+        border-color: rgba(208, 59, 59, 0.55);
+      }
+      .b-block i {
+        color: var(--crit);
+      }
 
-  /* feature list */
-  .feat { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; margin-top: 12px; }
-  .feat > div { padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
-  .feat b { display: block; color: var(--ink); font-weight: 600; margin-bottom: 2px; }
-  .feat .badge { float: right; margin-top: 2px; }
+      /* feature list */
+      .feat {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 18px;
+        margin-top: 12px;
+      }
+      .feat > div {
+        padding: 9px 0;
+        border-bottom: 1px solid var(--line);
+        font-size: 13.5px;
+      }
+      .feat b {
+        display: block;
+        color: var(--ink);
+        font-weight: 600;
+        margin-bottom: 2px;
+      }
+      .feat .badge {
+        float: right;
+        margin-top: 2px;
+      }
 
-  /* tables */
-  .tbl-scroll { overflow-x: auto; margin-top: 12px; border: 1px solid var(--line); border-radius: 10px; }
-  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 13px; }
-  th {
-    text-align: left; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase;
-    color: var(--ink-3); font-weight: 600; padding: 10px 14px; border-bottom: 1px solid var(--line-strong);
-    background: rgba(255,255,255,.02);
-  }
-  td { padding: 9px 14px; border-bottom: 1px solid var(--line); color: var(--ink-2); vertical-align: top; }
-  tr:last-child td { border-bottom: none; }
-  td.mono, .mono { font-family: var(--mono); font-size: 12px; color: var(--ink); }
-  tr.group td {
-    font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3);
-    background: rgba(255,255,255,.025); padding: 7px 14px;
-  }
+      /* tables */
+      .tbl-scroll {
+        overflow-x: auto;
+        margin-top: 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 640px;
+        font-size: 13px;
+      }
+      th {
+        text-align: left;
+        font-size: 10.5px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        font-weight: 600;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line-strong);
+        background: rgba(255, 255, 255, 0.02);
+      }
+      td {
+        padding: 9px 14px;
+        border-bottom: 1px solid var(--line);
+        color: var(--ink-2);
+        vertical-align: top;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      td.mono,
+      .mono {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--ink);
+      }
+      tr.group td {
+        font-size: 10.5px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        background: rgba(255, 255, 255, 0.025);
+        padding: 7px 14px;
+      }
 
-  /* meters */
-  .meter { margin-top: 14px; }
-  .meter .m-head { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 6px; }
-  .meter .m-head b { color: var(--ink); font-weight: 600; }
-  .meter .m-head span { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
-  .track { position: relative; height: 6px; border-radius: 4px; background: rgba(255,255,255,.07); overflow: visible; }
-  .fill { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--seq); }
-  .fill.iri { background: var(--iri); }
-  .tick { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink-3); border-radius: 2px; }
-  .m-note { font-size: 11px; color: var(--ink-3); margin-top: 5px; }
+      /* meters */
+      .meter {
+        margin-top: 14px;
+      }
+      .meter .m-head {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12.5px;
+        margin-bottom: 6px;
+      }
+      .meter .m-head b {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .meter .m-head span {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--ink-2);
+      }
+      .track {
+        position: relative;
+        height: 6px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.07);
+        overflow: visible;
+      }
+      .fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        border-radius: 4px;
+        background: var(--seq);
+      }
+      .fill.iri {
+        background: var(--iri);
+      }
+      .tick {
+        position: absolute;
+        top: -3px;
+        bottom: -3px;
+        width: 2px;
+        background: var(--ink-3);
+        border-radius: 2px;
+      }
+      .m-note {
+        font-size: 11px;
+        color: var(--ink-3);
+        margin-top: 5px;
+      }
 
-  /* ============ to-do ============ */
-  .todo-tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
-  .pill {
-    font-size: 12px; padding: 6px 12px; cursor: pointer;
-    border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--ink-2);
-  }
-  .pill[aria-pressed="true"] { border-color: var(--line-strong); background: rgba(255,255,255,.08); color: var(--ink); }
-  .pill .n { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-left: 4px; }
-  .search {
-    flex: 1; min-width: 180px;
-    background: var(--glass); border: 1px solid var(--line); border-radius: 8px;
-    color: var(--ink); font: 13px var(--body); padding: 8px 12px;
-  }
-  .search::placeholder { color: var(--ink-3); }
-  .todo-progress { margin: 16px 0 4px; }
-  .todo-list { list-style: none; margin-top: 14px; }
-  .todo-list > li { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; background: rgba(255,255,255,.015); }
-  .todo-list > li.done { opacity: .55; }
-  .todo-list > li[hidden] { display: none; }
-  .task > summary {
-    list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px;
-    padding: 12px 14px;
-  }
-  .task > summary::-webkit-details-marker { display: none; }
-  .task input[type="checkbox"] {
-    width: 16px; height: 16px; accent-color: #a5b4fc; cursor: pointer; flex-shrink: 0;
-  }
-  .task .t-title { font-size: 14px; color: var(--ink); font-weight: 600; }
-  li.done .t-title { text-decoration: line-through; text-decoration-color: var(--ink-3); }
-  .task summary .badge { margin-left: auto; }
-  .task .t-body { padding: 0 14px 14px 42px; font-size: 13.5px; color: var(--ink-2); }
-  .t-meta { display: grid; grid-template-columns: 92px 1fr; gap: 5px 12px; margin-top: 10px; font-size: 12.5px; }
-  .t-meta dt { color: var(--ink-3); text-transform: uppercase; font-size: 10.5px; letter-spacing: .1em; padding-top: 2px; }
-  .t-meta dd code { white-space: normal; }
-  .t-meta .cmd { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
-  .copy-mini {
-    font: 10.5px var(--body); color: var(--ink-2); background: none;
-    border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; cursor: pointer;
-  }
-  .copy-mini:hover { color: var(--ink); border-color: var(--line-strong); }
-  .reset-btn {
-    font: 12px var(--body); color: var(--serious); background: none;
-    border: 1px solid rgba(236,131,90,.4); border-radius: 8px; padding: 7px 12px; cursor: pointer;
-  }
-  .empty-note { color: var(--ink-3); font-size: 13px; padding: 18px 4px; display: none; }
+      /* ============ to-do ============ */
+      .todo-tools {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 14px;
+      }
+      .pill {
+        font-size: 12px;
+        padding: 6px 12px;
+        cursor: pointer;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: none;
+        color: var(--ink-2);
+      }
+      .pill[aria-pressed="true"] {
+        border-color: var(--line-strong);
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--ink);
+      }
+      .pill .n {
+        font-family: var(--mono);
+        font-size: 10.5px;
+        color: var(--ink-3);
+        margin-left: 4px;
+      }
+      .search {
+        flex: 1;
+        min-width: 180px;
+        background: var(--glass);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--ink);
+        font: 13px var(--body);
+        padding: 8px 12px;
+      }
+      .search::placeholder {
+        color: var(--ink-3);
+      }
+      .todo-progress {
+        margin: 16px 0 4px;
+      }
+      .todo-list {
+        list-style: none;
+        margin-top: 14px;
+      }
+      .todo-list > li {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        margin-bottom: 8px;
+        background: rgba(255, 255, 255, 0.015);
+      }
+      .todo-list > li.done {
+        opacity: 0.55;
+      }
+      .todo-list > li[hidden] {
+        display: none;
+      }
+      .task > summary {
+        list-style: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+      }
+      .task > summary::-webkit-details-marker {
+        display: none;
+      }
+      .task input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: #a5b4fc;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      .task .t-title {
+        font-size: 14px;
+        color: var(--ink);
+        font-weight: 600;
+      }
+      li.done .t-title {
+        text-decoration: line-through;
+        text-decoration-color: var(--ink-3);
+      }
+      .task summary .badge {
+        margin-left: auto;
+      }
+      .task .t-body {
+        padding: 0 14px 14px 42px;
+        font-size: 13.5px;
+        color: var(--ink-2);
+      }
+      .t-meta {
+        display: grid;
+        grid-template-columns: 92px 1fr;
+        gap: 5px 12px;
+        margin-top: 10px;
+        font-size: 12.5px;
+      }
+      .t-meta dt {
+        color: var(--ink-3);
+        text-transform: uppercase;
+        font-size: 10.5px;
+        letter-spacing: 0.1em;
+        padding-top: 2px;
+      }
+      .t-meta dd code {
+        white-space: normal;
+      }
+      .t-meta .cmd {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+      .copy-mini {
+        font: 10.5px var(--body);
+        color: var(--ink-2);
+        background: none;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 3px 8px;
+        cursor: pointer;
+      }
+      .copy-mini:hover {
+        color: var(--ink);
+        border-color: var(--line-strong);
+      }
+      .reset-btn {
+        font: 12px var(--body);
+        color: var(--serious);
+        background: none;
+        border: 1px solid rgba(236, 131, 90, 0.4);
+        border-radius: 8px;
+        padding: 7px 12px;
+        cursor: pointer;
+      }
+      .empty-note {
+        color: var(--ink-3);
+        font-size: 13px;
+        padding: 18px 4px;
+        display: none;
+      }
 
-  /* ============ prompt ============ */
-  .prompt-box {
-    margin-top: 14px; border: 1px solid var(--line-strong); border-radius: 12px;
-    background: #0a0a11; overflow: hidden;
-  }
-  .prompt-head {
-    display: flex; align-items: center; gap: 8px; padding: 10px 14px;
-    border-bottom: 1px solid var(--line); font: 11px var(--mono); color: var(--ink-3);
-  }
-  .prompt-head .dots { display: flex; gap: 5px; }
-  .prompt-head .dots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.14); }
-  .prompt-head button { margin-left: auto; }
-  .copy-btn {
-    font: 12px var(--body); color: var(--ink); cursor: pointer;
-    background: rgba(255,255,255,.08); border: 1px solid var(--line-strong); border-radius: 8px;
-    padding: 6px 12px;
-  }
-  .copy-btn:hover { background: rgba(255,255,255,.13); }
-  pre.prompt {
-    padding: 18px; font: 12.5px/1.7 var(--mono); color: var(--ink-2);
-    white-space: pre-wrap; word-break: break-word; max-height: 480px; overflow-y: auto;
-  }
+      /* ============ prompt ============ */
+      .prompt-box {
+        margin-top: 14px;
+        border: 1px solid var(--line-strong);
+        border-radius: 12px;
+        background: #0a0a11;
+        overflow: hidden;
+      }
+      .prompt-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+        font: 11px var(--mono);
+        color: var(--ink-3);
+      }
+      .prompt-head .dots {
+        display: flex;
+        gap: 5px;
+      }
+      .prompt-head .dots i {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.14);
+      }
+      .prompt-head button {
+        margin-left: auto;
+      }
+      .copy-btn {
+        font: 12px var(--body);
+        color: var(--ink);
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        padding: 6px 12px;
+      }
+      .copy-btn:hover {
+        background: rgba(255, 255, 255, 0.13);
+      }
+      pre.prompt {
+        padding: 18px;
+        font: 12.5px/1.7 var(--mono);
+        color: var(--ink-2);
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 480px;
+        overflow-y: auto;
+      }
 
-  /* ordered build list */
-  ol.build { counter-reset: b; list-style: none; margin-top: 12px; }
-  ol.build li { counter-increment: b; padding: 10px 0 10px 44px; position: relative; border-bottom: 1px solid var(--line); font-size: 13.5px; }
-  ol.build li:last-child { border-bottom: none; }
-  ol.build li::before {
-    content: counter(b, decimal-leading-zero);
-    position: absolute; left: 0; top: 10px;
-    font: 12px var(--mono); color: transparent;
-    background: var(--iri); -webkit-background-clip: text; background-clip: text;
-  }
-  ol.build b { color: var(--ink); font-weight: 600; }
+      /* ordered build list */
+      ol.build {
+        counter-reset: b;
+        list-style: none;
+        margin-top: 12px;
+      }
+      ol.build li {
+        counter-increment: b;
+        padding: 10px 0 10px 44px;
+        position: relative;
+        border-bottom: 1px solid var(--line);
+        font-size: 13.5px;
+      }
+      ol.build li:last-child {
+        border-bottom: none;
+      }
+      ol.build li::before {
+        content: counter(b, decimal-leading-zero);
+        position: absolute;
+        left: 0;
+        top: 10px;
+        font: 12px var(--mono);
+        color: transparent;
+        background: var(--iri);
+        -webkit-background-clip: text;
+        background-clip: text;
+      }
+      ol.build b {
+        color: var(--ink);
+        font-weight: 600;
+      }
 
-  footer { margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 12px; line-height: 1.7; }
+      footer {
+        margin-top: 44px;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+        color: var(--ink-3);
+        font-size: 12px;
+        line-height: 1.7;
+      }
 
-  /* focus + motion */
-  button:focus-visible, input:focus-visible, summary:focus-visible {
-    outline: 2px solid #a5b4fc; outline-offset: 2px; border-radius: 6px;
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .hero > * { animation: rise .55s ease both; }
-    .hero > *:nth-child(2) { animation-delay: .05s; }
-    .hero > *:nth-child(3) { animation-delay: .1s; }
-    .hero > *:nth-child(4) { animation-delay: .16s; }
-    .hero > *:nth-child(5) { animation-delay: .22s; }
-    .spine::before { animation: draw .9s .3s ease both; }
-    @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-    @keyframes draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-  }
+      /* focus + motion */
+      button:focus-visible,
+      input:focus-visible,
+      summary:focus-visible {
+        outline: 2px solid #a5b4fc;
+        outline-offset: 2px;
+        border-radius: 6px;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .hero > * {
+          animation: rise 0.55s ease both;
+        }
+        .hero > *:nth-child(2) {
+          animation-delay: 0.05s;
+        }
+        .hero > *:nth-child(3) {
+          animation-delay: 0.1s;
+        }
+        .hero > *:nth-child(4) {
+          animation-delay: 0.16s;
+        }
+        .hero > *:nth-child(5) {
+          animation-delay: 0.22s;
+        }
+        .spine::before {
+          animation: draw 0.9s 0.3s ease both;
+        }
+        @keyframes rise {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: none;
+          }
+        }
+        @keyframes draw {
+          from {
+            transform: scaleX(0);
+          }
+          to {
+            transform: scaleX(1);
+          }
+        }
+      }
 
-  /* responsive */
-  @media (max-width: 900px) {
-    .tiles { grid-template-columns: repeat(3, 1fr); }
-    .grid { grid-template-columns: 1fr; }
-    details.card.wide { grid-column: span 1; }
-    .feat { grid-template-columns: 1fr; }
-  }
-  @media (max-width: 560px) {
-    .tiles { grid-template-columns: repeat(2, 1fr); }
-    .kv { grid-template-columns: 1fr; gap: 2px 0; }
-    .kv dt { margin-top: 8px; }
-    .t-meta { grid-template-columns: 1fr; }
-    summary .hint { display: none; }
-  }
-</style>
-</head>
-<body>
-
-<div class="topbar">
-  <div class="topbar-inner">
-    <span class="wordmark"><b>CABANA</b></span>
-    <span class="sub">Project status · 2026-07-06</span>
-    <span class="spacer"></span>
-    <span class="gate" aria-label="Verified handoff gate results">
-      <span class="chip"><span class="ok">✓</span> tests 332/332</span>
-      <span class="chip"><span class="ok">✓</span> tsc clean</span>
-      <span class="chip"><span class="ok">✓</span> lint 0 err</span>
-      <span class="chip"><span class="ok">✓</span> build</span>
-    </span>
-    <button class="tb-btn" id="expandAll" type="button">Expand all</button>
-    <button class="tb-btn" id="collapseAll" type="button">Collapse all</button>
-  </div>
-</div>
-
-<div class="wrap">
-
-  <!-- ================= HERO ================= -->
-  <header class="hero">
-    <p class="eyebrow">Cabana · LuminaCreatorSuite · engineering status</p>
-    <h1>Phase 11B shipped.<br />The next move is <em>gated</em>.</h1>
-    <p class="lede">
-      The creator-platform evolution is green end to end: <strong>16 migrations rebuild the database from zero</strong>,
-      <strong>332 unit tests pass</strong>, and the full handoff gate (lint · types · tests · build) was
-      <strong>re-verified today, July&nbsp;6&nbsp;2026</strong>. All money is demo-only integer cents — no processor, no real payouts.
-      Phases 11C (audience insights) and 9C (delivery providers) exist in the roadmap but must not start without explicit approval.
-    </p>
-
-    <!-- signature: the migration spine -->
-    <div class="spine-block">
-      <p class="spine-label">The migration spine — every schema change, in rebuild order</p>
-      <div class="spine-scroll">
-        <div class="spine">
-          <div class="node ship"><span class="dot"></span><span class="tag">0511</span><span class="name">baseline</span></div>
-          <div class="node ship"><span class="dot"></span><span class="tag">0512</span><span class="name">member accounts</span></div>
-          <div class="node ship"><span class="dot"></span><span class="tag">0513</span><span class="name">social graph</span></div>
-          <div class="node ship"><span class="dot"></span><span class="tag">0514</span><span class="name">posts + feed</span></div>
-          <div class="node ship"><span class="dot"></span><span class="tag">0515</span><span class="name">engagement</span></div>
-          <div class="node ship"><span class="dot"></span><span class="tag">0516</span><span class="name">creator subs</span></div>
-          <div class="node ship"><span class="dot"></span><span class="tag">0517</span><span class="name">messaging</span></div>
-          <div class="node ship"><span class="dot"></span><span class="tag">0518</span><span class="name">money ledger</span></div>
-          <div class="node ship"><span class="dot"></span><span class="tag">0519</span><span class="name">notifications</span></div>
-          <div class="node ship"><span class="dot"></span><span class="tag">0520</span><span class="name">moderation</span></div>
-          <div class="node ship"><span class="dot"></span><span class="tag">0521</span><span class="name">report reasons</span></div>
-          <div class="node ship"><span class="dot"></span><span class="tag">0522</span><span class="name">admin payouts</span></div>
-          <div class="node ship"><span class="dot"></span><span class="tag">0523</span><span class="name">notif engine</span></div>
-          <div class="node ship"><span class="dot"></span><span class="tag">0524</span><span class="name">creator analytics</span></div>
-          <div class="node fix"><span class="dot"></span><span class="tag">0525</span><span class="name">baseline grants fix</span></div>
-          <div class="node fix"><span class="dot"></span><span class="tag">0526</span><span class="name">roles policy fix</span></div>
-          <div class="node ghost"><span class="dot"></span><span class="tag">11C</span><span class="name">audience insights</span></div>
-          <div class="node ghost"><span class="dot"></span><span class="tag">9C</span><span class="name">delivery providers</span></div>
-          <div class="node ghost"><span class="dot"></span><span class="tag">$$$</span><span class="name">real payments</span></div>
-        </div>
-      </div>
-      <div class="spine-legend">
-        <span><i class="lg-dot lg-ship"></i> shipped</span>
-        <span><i class="lg-dot lg-fix"></i> corrective fix</span>
-        <span><i class="lg-dot lg-ghost"></i> gated — needs explicit approval</span>
+      /* responsive */
+      @media (max-width: 900px) {
+        .tiles {
+          grid-template-columns: repeat(3, 1fr);
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        details.card.wide {
+          grid-column: span 1;
+        }
+        .feat {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 560px) {
+        .tiles {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .kv {
+          grid-template-columns: 1fr;
+          gap: 2px 0;
+        }
+        .kv dt {
+          margin-top: 8px;
+        }
+        .t-meta {
+          grid-template-columns: 1fr;
+        }
+        summary .hint {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <span class="wordmark"><b>CABANA</b></span>
+        <span class="sub">Project status · 2026-07-06</span>
+        <span class="spacer"></span>
+        <span class="gate" aria-label="Verified handoff gate results">
+          <span class="chip"><span class="ok">✓</span> tests 332/332</span>
+          <span class="chip"><span class="ok">✓</span> tsc clean</span>
+          <span class="chip"><span class="ok">✓</span> lint 0 err</span>
+          <span class="chip"><span class="ok">✓</span> build</span>
+        </span>
+        <button class="tb-btn" id="expandAll" type="button">Expand all</button>
+        <button class="tb-btn" id="collapseAll" type="button">Collapse all</button>
       </div>
     </div>
 
-    <!-- stat tiles (verified against the repo today) -->
-    <div class="tiles">
-      <div class="tile"><div class="v">332</div><div class="k">unit tests passing <span class="s">(run today)</span></div></div>
-      <div class="tile"><div class="v">16</div><div class="k">migrations, rebuild from zero</div></div>
-      <div class="tile"><div class="v">35</div><div class="k">tables created across migrations</div></div>
-      <div class="tile"><div class="v">14</div><div class="k">behavioral SQL suites</div></div>
-      <div class="tile"><div class="v">16</div><div class="k">pure modules under the 95% gate</div></div>
-      <div class="tile"><div class="v">42</div><div class="k">route files (TanStack Router)</div></div>
-    </div>
-  </header>
+    <div class="wrap">
+      <!-- ================= HERO ================= -->
+      <header class="hero">
+        <p class="eyebrow">Cabana · LuminaCreatorSuite · engineering status</p>
+        <h1>Phase 11B shipped.<br />The next move is <em>gated</em>.</h1>
+        <p class="lede">
+          The creator-platform evolution is green end to end:
+          <strong>16 migrations rebuild the database from zero</strong>,
+          <strong>332 unit tests pass</strong>, and the full handoff gate (lint · types · tests ·
+          build) was <strong>re-verified today, July&nbsp;6&nbsp;2026</strong>. All money is
+          demo-only integer cents — no processor, no real payouts. Phases 11C (audience insights)
+          and 9C (delivery providers) exist in the roadmap but must not start without explicit
+          approval.
+        </p>
 
-  <!-- ================= SECTIONS ================= -->
-  <main class="grid">
-
-    <details class="card" open id="overview">
-      <summary><span class="num">01</span><h2>Project overview</h2><span class="chev">▶</span></summary>
-      <div class="card-body">
-        <p><strong>CABANA</strong> is a premium creator OS — link-in-bio, storefront, media kit, first-party analytics —
-        being evolved <strong>additively</strong> into a creator subscription platform (members, follows, posts, fan
-        subscriptions, messaging, tips, payouts). Product name in code and UI is CABANA; the repo folder is
-        <code>LuminaCreatorSuite</code>.</p>
-        <p>The guiding rule: <strong>preserve all existing creator functionality</strong>. Each phase adds tables + RLS and a thin,
-        RLS-scoped server-action tier in strict dependency order, and never moves real money or touches the remote
-        Supabase without explicit, gated approval.</p>
-        <dl class="kv">
-          <dt>Stack</dt><dd>TanStack Start (SSR) · React 19 · Vite 7 · Tailwind CSS 4 · Cloudflare Workers · Supabase (auth/Postgres/storage) · Bun</dd>
-          <dt>Source of truth</dt><dd><code>CLAUDE.md</code>, <code>CABANA_ARCHITECTURE.md</code>, <code>docs/CABANA_BUILD_ROADMAP.md</code>, <code>docs/CLAUDE_SESSION_HANDOFF.md</code></dd>
-          <dt>Demo clock</dt><dd>June 25, 2026 — mock provider refs use a <code>mock_</code> prefix</dd>
-          <dt>README</dt><dd>None at repo root — see the to-do list</dd>
-        </dl>
-      </div>
-    </details>
-
-    <details class="card" open id="phase">
-      <summary><span class="num">02</span><h2>Current phase</h2><span class="chev">▶</span></summary>
-      <div class="card-body">
-        <p><span class="badge b-live"><i>●</i> shipped</span>&nbsp; <strong>Phase 11B — Creator analytics</strong> is the latest completed
-        phase (revenue / subscriber / content / engagement analytics at <code>/dashboard/performance</code>).</p>
-        <p>Since then, <code>main</code> has taken two corrective DB fixes (baseline grants, user-roles admin policy) and two
-        UI refactors (social three-column shell; social feed + creator profile polish, PR&nbsp;#22 at HEAD <code>43c1321</code>).</p>
-        <p><span class="badge b-gated"><i>◆</i> gated</span>&nbsp; <strong>Next in the roadmap:</strong> Phase 11C (audience insights) and
-        Phase 9C (notification delivery providers). Both require explicit approval before any work starts — the handoff says so verbatim.</p>
-        <p><span class="badge b-verify"><i>◆</i> needs verification</span>&nbsp; Working tree has <strong>one uncommitted change</strong>:
-        a <code>CLAUDE.md</code> sync updating it to match the repo (new migrations, social shell, new dashboard routes). Review and commit it.</p>
-      </div>
-    </details>
-
-    <details class="card wide" id="completed">
-      <summary><span class="num">03</span><h2>Completed work</h2><span class="hint">18 shipped slices, Phase 2A → 11B</span><span class="chev">▶</span></summary>
-      <div class="card-body">
-        <div class="tbl-scroll"><table>
-          <thead><tr><th>Phase</th><th>Delivered</th><th>Key surfaces / modules</th><th>Money</th></tr></thead>
-          <tbody>
-            <tr><td class="mono">2A</td><td>Rebuild-from-zero baseline + CI (verify + Docker db-validate jobs)</td><td><code>20260511_baseline</code>, <code>ci.yml</code>, <code>db-validate.sh</code></td><td>—</td></tr>
-            <tr><td class="mono">2B</td><td>Member vs creator accounts; first protected server-action tier</td><td><code>member_profiles</code>, <code>/account</code>, <code>cabana-account</code></td><td>—</td></tr>
-            <tr><td class="mono">2C</td><td>Social graph: follows, blocks, ID-free public profile views</td><td><code>relationship_*</code> RPCs, persistent follow on <code>/$username</code></td><td>—</td></tr>
-            <tr><td class="mono">3</td><td>Posts + feed; private media bucket + signed URLs; locked stubs</td><td><code>/dashboard/posts</code>, <code>/feed</code>, <code>can_view_post</code></td><td>—</td></tr>
-            <tr><td class="mono">3.2</td><td>Comments, likes, saves with block-aware RLS</td><td><code>/post/$postId</code>, <code>post_engagement_state</code></td><td>—</td></tr>
-            <tr><td class="mono">4</td><td>Fan→creator subscription tiers + subscriber entitlements</td><td><code>/dashboard/subscribers</code>, subscribe panel</td><td>demo</td></tr>
-            <tr><td class="mono">5</td><td>1:1 messaging with read receipts + Supabase Realtime</td><td><code>/messages</code>, <code>/messages/$conversationId</code></td><td>—</td></tr>
-            <tr><td class="mono">6</td><td>Monetization ledger: append-only transactions, tips, purchases, entitlements, payout requests</td><td><code>/dashboard/earnings</code>, <code>cabana-money</code></td><td>demo</td></tr>
-            <tr><td class="mono">7</td><td>Notifications + activity log, DB-trigger event generation, inert outbox</td><td><code>emit_notification</code>, realtime badge</td><td>—</td></tr>
-            <tr><td class="mono">8</td><td>Moderation queue + append-only audit trail (staff-gated)</td><td><code>/admin/reports</code>, <code>/admin/audit</code></td><td>—</td></tr>
-            <tr><td class="mono">8B</td><td>Member-facing reporting on posts, comments, profiles, DMs</td><td><code>ReportButton → ReportDialog</code></td><td>—</td></tr>
-            <tr><td class="mono">8C</td><td>Admin finance reads + transition-validated payout workflow (approve ≠ mark-paid)</td><td><code>/admin/finance</code>, <code>/admin/ledger</code>, <code>/admin/payouts</code></td><td>demo</td></tr>
-            <tr><td class="mono">9A</td><td>Outbox processor RPC (batch claim, backoff, dead-letter) — simulated delivery</td><td><code>process_notification_outbox</code></td><td>—</td></tr>
-            <tr><td class="mono">9B</td><td>Notification center UI + activity feed + preferences</td><td><code>/dashboard/notifications</code>, <code>/notifications</code></td><td>—</td></tr>
-            <tr><td class="mono">10A+B</td><td>Public discovery + global search with deterministic ranking</td><td><code>/discover</code> (noindex, public projections only)</td><td>—</td></tr>
-            <tr><td class="mono">11A</td><td>Creator dashboard home: KPIs, revenue + subscriber summaries, activity</td><td><code>/dashboard/home</code></td><td>demo</td></tr>
-            <tr><td class="mono">11B</td><td>Creator analytics with date-range filters + own-content RPC</td><td><code>/dashboard/performance</code>, <code>creator_content_analytics</code></td><td>demo</td></tr>
-            <tr><td class="mono">fixes</td><td>Baseline table GRANTs (42501 fix) · user_roles admin policy via <code>is_current_user_admin()</code> · social shell UI refactor</td><td><code>20260525</code>, <code>20260526</code>, <code>components/cabana/social/</code></td><td>—</td></tr>
-          </tbody>
-        </table></div>
-      </div>
-    </details>
-
-    <details class="card" id="architecture">
-      <summary><span class="num">04</span><h2>Architecture summary</h2><span class="chev">▶</span></summary>
-      <div class="card-body">
-        <ul>
-          <li><strong>Routing/SSR:</strong> file-based TanStack Router in <code>src/routes/</code> (flat dot-notation); SSR entry <code>src/server.ts</code> wraps the handler with a branded error page; <code>routeTree.gen.ts</code> is generated — never hand-edit.</li>
-          <li><strong>Three Supabase trust boundaries:</strong> <code>supabase</code> (anon browser client, RLS-enforced) · <code>supabaseAdmin</code> (service role, server-only) · <code>requireSupabaseAuth</code> middleware (per-request RLS-scoped client). A fourth, <code>optionalSupabaseAuth</code>, serves guest-callable reads (feed, discovery).</li>
-          <li><strong>T2 protected actions:</strong> every <code>createServerFn</code> composes client <code>attachSupabaseToken</code> + server <code>requireSupabaseAuth</code>, so handlers run under the caller's RLS — never the service role. Handlers stay thin; behavior lives in pure, repository-injected modules.</li>
-          <li><strong>Pure business layer:</strong> 16 <code>cabana-*</code> modules (money, entitlements, posts, messaging, moderation, payouts, analytics…) unit-tested without React, Supabase, or a browser — this is where new domain logic must go.</li>
-          <li><strong>Event generation at the DB layer:</strong> notifications and audit rows are written by SECURITY DEFINER triggers (<code>emit_notification</code>, report/payout audit triggers), so events fire uniformly for every write path.</li>
-          <li><strong>Design system:</strong> luxury dark / glass / iridescent utilities in <code>src/styles.css</code> (Tailwind 4, CSS-config); shadcn/ui primitives in <code>components/ui/</code>; social surfaces render inside the three-column <code>SocialShell</code>.</li>
-        </ul>
-      </div>
-    </details>
-
-    <details class="card" id="features">
-      <summary><span class="num">05</span><h2>Active features</h2><span class="chev">▶</span></summary>
-      <div class="card-body">
-        <div class="feat">
-          <div><span class="badge b-live"><i>●</i> live</span><b>Creator OS</b>profiles, links, storefront, media uploads, first-party analytics</div>
-          <div><span class="badge b-live"><i>●</i> live</span><b>Accounts + social graph</b>member/creator split, follows, blocks, public views</div>
-          <div><span class="badge b-live"><i>●</i> live</span><b>Posts, feed, engagement</b>visibility tiers, locked stubs, comments/likes/saves</div>
-          <div><span class="badge b-live"><i>●</i> live</span><b>Messaging</b>1:1 realtime DMs with read receipts</div>
-          <div><span class="badge b-demo"><i>◐</i> demo-only</span><b>Subscriptions + monetization</b>tiers, tips, purchases, ledger, payouts — mock refs, no processor</div>
-          <div><span class="badge b-live"><i>●</i> live</span><b>Notifications</b>DB-trigger events, realtime center, preferences, outbox engine (simulated delivery)</div>
-          <div><span class="badge b-live"><i>●</i> live</span><b>Trust &amp; ops</b>reporting, staff moderation queue, append-only audit, admin finance + payout review</div>
-          <div><span class="badge b-live"><i>●</i> live</span><b>Discovery + dashboards</b>public /discover search, creator home KPIs, performance analytics</div>
-        </div>
-      </div>
-    </details>
-
-    <details class="card" id="database">
-      <summary><span class="num">06</span><h2>Supabase / database status</h2><span class="chev">▶</span></summary>
-      <div class="card-body">
-        <p><strong>16 ordered migrations rebuild the schema from zero</strong> (<code>20260511_baseline</code> →
-        <code>20260526_user_roles_admin_policy</code>), creating 35 tables, 2 safe public views, and 4 storage buckets
-        (<code>avatars</code>/<code>banners</code>/<code>products</code> public-CDN; <code>post-media</code> <strong>private</strong>, signed URLs only).</p>
-        <ul>
-          <li><strong>14 behavioral SQL suites</strong> in <code>supabase/tests/</code> run via <code>bun run db:validate</code> (needs Docker; CI runs them on every push/PR).</li>
-          <li><strong>Append-only guarantees:</strong> <code>transactions</code>, <code>audit_logs</code>, <code>activity_events</code> are immutable by trigger — reversals are new <code>refund</code> rows, never edits.</li>
-          <li><strong>Hard-won lesson (migration 0525):</strong> RLS policies alone are not enough — every table needs explicit GRANTs to <code>anon</code>/<code>authenticated</code> or PostgREST fails with <code>42501</code> before policies run.</li>
-          <li><strong>Seed:</strong> <code>aurora</code> demo creator incl. a purchase post, demo reports, and payout requests, so every surface renders locally after <code>bun run db:reset</code>.</li>
-        </ul>
-        <p><span class="badge b-verify"><i>◆</i> needs verification</span>&nbsp; The baseline was <em>reconstructed</em>, not dumped:
-        it has never been diffed against the live project (<code>dwnricswfskypqqfknnh</code>). The CLI is intentionally unlinked —
-        <strong>validate locally only, never push to the remote.</strong></p>
-      </div>
-    </details>
-
-    <details class="card" id="auth">
-      <summary><span class="num">07</span><h2>Auth / roles / RLS notes</h2><span class="chev">▶</span></summary>
-      <div class="card-body">
-        <ul>
-          <li><strong>Four principals:</strong> guest (public reads only) · member (<code>/account</code> home) · creator (<code>/dashboard</code>, default on signup) · staff (admin or moderator via <code>user_roles</code>). <code>is_current_user_admin()</code> / <code>is_current_user_staff()</code> wrap the revoked <code>has_role</code> for policies.</li>
-          <li><strong>Signup branching:</strong> the <code>handle_new_user</code> trigger reads <code>raw_user_meta_data.account_type</code>; only the exact string <code>"member"</code> opts out of creator provisioning.</li>
-          <li><strong>Route guards are client-side only</strong> (redirects in <code>dashboard.tsx</code>/<code>account.tsx</code>). Data stays safe because every server action independently validates the bearer token — but guarded shells can flash for signed-out users.</li>
-          <li><strong>Writes go through RPCs or column-scoped policies:</strong> fan subscriptions, conversations, purchases, tips, payout reviews are SECURITY DEFINER RPC-only; clients may only flip <code>notifications.read_at</code>.</li>
-          <li><strong>Identity safety:</strong> cross-account discovery uses ID-free views/RPCs. Known exception: the legacy public read of <code>creator_profiles</code> still exposes <code>user_id</code> (see risks).</li>
-        </ul>
-      </div>
-    </details>
-
-    <details class="card wide" id="routes">
-      <summary><span class="num">08</span><h2>Frontend routes / screens</h2><span class="hint">42 route files</span><span class="chev">▶</span></summary>
-      <div class="card-body">
-        <div class="tbl-scroll"><table>
-          <thead><tr><th style="width:230px">Route</th><th>Screen</th><th style="width:170px">Status</th></tr></thead>
-          <tbody>
-            <tr class="group"><td colspan="3">Public &amp; marketing</td></tr>
-            <tr><td class="mono">/</td><td>Marketing landing</td><td><span class="badge b-live"><i>●</i> live</span></td></tr>
-            <tr><td class="mono">/$username</td><td>Public creator page (posts, tiers, follow, message) in SocialShell</td><td><span class="badge b-live"><i>●</i> live</span></td></tr>
-            <tr><td class="mono">/discover</td><td>Discovery + global search (noindex, public projections only)</td><td><span class="badge b-live"><i>●</i> live</span></td></tr>
-            <tr><td class="mono">/feed · /post/$postId</td><td>Home feed · post detail with engagement</td><td><span class="badge b-live"><i>●</i> live</span></td></tr>
-            <tr><td class="mono">/pricing</td><td>SaaS plans — no checkout wired</td><td><span class="badge b-demo"><i>◐</i> demo</span></td></tr>
-            <tr><td class="mono">/demo · /td · /eldondolla</td><td>Seeded demo profile · bespoke static microsites</td><td><span class="badge b-demo"><i>◐</i> demo</span></td></tr>
-            <tr><td class="mono">/docs/system · /docs/data-model</td><td>In-app docs (data-model flagged stale in debt register)</td><td><span class="badge b-verify"><i>◆</i> verify</span></td></tr>
-            <tr class="group"><td colspan="3">Auth &amp; member</td></tr>
-            <tr><td class="mono">/login · /signup · /forgot-password · /reset-password</td><td>Auth flows (AuthShell)</td><td><span class="badge b-live"><i>●</i> live</span></td></tr>
-            <tr><td class="mono">/onboarding</td><td>7-step onboarding — mostly not persisted</td><td><span class="badge b-demo"><i>◐</i> demo</span></td></tr>
-            <tr><td class="mono">/account</td><td>Member home (noindex, creator-bounced)</td><td><span class="badge b-live"><i>●</i> live</span></td></tr>
-            <tr><td class="mono">/messages · /messages/$id</td><td>Realtime inbox + thread</td><td><span class="badge b-live"><i>●</i> live</span></td></tr>
-            <tr><td class="mono">/notifications</td><td>Member notifications (guests see FoundationPage)</td><td><span class="badge b-live"><i>●</i> live</span></td></tr>
-            <tr class="group"><td colspan="3">Creator studio — /dashboard</td></tr>
-            <tr><td class="mono">/dashboard</td><td>Link-in-bio studio home (DashHome)</td><td><span class="badge b-live"><i>●</i> live</span></td></tr>
-            <tr><td class="mono">/dashboard/home</td><td>Creator business dashboard: KPIs, revenue, subscribers, activity</td><td><span class="badge b-live"><i>●</i> live</span></td></tr>
-            <tr><td class="mono">/dashboard/posts · /subscribers · /earnings · /notifications</td><td>Composer + manager · subscriber roster · earnings + payouts · center</td><td><span class="badge b-live"><i>●</i> live</span></td></tr>
-            <tr><td class="mono">/dashboard/performance</td><td>Creator analytics (11B) — distinct from legacy /dashboard/analytics</td><td><span class="badge b-live"><i>●</i> live</span></td></tr>
-            <tr><td class="mono">/dashboard/analytics · /links · /profile · /storefront</td><td>Link-in-bio analytics · link manager · profile editor · store</td><td><span class="badge b-live"><i>●</i> live</span></td></tr>
-            <tr><td class="mono">/dashboard/messages</td><td>Dashboard messages screen (real inbox lives at /messages)</td><td><span class="badge b-verify"><i>◆</i> verify</span></td></tr>
-            <tr><td class="mono">/dashboard/media-kit · /settings</td><td>Hardcoded metrics · hardcoded integrations</td><td><span class="badge b-demo"><i>◐</i> demo</span></td></tr>
-            <tr class="group"><td colspan="3">Admin &amp; staff</td></tr>
-            <tr><td class="mono">/admin</td><td>Legacy demo tabs (hardcoded panels) + nav cards to real tools</td><td><span class="badge b-demo"><i>◐</i> demo</span></td></tr>
-            <tr><td class="mono">/admin/reports · /admin/audit</td><td>Moderation queue + audit trail (StaffGate)</td><td><span class="badge b-live"><i>●</i> live</span></td></tr>
-            <tr><td class="mono">/admin/finance · /ledger · /ledger/$id · /payouts</td><td>Finance back office + payout review (AdminGate, demo money)</td><td><span class="badge b-live"><i>●</i> live</span></td></tr>
-          </tbody>
-        </table></div>
-      </div>
-    </details>
-
-    <details class="card" id="testing">
-      <summary><span class="num">09</span><h2>Testing coverage</h2><span class="hint">verified today</span><span class="chev">▶</span></summary>
-      <div class="card-body">
-        <p><strong>332 tests in 16 files pass</strong> (vitest, run 2026-07-06). Coverage is measured over exactly the 16 pure
-        business modules with a <strong>95% threshold</strong> on every axis — the tick on each meter marks the gate.</p>
-        <div class="meter"><div class="m-head"><b>Statements</b><span>99.52%</span></div><div class="track"><div class="fill" style="width:99.52%"></div><div class="tick" style="left:95%"></div></div></div>
-        <div class="meter"><div class="m-head"><b>Branches</b><span>95.75%</span></div><div class="track"><div class="fill" style="width:95.75%"></div><div class="tick" style="left:95%"></div></div></div>
-        <div class="meter"><div class="m-head"><b>Functions</b><span>100%</span></div><div class="track"><div class="fill" style="width:100%"></div><div class="tick" style="left:95%"></div></div></div>
-        <div class="meter"><div class="m-head"><b>Lines</b><span>100%</span></div><div class="track"><div class="fill" style="width:100%"></div><div class="tick" style="left:95%"></div></div></div>
-        <p class="m-note">Branch coverage sits closest to the gate — lowest modules: cabana-discovery 86.9%, cabana-creator-analytics 93.6%, cabana-moderation 93.7%.</p>
-        <p style="margin-top:12px"><strong>Not unit-tested:</strong> React hooks, server-action wiring, and UI components — covered only
-        indirectly by the 14 SQL suites at the DB layer and by lint/tsc/build. E2E does not exist.</p>
-        <p><strong>Gate verified today:</strong> lint 0 errors (6 expected react-refresh warnings in shadcn files) · <code>tsc --noEmit</code> clean · build green in 3.7s.</p>
-      </div>
-    </details>
-
-    <details class="card" id="risks">
-      <summary><span class="num">10</span><h2>Known risks / blockers</h2><span class="chev">▶</span></summary>
-      <div class="card-body">
-        <ul>
-          <li><span class="badge b-block"><i>◆</i> prod blocker</span>&nbsp; <strong>Remote schema never reconciled.</strong> Baseline is reconstructed; no <code>supabase db dump</code> diff or <code>migration repair</code> has run (auth-blocked). Keep validation local-only.</li>
-          <li><span class="badge b-risk"><i>◆</i> risk</span>&nbsp; <strong><code>creator_profiles</code> public read exposes <code>user_id</code></strong> — the legacy <code>cabana-store.ts</code> path predates the safe views.</li>
-          <li><span class="badge b-risk"><i>◆</i> risk</span>&nbsp; <strong>Route guards are client-side only</strong> — no server route guard; guarded shells can flash. Server actions remain independently protected.</li>
-          <li><span class="badge b-risk"><i>◆</i> risk</span>&nbsp; <strong>Legacy buckets are CDN-public</strong> (<code>avatars</code>/<code>banners</code>/<code>products</code>) — unsuitable for any future private media; only <code>post-media</code> is private.</li>
-          <li><span class="badge b-verify"><i>◆</i> verify</span>&nbsp; <strong><code>?redirect=</code> open-redirect</strong> flagged in the debt register for <code>dashboard.tsx</code>; not re-checked since.</li>
-          <li><span class="badge b-verify"><i>◆</i> verify</span>&nbsp; <strong><code>post_count</code> placeholders</strong> in the public views were 0 at Phase 2C — unclear if later phases wired real counts (affects /discover ranking).</li>
-          <li><span class="badge b-risk"><i>◆</i> risk</span>&nbsp; <strong>Naming collision:</strong> <code>subscriptions</code> = SaaS plans; the gated rename to <code>platform_subscriptions</code> hasn't happened. Fan billing must keep using <code>creator_subscriptions</code>.</li>
-          <li><span class="badge b-demo"><i>◐</i> hygiene</span>&nbsp; <strong>Heavy build chunks</strong> (~0.9–1.05 MB: router, dashboard.performance) and lingering demo surfaces (media kit, settings integrations, admin tabs, pricing) that read as real.</li>
-          <li><span class="badge b-demo"><i>◐</i> hygiene</span>&nbsp; <strong>Stale checkpoint docs:</strong> <code>CABANA_PROJECT_STATE.md</code> self-describes as a Phase-7 snapshot; parts of <code>CABANA_TECH_DEBT.md</code> are already resolved.</li>
-        </ul>
-      </div>
-    </details>
-
-    <!-- ================= TO-DO ================= -->
-    <details class="card wide" open id="todo">
-      <summary><span class="num">11</span><h2>To-do list</h2><span class="hint">checkbox state saved in this browser</span><span class="chev">▶</span></summary>
-      <div class="card-body">
-
-        <div class="todo-tools" role="group" aria-label="Task filters">
-          <button class="pill" data-f="all" aria-pressed="true" type="button">All <span class="n" data-c="all"></span></button>
-          <button class="pill" data-f="critical" aria-pressed="false" type="button">Critical <span class="n" data-c="critical"></span></button>
-          <button class="pill" data-f="high" aria-pressed="false" type="button">High <span class="n" data-c="high"></span></button>
-          <button class="pill" data-f="medium" aria-pressed="false" type="button">Medium <span class="n" data-c="medium"></span></button>
-          <button class="pill" data-f="later" aria-pressed="false" type="button">Later <span class="n" data-c="later"></span></button>
-          <input class="search" id="taskSearch" type="search" placeholder="Search tasks — title, files, keywords…" aria-label="Search tasks" />
-          <button class="reset-btn" id="resetTasks" type="button">Reset checklist</button>
-        </div>
-
-        <div class="todo-progress">
-          <div class="meter">
-            <div class="m-head"><b>Checklist progress</b><span id="progressLabel" aria-live="polite">0 of 16 · 0%</span></div>
-            <div class="track"><div class="fill iri" id="progressFill" style="width:0%"></div></div>
+        <!-- signature: the migration spine -->
+        <div class="spine-block">
+          <p class="spine-label">The migration spine — every schema change, in rebuild order</p>
+          <div class="spine-scroll">
+            <div class="spine">
+              <div class="node ship">
+                <span class="dot"></span><span class="tag">0511</span
+                ><span class="name">baseline</span>
+              </div>
+              <div class="node ship">
+                <span class="dot"></span><span class="tag">0512</span
+                ><span class="name">member accounts</span>
+              </div>
+              <div class="node ship">
+                <span class="dot"></span><span class="tag">0513</span
+                ><span class="name">social graph</span>
+              </div>
+              <div class="node ship">
+                <span class="dot"></span><span class="tag">0514</span
+                ><span class="name">posts + feed</span>
+              </div>
+              <div class="node ship">
+                <span class="dot"></span><span class="tag">0515</span
+                ><span class="name">engagement</span>
+              </div>
+              <div class="node ship">
+                <span class="dot"></span><span class="tag">0516</span
+                ><span class="name">creator subs</span>
+              </div>
+              <div class="node ship">
+                <span class="dot"></span><span class="tag">0517</span
+                ><span class="name">messaging</span>
+              </div>
+              <div class="node ship">
+                <span class="dot"></span><span class="tag">0518</span
+                ><span class="name">money ledger</span>
+              </div>
+              <div class="node ship">
+                <span class="dot"></span><span class="tag">0519</span
+                ><span class="name">notifications</span>
+              </div>
+              <div class="node ship">
+                <span class="dot"></span><span class="tag">0520</span
+                ><span class="name">moderation</span>
+              </div>
+              <div class="node ship">
+                <span class="dot"></span><span class="tag">0521</span
+                ><span class="name">report reasons</span>
+              </div>
+              <div class="node ship">
+                <span class="dot"></span><span class="tag">0522</span
+                ><span class="name">admin payouts</span>
+              </div>
+              <div class="node ship">
+                <span class="dot"></span><span class="tag">0523</span
+                ><span class="name">notif engine</span>
+              </div>
+              <div class="node ship">
+                <span class="dot"></span><span class="tag">0524</span
+                ><span class="name">creator analytics</span>
+              </div>
+              <div class="node fix">
+                <span class="dot"></span><span class="tag">0525</span
+                ><span class="name">baseline grants fix</span>
+              </div>
+              <div class="node fix">
+                <span class="dot"></span><span class="tag">0526</span
+                ><span class="name">roles policy fix</span>
+              </div>
+              <div class="node ghost">
+                <span class="dot"></span><span class="tag">11C</span
+                ><span class="name">audience insights</span>
+              </div>
+              <div class="node ghost">
+                <span class="dot"></span><span class="tag">9C</span
+                ><span class="name">delivery providers</span>
+              </div>
+              <div class="node ghost">
+                <span class="dot"></span><span class="tag">$$$</span
+                ><span class="name">real payments</span>
+              </div>
+            </div>
+          </div>
+          <div class="spine-legend">
+            <span><i class="lg-dot lg-ship"></i> shipped</span>
+            <span><i class="lg-dot lg-fix"></i> corrective fix</span>
+            <span><i class="lg-dot lg-ghost"></i> gated — needs explicit approval</span>
           </div>
         </div>
 
-        <ul class="todo-list" id="taskList">
-
-          <!-- CRITICAL -->
-          <li data-priority="critical" data-id="commit-claude-md">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Review + commit the pending CLAUDE.md sync</span>
-              <span class="badge b-block"><i>◆</i> critical</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p>The working tree has one uncommitted change: a CLAUDE.md update syncing it to the repo (migrations 20260525/20260526, the SocialShell layout, the /dashboard/home · /performance · /subscribers routes, the docs/ reference set).</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">CLAUDE.md</dd>
-                <dt>Why</dt><dd>CLAUDE.md is the source of truth for every agent session; drift misleads all future work.</dd>
-                <dt>Validate</dt><dd class="cmd"><code>git diff CLAUDE.md</code><button class="copy-mini" data-copy="git diff CLAUDE.md" type="button">Copy</button></dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <li data-priority="critical" data-id="handoff-update">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Record today's verified gate in the session handoff</span>
-              <span class="badge b-block"><i>◆</i> critical</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p>The handoff still ends at the Phase 11B session (June 25). The full gate was re-verified 2026-07-06 after the social-UI merges: lint 0 errors / 6 expected warnings, tsc clean, 332/332 tests, coverage 99.52 / 95.75 / 100 / 100, build green.</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">docs/CLAUDE_SESSION_HANDOFF.md</dd>
-                <dt>Why</dt><dd>Project convention: every session ends with an updated handoff; it's the state ledger the next session reads first.</dd>
-                <dt>Validate</dt><dd class="cmd"><code>bun run lint && bunx tsc --noEmit && bun run test && bun run build</code><button class="copy-mini" data-copy="bun run lint && bunx tsc --noEmit && bun run test && bun run build" type="button">Copy</button></dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <!-- HIGH -->
-          <li data-priority="high" data-id="safe-view-migration">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Stop leaking user_id: move public creator reads to the safe view</span>
-              <span class="badge b-risk"><i>◆</i> high</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p>The legacy public read path still selects from raw <code>creator_profiles</code>, which exposes <code>user_id</code>. The ID-free <code>public_creator_profiles</code> view has existed since Phase 2C — migrate <code>useCreatorByHandle</code> and the public page to it; owner reads stay on the table. App-code change only, no migration.</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">src/lib/cabana-store.ts · src/routes/$username.tsx</dd>
-                <dt>Why</dt><dd>Top security item in the debt register; the fix's prerequisite (the view) already shipped.</dd>
-                <dt>Validate</dt><dd class="cmd"><code>grep -rn 'creator_profiles' src/lib/cabana-store.ts</code><button class="copy-mini" data-copy="grep -rn 'creator_profiles' src/lib/cabana-store.ts" type="button">Copy</button></dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <li data-priority="high" data-id="redirect-allowlist">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Verify + close the ?redirect= open-redirect</span>
-              <span class="badge b-verify"><i>◆</i> high · verify</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p>The debt register flags <code>dashboard.tsx</code> for consuming <code>?redirect=</code> directly. First confirm it's still unguarded, then allow-list to same-origin path-only targets.</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">src/routes/dashboard.tsx · src/routes/login.tsx</dd>
-                <dt>Why</dt><dd>Open redirects turn the login flow into a phishing primitive.</dd>
-                <dt>Validate</dt><dd class="cmd"><code>grep -n 'redirect' src/routes/dashboard.tsx src/routes/login.tsx</code><button class="copy-mini" data-copy="grep -n 'redirect' src/routes/dashboard.tsx src/routes/login.tsx" type="button">Copy</button></dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <li data-priority="high" data-id="post-count-verify">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Verify post_count / engagement counts in the public views</span>
-              <span class="badge b-verify"><i>◆</i> high · verify</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p>At Phase 2C the public views returned placeholder <code>post_count = 0</code>; the Phase 3.2 follow-up ("wire real counts") was never explicitly closed. If still stubbed, /discover ranking is skewed. A view change would need the standard migration gate.</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">supabase/migrations (view defs) · src/lib/cabana-discovery.ts</dd>
-                <dt>Why</dt><dd>Discovery ranking consumes these fields; silent zeros make "trending" wrong.</dd>
-                <dt>Validate</dt><dd class="cmd"><code>bun run db:reset && psql "$DB_URL" -c "select username, post_count from public_creator_profiles"</code><button class="copy-mini" data-copy='bun run db:reset && psql "$DB_URL" -c "select username, post_count from public_creator_profiles"' type="button">Copy</button></dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <li data-priority="high" data-id="server-guard-design">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Design the server-side route guard</span>
-              <span class="badge b-risk"><i>◆</i> high</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p>Guards for /dashboard, /account, /admin are client redirects only. Design (then implement) a TanStack Start loader/middleware guard so guarded shells never render for the wrong principal. Data is already safe — this closes the UX/consistency gap and a production-readiness item.</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">src/routes/dashboard.tsx · src/routes/account.tsx · src/routes/admin.tsx · src/server.ts</dd>
-                <dt>Why</dt><dd>Debt register marks client-only auth gating as a production blocker (P2/P7).</dd>
-                <dt>Validate</dt><dd class="cmd"><code>curl -sI http://localhost:3000/dashboard | head -5</code> (expect a redirect when signed out)<button class="copy-mini" data-copy="curl -sI http://localhost:3000/dashboard | head -5" type="button">Copy</button></dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <!-- MEDIUM -->
-          <li data-priority="medium" data-id="readme">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Add a root README.md</span>
-              <span class="badge b-demo"><i>◐</i> medium</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p>The repo has no README — the GitHub landing page is empty. A short one should state what CABANA is, the Bun command set, and point to CLAUDE.md + the docs/ blueprints.</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">README.md (new)</dd>
-                <dt>Why</dt><dd>First-touch onboarding; everything else is documented but undiscoverable.</dd>
-                <dt>Validate</dt><dd class="cmd"><code>bun run format && bun run lint</code><button class="copy-mini" data-copy="bun run format && bun run lint" type="button">Copy</button></dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <li data-priority="medium" data-id="stale-docs">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Reconcile stale checkpoint docs</span>
-              <span class="badge b-demo"><i>◐</i> medium</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p><code>CABANA_PROJECT_STATE.md</code> is a Phase-7 snapshot; <code>CABANA_TECH_DEBT.md</code> lists items already resolved (vitest, CI, moderator wiring, member accounts). Update, banner, or delete per each file's own "living docs win" rule so agents don't act on stale facts.</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">docs/CABANA_PROJECT_STATE.md · docs/CABANA_TECH_DEBT.md · docs/CABANA_ROUTE_MAP.md</dd>
-                <dt>Why</dt><dd>Two sources of truth that disagree cost every future session verification time.</dd>
-                <dt>Validate</dt><dd class="cmd">doc review — no build impact</dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <li data-priority="medium" data-id="demo-labels">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Sweep the remaining demo surfaces</span>
-              <span class="badge b-demo"><i>◐</i> medium</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p>Media kit (hardcoded Aurora metrics), settings integrations (hardcoded Stripe/Mailchimp/etc.), admin demo tabs, and pricing (no checkout) still read as real. Label them clearly as demo, wire them, or remove — demo discipline requires visible labels.</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">MediaKit.tsx · SettingsPanel.tsx · admin.tsx · pricing.tsx</dd>
-                <dt>Why</dt><dd>Unlabeled demo state can be mistaken for production behavior — the register calls this out explicitly for money-adjacent surfaces.</dd>
-                <dt>Validate</dt><dd class="cmd"><code>bun run lint && bunx tsc --noEmit</code> + visual pass<button class="copy-mini" data-copy="bun run lint && bunx tsc --noEmit" type="button">Copy</button></dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <li data-priority="medium" data-id="chunk-split">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Code-split the heavy route chunks</span>
-              <span class="badge b-demo"><i>◐</i> medium</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p>Today's build emits ~0.9–1.05&nbsp;MB chunks (router, dashboard.performance — recharts). Lazy-load the analytics/recharts surface and audit shared-chunk composition.</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">src/components/cabana/dashboard/analytics/* · route-level lazy imports</dd>
-                <dt>Why</dt><dd>Bundle weight lands on every dashboard visitor; recharts belongs behind a lazy boundary.</dd>
-                <dt>Validate</dt><dd class="cmd"><code>bun run build</code> — compare chunk sizes<button class="copy-mini" data-copy="bun run build" type="button">Copy</button></dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <li data-priority="medium" data-id="member-report-surface">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Member-profile reporting surface (deferred from 8B)</span>
-              <span class="badge b-demo"><i>◐</i> medium</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p><code>ReportButton</code> already supports <code>subjectType="user"</code>, but no surface exposes another member's id. When a member-profile surface appears (e.g. in messaging headers), wire the button in — backend needs no change.</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">components/cabana/reporting/ · components/cabana/messaging/</dd>
-                <dt>Why</dt><dd>Closes the last gap in the reporting matrix (posts/comments/creators/DMs are covered).</dd>
-                <dt>Validate</dt><dd class="cmd"><code>bun run test && bun run db:validate</code><button class="copy-mini" data-copy="bun run test && bun run db:validate" type="button">Copy</button></dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <!-- LATER (GATED) -->
-          <li data-priority="later" data-id="phase-11c">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Phase 11C — audience insights</span>
-              <span class="badge b-gated"><i>◆</i> gated</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p>Demographics / geography / devices / exports over creator analytics. <strong>Do not start without explicit approval.</strong> Standard slice gate applies: approved migration + RLS design + behavioral SQL + a pure module joining the 95% set.</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">new cabana-* pure module · analytics surfaces</dd>
-                <dt>Why</dt><dd>Named "next" by the Phase 11B handoff — but gated.</dd>
-                <dt>Validate</dt><dd class="cmd">full gate + <code>bun run db:validate</code></dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <li data-priority="later" data-id="phase-9c">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Phase 9C — real notification delivery providers</span>
-              <span class="badge b-gated"><i>◆</i> gated</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p>Replace the 9A simulated outbox outcome with real per-channel providers (email/push). The processor RPC, backoff, and dead-lettering already exist and are tested.</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">process_notification_outbox integration · provider config</dd>
-                <dt>Why</dt><dd>Everything upstream (events → outbox → claim/backoff) is already production-shaped.</dd>
-                <dt>Validate</dt><dd class="cmd"><code>supabase/tests/notification_engine.sql</code> via db:validate</dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <li data-priority="later" data-id="subs-rename">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Rename subscriptions → platform_subscriptions</span>
-              <span class="badge b-gated"><i>◆</i> gated</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p>The SaaS-plan table's name collides with fan billing. The register wants the rename before <code>creator_subscriptions</code> carries production data. Gated migration + updated types + tests.</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">new migration · types.ts regen · cabana-store.ts</dd>
-                <dt>Why</dt><dd>A wrong-table write here is a billing bug by construction.</dd>
-                <dt>Validate</dt><dd class="cmd"><code>bun run db:validate</code> + full gate</dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <li data-priority="later" data-id="remote-reconcile">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Remote schema reconciliation + migration repair</span>
-              <span class="badge b-gated"><i>◆</i> gated · human step</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p>Diff the reconstructed baseline against a live <code>supabase db dump</code>, then <code>migration repair --status applied</code>. Needs a Supabase access token / DB password and <strong>mutates remote history</strong> — a deliberate human-run step, never automated from this environment.</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">supabase/ (remote project dwnricswfskypqqfknnh)</dd>
-                <dt>Why</dt><dd>Until done, the baseline cannot be treated as byte-exact with production.</dd>
-                <dt>Validate</dt><dd class="cmd"><code>supabase db dump</code> diff review (manual)</dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <li data-priority="later" data-id="real-money">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Production payments (Stripe, KYC, real payouts)</span>
-              <span class="badge b-gated"><i>◆</i> hard-gated</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p>Explicitly out of scope by standing constraint. When approved: processor + webhooks (signature-verified, idempotent), KYC, refunds/disputes, settling into the existing append-only ledger. The demo fee model (10% + 3%) and approve-vs-mark-paid payout split were designed to survive this swap.</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">money-actions.ts · new webhook tier · ledger RPCs</dd>
-                <dt>Why</dt><dd>The entire Phase 6–8C ledger exists so this lands as a settlement layer, not a rewrite.</dd>
-                <dt>Validate</dt><dd class="cmd">gated design review first — no command applies yet</dd>
-              </dl>
-            </div></details>
-          </li>
-
-          <li data-priority="later" data-id="paid-messages">
-            <details class="task"><summary>
-              <input type="checkbox" aria-label="Mark task done" />
-              <span class="t-title">Paid messages + private attachments</span>
-              <span class="badge b-gated"><i>◆</i> gated</span><span class="chev">▶</span>
-            </summary><div class="t-body">
-              <p>Deferred Phase 5 scope: image/video attachments on private storage with signed URLs, and paid-message unlocks through the entitlement ledger. Depends on the private-bucket pattern (exists) and monetization rules (demo).</p>
-              <dl class="t-meta">
-                <dt>Files</dt><dd class="mono">messaging schema (gated migration) · cabana-messaging.ts</dd>
-                <dt>Why</dt><dd>Highest-demand creator feature after subscriptions; touches money + privacy at once.</dd>
-                <dt>Validate</dt><dd class="cmd"><code>supabase/tests/messaging.sql</code> extension via db:validate</dd>
-              </dl>
-            </div></details>
-          </li>
-
-        </ul>
-        <p class="empty-note" id="emptyNote">No tasks match the current filter.</p>
-      </div>
-    </details>
-
-    <details class="card" id="next-tasks">
-      <summary><span class="num">12</span><h2>Next Claude tasks</h2><span class="chev">▶</span></summary>
-      <div class="card-body">
-        <p>The short version — what the next session should actually do, in order:</p>
-        <ol class="build">
-          <li><b>Commit the CLAUDE.md sync</b> sitting in the working tree (review <code>git diff CLAUDE.md</code> first).</li>
-          <li><b>Update the session handoff</b> with today's verified gate results.</li>
-          <li><b>Fix the user_id leak</b> — move public creator reads onto <code>public_creator_profiles</code>; re-run the gate.</li>
-          <li><b>Verify the ?redirect= handling</b> and allow-list it if still raw.</li>
-          <li><b>Stop.</b> Phases 11C / 9C and anything schema-shaped are gated on explicit approval.</li>
-        </ol>
-      </div>
-    </details>
-
-    <details class="card" id="build-order">
-      <summary><span class="num">13</span><h2>Recommended build order</h2><span class="chev">▶</span></summary>
-      <div class="card-body">
-        <ol class="build">
-          <li><b>Housekeeping</b> — commit doc sync, record the gate, README, stale-doc reconciliation. Zero risk, restores a clean baseline.</li>
-          <li><b>Security debt burn-down</b> — safe-view migration, redirect allow-list, server route-guard design. App-code only; no migrations needed.</li>
-          <li><b>Product hygiene</b> — demo-surface labeling, chunk splitting, post_count verification.</li>
-          <li><b>Gated feature work (pick one per approval)</b> — Phase 11C audience insights <em>or</em> Phase 9C delivery providers; then member-profile reporting when a surface exists.</li>
-          <li><b>Pre-production platform work (gated)</b> — <code>platform_subscriptions</code> rename, remote schema reconciliation, server route guard implementation.</li>
-          <li><b>Real money, last</b> — Stripe/KYC/payouts settle into the existing ledger only after everything above is stable and explicitly approved.</li>
-        </ol>
-      </div>
-    </details>
-
-    <!-- ================= PROMPT ================= -->
-    <details class="card wide" open id="prompt">
-      <summary><span class="num">14</span><h2>Next Claude execution prompt</h2><span class="chev">▶</span></summary>
-      <div class="card-body">
-        <div class="prompt-box">
-          <div class="prompt-head">
-            <span class="dots"><i></i><i></i><i></i></span>
-            <span>prompt · paste into Claude Code at the repo root</span>
-            <button class="copy-btn" id="copyPrompt" type="button">Copy next Claude prompt</button>
+        <!-- stat tiles (verified against the repo today) -->
+        <div class="tiles">
+          <div class="tile">
+            <div class="v">332</div>
+            <div class="k">unit tests passing <span class="s">(run today)</span></div>
           </div>
-          <pre class="prompt" id="promptText">Read CLAUDE.md and docs/CLAUDE_SESSION_HANDOFF.md before touching anything.
+          <div class="tile">
+            <div class="v">16</div>
+            <div class="k">migrations, rebuild from zero</div>
+          </div>
+          <div class="tile">
+            <div class="v">35</div>
+            <div class="k">tables created across migrations</div>
+          </div>
+          <div class="tile">
+            <div class="v">14</div>
+            <div class="k">behavioral SQL suites</div>
+          </div>
+          <div class="tile">
+            <div class="v">16</div>
+            <div class="k">pure modules under the 95% gate</div>
+          </div>
+          <div class="tile">
+            <div class="v">42</div>
+            <div class="k">route files (TanStack Router)</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ================= SECTIONS ================= -->
+      <main class="grid">
+        <details class="card" open id="overview">
+          <summary>
+            <span class="num">01</span>
+            <h2>Project overview</h2>
+            <span class="chev">▶</span>
+          </summary>
+          <div class="card-body">
+            <p>
+              <strong>CABANA</strong> is a premium creator OS — link-in-bio, storefront, media kit,
+              first-party analytics — being evolved <strong>additively</strong> into a creator
+              subscription platform (members, follows, posts, fan subscriptions, messaging, tips,
+              payouts). Product name in code and UI is CABANA; the repo folder is
+              <code>LuminaCreatorSuite</code>.
+            </p>
+            <p>
+              The guiding rule: <strong>preserve all existing creator functionality</strong>. Each
+              phase adds tables + RLS and a thin, RLS-scoped server-action tier in strict dependency
+              order, and never moves real money or touches the remote Supabase without explicit,
+              gated approval.
+            </p>
+            <dl class="kv">
+              <dt>Stack</dt>
+              <dd>
+                TanStack Start (SSR) · React 19 · Vite 7 · Tailwind CSS 4 · Cloudflare Workers ·
+                Supabase (auth/Postgres/storage) · Bun
+              </dd>
+              <dt>Source of truth</dt>
+              <dd>
+                <code>CLAUDE.md</code>, <code>CABANA_ARCHITECTURE.md</code>,
+                <code>docs/CABANA_BUILD_ROADMAP.md</code>,
+                <code>docs/CLAUDE_SESSION_HANDOFF.md</code>
+              </dd>
+              <dt>Demo clock</dt>
+              <dd>June 25, 2026 — mock provider refs use a <code>mock_</code> prefix</dd>
+              <dt>README</dt>
+              <dd>None at repo root — see the to-do list</dd>
+            </dl>
+          </div>
+        </details>
+
+        <details class="card" open id="phase">
+          <summary>
+            <span class="num">02</span>
+            <h2>Current phase</h2>
+            <span class="chev">▶</span>
+          </summary>
+          <div class="card-body">
+            <p>
+              <span class="badge b-live"><i>●</i> shipped</span>&nbsp;
+              <strong>Phase 11B — Creator analytics</strong> is the latest completed phase (revenue
+              / subscriber / content / engagement analytics at <code>/dashboard/performance</code>).
+            </p>
+            <p>
+              Since then, <code>main</code> has taken two corrective DB fixes (baseline grants,
+              user-roles admin policy) and two UI refactors (social three-column shell; social feed
+              + creator profile polish, PR&nbsp;#22 at HEAD <code>43c1321</code>).
+            </p>
+            <p>
+              <span class="badge b-gated"><i>◆</i> gated</span>&nbsp;
+              <strong>Next in the roadmap:</strong> Phase 11C (audience insights) and Phase 9C
+              (notification delivery providers). Both require explicit approval before any work
+              starts — the handoff says so verbatim.
+            </p>
+            <p>
+              <span class="badge b-verify"><i>◆</i> needs verification</span>&nbsp; Working tree has
+              <strong>one uncommitted change</strong>: a <code>CLAUDE.md</code> sync updating it to
+              match the repo (new migrations, social shell, new dashboard routes). Review and commit
+              it.
+            </p>
+          </div>
+        </details>
+
+        <details class="card wide" id="completed">
+          <summary>
+            <span class="num">03</span>
+            <h2>Completed work</h2>
+            <span class="hint">18 shipped slices, Phase 2A → 11B</span><span class="chev">▶</span>
+          </summary>
+          <div class="card-body">
+            <div class="tbl-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Phase</th>
+                    <th>Delivered</th>
+                    <th>Key surfaces / modules</th>
+                    <th>Money</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="mono">2A</td>
+                    <td>Rebuild-from-zero baseline + CI (verify + Docker db-validate jobs)</td>
+                    <td>
+                      <code>20260511_baseline</code>, <code>ci.yml</code>,
+                      <code>db-validate.sh</code>
+                    </td>
+                    <td>—</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">2B</td>
+                    <td>Member vs creator accounts; first protected server-action tier</td>
+                    <td>
+                      <code>member_profiles</code>, <code>/account</code>,
+                      <code>cabana-account</code>
+                    </td>
+                    <td>—</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">2C</td>
+                    <td>Social graph: follows, blocks, ID-free public profile views</td>
+                    <td>
+                      <code>relationship_*</code> RPCs, persistent follow on <code>/$username</code>
+                    </td>
+                    <td>—</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">3</td>
+                    <td>Posts + feed; private media bucket + signed URLs; locked stubs</td>
+                    <td>
+                      <code>/dashboard/posts</code>, <code>/feed</code>, <code>can_view_post</code>
+                    </td>
+                    <td>—</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">3.2</td>
+                    <td>Comments, likes, saves with block-aware RLS</td>
+                    <td><code>/post/$postId</code>, <code>post_engagement_state</code></td>
+                    <td>—</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">4</td>
+                    <td>Fan→creator subscription tiers + subscriber entitlements</td>
+                    <td><code>/dashboard/subscribers</code>, subscribe panel</td>
+                    <td>demo</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">5</td>
+                    <td>1:1 messaging with read receipts + Supabase Realtime</td>
+                    <td><code>/messages</code>, <code>/messages/$conversationId</code></td>
+                    <td>—</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">6</td>
+                    <td>
+                      Monetization ledger: append-only transactions, tips, purchases, entitlements,
+                      payout requests
+                    </td>
+                    <td><code>/dashboard/earnings</code>, <code>cabana-money</code></td>
+                    <td>demo</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">7</td>
+                    <td>Notifications + activity log, DB-trigger event generation, inert outbox</td>
+                    <td><code>emit_notification</code>, realtime badge</td>
+                    <td>—</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">8</td>
+                    <td>Moderation queue + append-only audit trail (staff-gated)</td>
+                    <td><code>/admin/reports</code>, <code>/admin/audit</code></td>
+                    <td>—</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">8B</td>
+                    <td>Member-facing reporting on posts, comments, profiles, DMs</td>
+                    <td><code>ReportButton → ReportDialog</code></td>
+                    <td>—</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">8C</td>
+                    <td>
+                      Admin finance reads + transition-validated payout workflow (approve ≠
+                      mark-paid)
+                    </td>
+                    <td>
+                      <code>/admin/finance</code>, <code>/admin/ledger</code>,
+                      <code>/admin/payouts</code>
+                    </td>
+                    <td>demo</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">9A</td>
+                    <td>
+                      Outbox processor RPC (batch claim, backoff, dead-letter) — simulated delivery
+                    </td>
+                    <td><code>process_notification_outbox</code></td>
+                    <td>—</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">9B</td>
+                    <td>Notification center UI + activity feed + preferences</td>
+                    <td><code>/dashboard/notifications</code>, <code>/notifications</code></td>
+                    <td>—</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">10A+B</td>
+                    <td>Public discovery + global search with deterministic ranking</td>
+                    <td><code>/discover</code> (noindex, public projections only)</td>
+                    <td>—</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">11A</td>
+                    <td>Creator dashboard home: KPIs, revenue + subscriber summaries, activity</td>
+                    <td><code>/dashboard/home</code></td>
+                    <td>demo</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">11B</td>
+                    <td>Creator analytics with date-range filters + own-content RPC</td>
+                    <td>
+                      <code>/dashboard/performance</code>, <code>creator_content_analytics</code>
+                    </td>
+                    <td>demo</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">fixes</td>
+                    <td>
+                      Baseline table GRANTs (42501 fix) · user_roles admin policy via
+                      <code>is_current_user_admin()</code> · social shell UI refactor
+                    </td>
+                    <td>
+                      <code>20260525</code>, <code>20260526</code>,
+                      <code>components/cabana/social/</code>
+                    </td>
+                    <td>—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+
+        <details class="card" id="architecture">
+          <summary>
+            <span class="num">04</span>
+            <h2>Architecture summary</h2>
+            <span class="chev">▶</span>
+          </summary>
+          <div class="card-body">
+            <ul>
+              <li>
+                <strong>Routing/SSR:</strong> file-based TanStack Router in
+                <code>src/routes/</code> (flat dot-notation); SSR entry
+                <code>src/server.ts</code> wraps the handler with a branded error page;
+                <code>routeTree.gen.ts</code> is generated — never hand-edit.
+              </li>
+              <li>
+                <strong>Three Supabase trust boundaries:</strong> <code>supabase</code> (anon
+                browser client, RLS-enforced) · <code>supabaseAdmin</code> (service role,
+                server-only) · <code>requireSupabaseAuth</code> middleware (per-request RLS-scoped
+                client). A fourth, <code>optionalSupabaseAuth</code>, serves guest-callable reads
+                (feed, discovery).
+              </li>
+              <li>
+                <strong>T2 protected actions:</strong> every <code>createServerFn</code> composes
+                client <code>attachSupabaseToken</code> + server <code>requireSupabaseAuth</code>,
+                so handlers run under the caller's RLS — never the service role. Handlers stay thin;
+                behavior lives in pure, repository-injected modules.
+              </li>
+              <li>
+                <strong>Pure business layer:</strong> 16 <code>cabana-*</code> modules (money,
+                entitlements, posts, messaging, moderation, payouts, analytics…) unit-tested without
+                React, Supabase, or a browser — this is where new domain logic must go.
+              </li>
+              <li>
+                <strong>Event generation at the DB layer:</strong> notifications and audit rows are
+                written by SECURITY DEFINER triggers (<code>emit_notification</code>, report/payout
+                audit triggers), so events fire uniformly for every write path.
+              </li>
+              <li>
+                <strong>Design system:</strong> luxury dark / glass / iridescent utilities in
+                <code>src/styles.css</code> (Tailwind 4, CSS-config); shadcn/ui primitives in
+                <code>components/ui/</code>; social surfaces render inside the three-column
+                <code>SocialShell</code>.
+              </li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="card" id="features">
+          <summary>
+            <span class="num">05</span>
+            <h2>Active features</h2>
+            <span class="chev">▶</span>
+          </summary>
+          <div class="card-body">
+            <div class="feat">
+              <div>
+                <span class="badge b-live"><i>●</i> live</span><b>Creator OS</b>profiles, links,
+                storefront, media uploads, first-party analytics
+              </div>
+              <div>
+                <span class="badge b-live"><i>●</i> live</span
+                ><b>Accounts + social graph</b>member/creator split, follows, blocks, public views
+              </div>
+              <div>
+                <span class="badge b-live"><i>●</i> live</span
+                ><b>Posts, feed, engagement</b>visibility tiers, locked stubs, comments/likes/saves
+              </div>
+              <div>
+                <span class="badge b-live"><i>●</i> live</span><b>Messaging</b>1:1 realtime DMs with
+                read receipts
+              </div>
+              <div>
+                <span class="badge b-demo"><i>◐</i> demo-only</span
+                ><b>Subscriptions + monetization</b>tiers, tips, purchases, ledger, payouts — mock
+                refs, no processor
+              </div>
+              <div>
+                <span class="badge b-live"><i>●</i> live</span><b>Notifications</b>DB-trigger
+                events, realtime center, preferences, outbox engine (simulated delivery)
+              </div>
+              <div>
+                <span class="badge b-live"><i>●</i> live</span><b>Trust &amp; ops</b>reporting,
+                staff moderation queue, append-only audit, admin finance + payout review
+              </div>
+              <div>
+                <span class="badge b-live"><i>●</i> live</span><b>Discovery + dashboards</b>public
+                /discover search, creator home KPIs, performance analytics
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="card" id="database">
+          <summary>
+            <span class="num">06</span>
+            <h2>Supabase / database status</h2>
+            <span class="chev">▶</span>
+          </summary>
+          <div class="card-body">
+            <p>
+              <strong>16 ordered migrations rebuild the schema from zero</strong> (<code
+                >20260511_baseline</code
+              >
+              → <code>20260526_user_roles_admin_policy</code>), creating 35 tables, 2 safe public
+              views, and 4 storage buckets (<code>avatars</code>/<code>banners</code>/<code
+                >products</code
+              >
+              public-CDN; <code>post-media</code> <strong>private</strong>, signed URLs only).
+            </p>
+            <ul>
+              <li>
+                <strong>14 behavioral SQL suites</strong> in <code>supabase/tests/</code> run via
+                <code>bun run db:validate</code> (needs Docker; CI runs them on every push/PR).
+              </li>
+              <li>
+                <strong>Append-only guarantees:</strong> <code>transactions</code>,
+                <code>audit_logs</code>, <code>activity_events</code> are immutable by trigger —
+                reversals are new <code>refund</code> rows, never edits.
+              </li>
+              <li>
+                <strong>Hard-won lesson (migration 0525):</strong> RLS policies alone are not enough
+                — every table needs explicit GRANTs to <code>anon</code>/<code>authenticated</code>
+                or PostgREST fails with <code>42501</code> before policies run.
+              </li>
+              <li>
+                <strong>Seed:</strong> <code>aurora</code> demo creator incl. a purchase post, demo
+                reports, and payout requests, so every surface renders locally after
+                <code>bun run db:reset</code>.
+              </li>
+            </ul>
+            <p>
+              <span class="badge b-verify"><i>◆</i> needs verification</span>&nbsp; The baseline was
+              <em>reconstructed</em>, not dumped: it has never been diffed against the live project
+              (<code>dwnricswfskypqqfknnh</code>). The CLI is intentionally unlinked —
+              <strong>validate locally only, never push to the remote.</strong>
+            </p>
+          </div>
+        </details>
+
+        <details class="card" id="auth">
+          <summary>
+            <span class="num">07</span>
+            <h2>Auth / roles / RLS notes</h2>
+            <span class="chev">▶</span>
+          </summary>
+          <div class="card-body">
+            <ul>
+              <li>
+                <strong>Four principals:</strong> guest (public reads only) · member (<code
+                  >/account</code
+                >
+                home) · creator (<code>/dashboard</code>, default on signup) · staff (admin or
+                moderator via <code>user_roles</code>). <code>is_current_user_admin()</code> /
+                <code>is_current_user_staff()</code> wrap the revoked <code>has_role</code> for
+                policies.
+              </li>
+              <li>
+                <strong>Signup branching:</strong> the <code>handle_new_user</code> trigger reads
+                <code>raw_user_meta_data.account_type</code>; only the exact string
+                <code>"member"</code> opts out of creator provisioning.
+              </li>
+              <li>
+                <strong>Route guards are client-side only</strong> (redirects in
+                <code>dashboard.tsx</code>/<code>account.tsx</code>). Data stays safe because every
+                server action independently validates the bearer token — but guarded shells can
+                flash for signed-out users.
+              </li>
+              <li>
+                <strong>Writes go through RPCs or column-scoped policies:</strong> fan
+                subscriptions, conversations, purchases, tips, payout reviews are SECURITY DEFINER
+                RPC-only; clients may only flip <code>notifications.read_at</code>.
+              </li>
+              <li>
+                <strong>Identity safety:</strong> cross-account discovery uses ID-free views/RPCs.
+                Known exception: the legacy public read of <code>creator_profiles</code> still
+                exposes <code>user_id</code> (see risks).
+              </li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="card wide" id="routes">
+          <summary>
+            <span class="num">08</span>
+            <h2>Frontend routes / screens</h2>
+            <span class="hint">42 route files</span><span class="chev">▶</span>
+          </summary>
+          <div class="card-body">
+            <div class="tbl-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 230px">Route</th>
+                    <th>Screen</th>
+                    <th style="width: 170px">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="group">
+                    <td colspan="3">Public &amp; marketing</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/</td>
+                    <td>Marketing landing</td>
+                    <td>
+                      <span class="badge b-live"><i>●</i> live</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/$username</td>
+                    <td>Public creator page (posts, tiers, follow, message) in SocialShell</td>
+                    <td>
+                      <span class="badge b-live"><i>●</i> live</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/discover</td>
+                    <td>Discovery + global search (noindex, public projections only)</td>
+                    <td>
+                      <span class="badge b-live"><i>●</i> live</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/feed · /post/$postId</td>
+                    <td>Home feed · post detail with engagement</td>
+                    <td>
+                      <span class="badge b-live"><i>●</i> live</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/pricing</td>
+                    <td>SaaS plans — no checkout wired</td>
+                    <td>
+                      <span class="badge b-demo"><i>◐</i> demo</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/demo · /td · /eldondolla</td>
+                    <td>Seeded demo profile · bespoke static microsites</td>
+                    <td>
+                      <span class="badge b-demo"><i>◐</i> demo</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/docs/system · /docs/data-model</td>
+                    <td>In-app docs (data-model flagged stale in debt register)</td>
+                    <td>
+                      <span class="badge b-verify"><i>◆</i> verify</span>
+                    </td>
+                  </tr>
+                  <tr class="group">
+                    <td colspan="3">Auth &amp; member</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/login · /signup · /forgot-password · /reset-password</td>
+                    <td>Auth flows (AuthShell)</td>
+                    <td>
+                      <span class="badge b-live"><i>●</i> live</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/onboarding</td>
+                    <td>7-step onboarding — mostly not persisted</td>
+                    <td>
+                      <span class="badge b-demo"><i>◐</i> demo</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/account</td>
+                    <td>Member home (noindex, creator-bounced)</td>
+                    <td>
+                      <span class="badge b-live"><i>●</i> live</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/messages · /messages/$id</td>
+                    <td>Realtime inbox + thread</td>
+                    <td>
+                      <span class="badge b-live"><i>●</i> live</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/notifications</td>
+                    <td>Member notifications (guests see FoundationPage)</td>
+                    <td>
+                      <span class="badge b-live"><i>●</i> live</span>
+                    </td>
+                  </tr>
+                  <tr class="group">
+                    <td colspan="3">Creator studio — /dashboard</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/dashboard</td>
+                    <td>Link-in-bio studio home (DashHome)</td>
+                    <td>
+                      <span class="badge b-live"><i>●</i> live</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/dashboard/home</td>
+                    <td>Creator business dashboard: KPIs, revenue, subscribers, activity</td>
+                    <td>
+                      <span class="badge b-live"><i>●</i> live</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">
+                      /dashboard/posts · /subscribers · /earnings · /notifications
+                    </td>
+                    <td>Composer + manager · subscriber roster · earnings + payouts · center</td>
+                    <td>
+                      <span class="badge b-live"><i>●</i> live</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/dashboard/performance</td>
+                    <td>Creator analytics (11B) — distinct from legacy /dashboard/analytics</td>
+                    <td>
+                      <span class="badge b-live"><i>●</i> live</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/dashboard/analytics · /links · /profile · /storefront</td>
+                    <td>Link-in-bio analytics · link manager · profile editor · store</td>
+                    <td>
+                      <span class="badge b-live"><i>●</i> live</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/dashboard/messages</td>
+                    <td>Dashboard messages screen (real inbox lives at /messages)</td>
+                    <td>
+                      <span class="badge b-verify"><i>◆</i> verify</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/dashboard/media-kit · /settings</td>
+                    <td>Hardcoded metrics · hardcoded integrations</td>
+                    <td>
+                      <span class="badge b-demo"><i>◐</i> demo</span>
+                    </td>
+                  </tr>
+                  <tr class="group">
+                    <td colspan="3">Admin &amp; staff</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/admin</td>
+                    <td>Legacy demo tabs (hardcoded panels) + nav cards to real tools</td>
+                    <td>
+                      <span class="badge b-demo"><i>◐</i> demo</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/admin/reports · /admin/audit</td>
+                    <td>Moderation queue + audit trail (StaffGate)</td>
+                    <td>
+                      <span class="badge b-live"><i>●</i> live</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="mono">/admin/finance · /ledger · /ledger/$id · /payouts</td>
+                    <td>Finance back office + payout review (AdminGate, demo money)</td>
+                    <td>
+                      <span class="badge b-live"><i>●</i> live</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+
+        <details class="card" id="testing">
+          <summary>
+            <span class="num">09</span>
+            <h2>Testing coverage</h2>
+            <span class="hint">verified today</span><span class="chev">▶</span>
+          </summary>
+          <div class="card-body">
+            <p>
+              <strong>332 tests in 16 files pass</strong> (vitest, run 2026-07-06). Coverage is
+              measured over exactly the 16 pure business modules with a
+              <strong>95% threshold</strong> on every axis — the tick on each meter marks the gate.
+            </p>
+            <div class="meter">
+              <div class="m-head"><b>Statements</b><span>99.52%</span></div>
+              <div class="track">
+                <div class="fill" style="width: 99.52%"></div>
+                <div class="tick" style="left: 95%"></div>
+              </div>
+            </div>
+            <div class="meter">
+              <div class="m-head"><b>Branches</b><span>95.75%</span></div>
+              <div class="track">
+                <div class="fill" style="width: 95.75%"></div>
+                <div class="tick" style="left: 95%"></div>
+              </div>
+            </div>
+            <div class="meter">
+              <div class="m-head"><b>Functions</b><span>100%</span></div>
+              <div class="track">
+                <div class="fill" style="width: 100%"></div>
+                <div class="tick" style="left: 95%"></div>
+              </div>
+            </div>
+            <div class="meter">
+              <div class="m-head"><b>Lines</b><span>100%</span></div>
+              <div class="track">
+                <div class="fill" style="width: 100%"></div>
+                <div class="tick" style="left: 95%"></div>
+              </div>
+            </div>
+            <p class="m-note">
+              Branch coverage sits closest to the gate — lowest modules: cabana-discovery 86.9%,
+              cabana-creator-analytics 93.6%, cabana-moderation 93.7%.
+            </p>
+            <p style="margin-top: 12px">
+              <strong>Not unit-tested:</strong> React hooks, server-action wiring, and UI components
+              — covered only indirectly by the 14 SQL suites at the DB layer and by lint/tsc/build.
+              E2E does not exist.
+            </p>
+            <p>
+              <strong>Gate verified today:</strong> lint 0 errors (6 expected react-refresh warnings
+              in shadcn files) · <code>tsc --noEmit</code> clean · build green in 3.7s.
+            </p>
+          </div>
+        </details>
+
+        <details class="card" id="risks">
+          <summary>
+            <span class="num">10</span>
+            <h2>Known risks / blockers</h2>
+            <span class="chev">▶</span>
+          </summary>
+          <div class="card-body">
+            <ul>
+              <li>
+                <span class="badge b-block"><i>◆</i> prod blocker</span>&nbsp;
+                <strong>Remote schema never reconciled.</strong> Baseline is reconstructed; no
+                <code>supabase db dump</code> diff or <code>migration repair</code> has run
+                (auth-blocked). Keep validation local-only.
+              </li>
+              <li>
+                <span class="badge b-risk"><i>◆</i> risk</span>&nbsp;
+                <strong
+                  ><code>creator_profiles</code> public read exposes <code>user_id</code></strong
+                >
+                — the legacy <code>cabana-store.ts</code> path predates the safe views.
+              </li>
+              <li>
+                <span class="badge b-risk"><i>◆</i> risk</span>&nbsp;
+                <strong>Route guards are client-side only</strong> — no server route guard; guarded
+                shells can flash. Server actions remain independently protected.
+              </li>
+              <li>
+                <span class="badge b-risk"><i>◆</i> risk</span>&nbsp;
+                <strong>Legacy buckets are CDN-public</strong>
+                (<code>avatars</code>/<code>banners</code>/<code>products</code>) — unsuitable for
+                any future private media; only <code>post-media</code> is private.
+              </li>
+              <li>
+                <span class="badge b-verify"><i>◆</i> verify</span>&nbsp;
+                <strong><code>?redirect=</code> open-redirect</strong> flagged in the debt register
+                for <code>dashboard.tsx</code>; not re-checked since.
+              </li>
+              <li>
+                <span class="badge b-verify"><i>◆</i> verify</span>&nbsp;
+                <strong><code>post_count</code> placeholders</strong> in the public views were 0 at
+                Phase 2C — unclear if later phases wired real counts (affects /discover ranking).
+              </li>
+              <li>
+                <span class="badge b-risk"><i>◆</i> risk</span>&nbsp;
+                <strong>Naming collision:</strong> <code>subscriptions</code> = SaaS plans; the
+                gated rename to <code>platform_subscriptions</code> hasn't happened. Fan billing
+                must keep using <code>creator_subscriptions</code>.
+              </li>
+              <li>
+                <span class="badge b-demo"><i>◐</i> hygiene</span>&nbsp;
+                <strong>Heavy build chunks</strong> (~0.9–1.05 MB: router, dashboard.performance)
+                and lingering demo surfaces (media kit, settings integrations, admin tabs, pricing)
+                that read as real.
+              </li>
+              <li>
+                <span class="badge b-demo"><i>◐</i> hygiene</span>&nbsp;
+                <strong>Stale checkpoint docs:</strong>
+                <code>CABANA_PROJECT_STATE.md</code> self-describes as a Phase-7 snapshot; parts of
+                <code>CABANA_TECH_DEBT.md</code> are already resolved.
+              </li>
+            </ul>
+          </div>
+        </details>
+
+        <!-- ================= TO-DO ================= -->
+        <details class="card wide" open id="todo">
+          <summary>
+            <span class="num">11</span>
+            <h2>To-do list</h2>
+            <span class="hint">checkbox state saved in this browser</span
+            ><span class="chev">▶</span>
+          </summary>
+          <div class="card-body">
+            <div class="todo-tools" role="group" aria-label="Task filters">
+              <button class="pill" data-f="all" aria-pressed="true" type="button">
+                All <span class="n" data-c="all"></span>
+              </button>
+              <button class="pill" data-f="critical" aria-pressed="false" type="button">
+                Critical <span class="n" data-c="critical"></span>
+              </button>
+              <button class="pill" data-f="high" aria-pressed="false" type="button">
+                High <span class="n" data-c="high"></span>
+              </button>
+              <button class="pill" data-f="medium" aria-pressed="false" type="button">
+                Medium <span class="n" data-c="medium"></span>
+              </button>
+              <button class="pill" data-f="later" aria-pressed="false" type="button">
+                Later <span class="n" data-c="later"></span>
+              </button>
+              <input
+                class="search"
+                id="taskSearch"
+                type="search"
+                placeholder="Search tasks — title, files, keywords…"
+                aria-label="Search tasks"
+              />
+              <button class="reset-btn" id="resetTasks" type="button">Reset checklist</button>
+            </div>
+
+            <div class="todo-progress">
+              <div class="meter">
+                <div class="m-head">
+                  <b>Checklist progress</b
+                  ><span id="progressLabel" aria-live="polite">0 of 16 · 0%</span>
+                </div>
+                <div class="track">
+                  <div class="fill iri" id="progressFill" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+
+            <ul class="todo-list" id="taskList">
+              <!-- CRITICAL -->
+              <li data-priority="critical" data-id="commit-claude-md">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title">Review + commit the pending CLAUDE.md sync</span>
+                    <span class="badge b-block"><i>◆</i> critical</span><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      The working tree has one uncommitted change: a CLAUDE.md update syncing it to
+                      the repo (migrations 20260525/20260526, the SocialShell layout, the
+                      /dashboard/home · /performance · /subscribers routes, the docs/ reference
+                      set).
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">CLAUDE.md</dd>
+                      <dt>Why</dt>
+                      <dd>
+                        CLAUDE.md is the source of truth for every agent session; drift misleads all
+                        future work.
+                      </dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd">
+                        <code>git diff CLAUDE.md</code
+                        ><button class="copy-mini" data-copy="git diff CLAUDE.md" type="button">
+                          Copy
+                        </button>
+                      </dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <li data-priority="critical" data-id="handoff-update">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title">Record today's verified gate in the session handoff</span>
+                    <span class="badge b-block"><i>◆</i> critical</span><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      The handoff still ends at the Phase 11B session (June 25). The full gate was
+                      re-verified 2026-07-06 after the social-UI merges: lint 0 errors / 6 expected
+                      warnings, tsc clean, 332/332 tests, coverage 99.52 / 95.75 / 100 / 100, build
+                      green.
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">docs/CLAUDE_SESSION_HANDOFF.md</dd>
+                      <dt>Why</dt>
+                      <dd>
+                        Project convention: every session ends with an updated handoff; it's the
+                        state ledger the next session reads first.
+                      </dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd">
+                        <code
+                          >bun run lint && bunx tsc --noEmit && bun run test && bun run build</code
+                        ><button
+                          class="copy-mini"
+                          data-copy="bun run lint && bunx tsc --noEmit && bun run test && bun run build"
+                          type="button"
+                        >
+                          Copy
+                        </button>
+                      </dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <!-- HIGH -->
+              <li data-priority="high" data-id="safe-view-migration">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title"
+                      >Stop leaking user_id: move public creator reads to the safe view</span
+                    >
+                    <span class="badge b-risk"><i>◆</i> high</span><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      The legacy public read path still selects from raw
+                      <code>creator_profiles</code>, which exposes <code>user_id</code>. The ID-free
+                      <code>public_creator_profiles</code> view has existed since Phase 2C — migrate
+                      <code>useCreatorByHandle</code> and the public page to it; owner reads stay on
+                      the table. App-code change only, no migration.
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">src/lib/cabana-store.ts · src/routes/$username.tsx</dd>
+                      <dt>Why</dt>
+                      <dd>
+                        Top security item in the debt register; the fix's prerequisite (the view)
+                        already shipped.
+                      </dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd">
+                        <code>grep -rn 'creator_profiles' src/lib/cabana-store.ts</code
+                        ><button
+                          class="copy-mini"
+                          data-copy="grep -rn 'creator_profiles' src/lib/cabana-store.ts"
+                          type="button"
+                        >
+                          Copy
+                        </button>
+                      </dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <li data-priority="high" data-id="redirect-allowlist">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title">Verify + close the ?redirect= open-redirect</span>
+                    <span class="badge b-verify"><i>◆</i> high · verify</span
+                    ><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      The debt register flags <code>dashboard.tsx</code> for consuming
+                      <code>?redirect=</code> directly. First confirm it's still unguarded, then
+                      allow-list to same-origin path-only targets.
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">src/routes/dashboard.tsx · src/routes/login.tsx</dd>
+                      <dt>Why</dt>
+                      <dd>Open redirects turn the login flow into a phishing primitive.</dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd">
+                        <code>grep -n 'redirect' src/routes/dashboard.tsx src/routes/login.tsx</code
+                        ><button
+                          class="copy-mini"
+                          data-copy="grep -n 'redirect' src/routes/dashboard.tsx src/routes/login.tsx"
+                          type="button"
+                        >
+                          Copy
+                        </button>
+                      </dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <li data-priority="high" data-id="post-count-verify">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title"
+                      >Verify post_count / engagement counts in the public views</span
+                    >
+                    <span class="badge b-verify"><i>◆</i> high · verify</span
+                    ><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      At Phase 2C the public views returned placeholder <code>post_count = 0</code>;
+                      the Phase 3.2 follow-up ("wire real counts") was never explicitly closed. If
+                      still stubbed, /discover ranking is skewed. A view change would need the
+                      standard migration gate.
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">
+                        supabase/migrations (view defs) · src/lib/cabana-discovery.ts
+                      </dd>
+                      <dt>Why</dt>
+                      <dd>
+                        Discovery ranking consumes these fields; silent zeros make "trending" wrong.
+                      </dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd">
+                        <code
+                          >bun run db:reset && psql "$DB_URL" -c "select username, post_count from
+                          public_creator_profiles"</code
+                        ><button
+                          class="copy-mini"
+                          data-copy='bun run db:reset && psql "$DB_URL" -c "select username, post_count from public_creator_profiles"'
+                          type="button"
+                        >
+                          Copy
+                        </button>
+                      </dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <li data-priority="high" data-id="server-guard-design">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title">Design the server-side route guard</span>
+                    <span class="badge b-risk"><i>◆</i> high</span><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      Guards for /dashboard, /account, /admin are client redirects only. Design
+                      (then implement) a TanStack Start loader/middleware guard so guarded shells
+                      never render for the wrong principal. Data is already safe — this closes the
+                      UX/consistency gap and a production-readiness item.
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">
+                        src/routes/dashboard.tsx · src/routes/account.tsx · src/routes/admin.tsx ·
+                        src/server.ts
+                      </dd>
+                      <dt>Why</dt>
+                      <dd>
+                        Debt register marks client-only auth gating as a production blocker (P2/P7).
+                      </dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd">
+                        <code>curl -sI http://localhost:3000/dashboard | head -5</code> (expect a
+                        redirect when signed out)<button
+                          class="copy-mini"
+                          data-copy="curl -sI http://localhost:3000/dashboard | head -5"
+                          type="button"
+                        >
+                          Copy
+                        </button>
+                      </dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <!-- MEDIUM -->
+              <li data-priority="medium" data-id="readme">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title">Add a root README.md</span>
+                    <span class="badge b-demo"><i>◐</i> medium</span><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      The repo has no README — the GitHub landing page is empty. A short one should
+                      state what CABANA is, the Bun command set, and point to CLAUDE.md + the docs/
+                      blueprints.
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">README.md (new)</dd>
+                      <dt>Why</dt>
+                      <dd>
+                        First-touch onboarding; everything else is documented but undiscoverable.
+                      </dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd">
+                        <code>bun run format && bun run lint</code
+                        ><button
+                          class="copy-mini"
+                          data-copy="bun run format && bun run lint"
+                          type="button"
+                        >
+                          Copy
+                        </button>
+                      </dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <li data-priority="medium" data-id="stale-docs">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title">Reconcile stale checkpoint docs</span>
+                    <span class="badge b-demo"><i>◐</i> medium</span><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      <code>CABANA_PROJECT_STATE.md</code> is a Phase-7 snapshot;
+                      <code>CABANA_TECH_DEBT.md</code> lists items already resolved (vitest, CI,
+                      moderator wiring, member accounts). Update, banner, or delete per each file's
+                      own "living docs win" rule so agents don't act on stale facts.
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">
+                        docs/CABANA_PROJECT_STATE.md · docs/CABANA_TECH_DEBT.md ·
+                        docs/CABANA_ROUTE_MAP.md
+                      </dd>
+                      <dt>Why</dt>
+                      <dd>
+                        Two sources of truth that disagree cost every future session verification
+                        time.
+                      </dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd">doc review — no build impact</dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <li data-priority="medium" data-id="demo-labels">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title">Sweep the remaining demo surfaces</span>
+                    <span class="badge b-demo"><i>◐</i> medium</span><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      Media kit (hardcoded Aurora metrics), settings integrations (hardcoded
+                      Stripe/Mailchimp/etc.), admin demo tabs, and pricing (no checkout) still read
+                      as real. Label them clearly as demo, wire them, or remove — demo discipline
+                      requires visible labels.
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">
+                        MediaKit.tsx · SettingsPanel.tsx · admin.tsx · pricing.tsx
+                      </dd>
+                      <dt>Why</dt>
+                      <dd>
+                        Unlabeled demo state can be mistaken for production behavior — the register
+                        calls this out explicitly for money-adjacent surfaces.
+                      </dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd">
+                        <code>bun run lint && bunx tsc --noEmit</code> + visual pass<button
+                          class="copy-mini"
+                          data-copy="bun run lint && bunx tsc --noEmit"
+                          type="button"
+                        >
+                          Copy
+                        </button>
+                      </dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <li data-priority="medium" data-id="chunk-split">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title">Code-split the heavy route chunks</span>
+                    <span class="badge b-demo"><i>◐</i> medium</span><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      Today's build emits ~0.9–1.05&nbsp;MB chunks (router, dashboard.performance —
+                      recharts). Lazy-load the analytics/recharts surface and audit shared-chunk
+                      composition.
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">
+                        src/components/cabana/dashboard/analytics/* · route-level lazy imports
+                      </dd>
+                      <dt>Why</dt>
+                      <dd>
+                        Bundle weight lands on every dashboard visitor; recharts belongs behind a
+                        lazy boundary.
+                      </dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd">
+                        <code>bun run build</code> — compare chunk sizes<button
+                          class="copy-mini"
+                          data-copy="bun run build"
+                          type="button"
+                        >
+                          Copy
+                        </button>
+                      </dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <li data-priority="medium" data-id="member-report-surface">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title">Member-profile reporting surface (deferred from 8B)</span>
+                    <span class="badge b-demo"><i>◐</i> medium</span><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      <code>ReportButton</code> already supports <code>subjectType="user"</code>,
+                      but no surface exposes another member's id. When a member-profile surface
+                      appears (e.g. in messaging headers), wire the button in — backend needs no
+                      change.
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">
+                        components/cabana/reporting/ · components/cabana/messaging/
+                      </dd>
+                      <dt>Why</dt>
+                      <dd>
+                        Closes the last gap in the reporting matrix (posts/comments/creators/DMs are
+                        covered).
+                      </dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd">
+                        <code>bun run test && bun run db:validate</code
+                        ><button
+                          class="copy-mini"
+                          data-copy="bun run test && bun run db:validate"
+                          type="button"
+                        >
+                          Copy
+                        </button>
+                      </dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <!-- LATER (GATED) -->
+              <li data-priority="later" data-id="phase-11c">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title">Phase 11C — audience insights</span>
+                    <span class="badge b-gated"><i>◆</i> gated</span><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      Demographics / geography / devices / exports over creator analytics.
+                      <strong>Do not start without explicit approval.</strong> Standard slice gate
+                      applies: approved migration + RLS design + behavioral SQL + a pure module
+                      joining the 95% set.
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">new cabana-* pure module · analytics surfaces</dd>
+                      <dt>Why</dt>
+                      <dd>Named "next" by the Phase 11B handoff — but gated.</dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd">full gate + <code>bun run db:validate</code></dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <li data-priority="later" data-id="phase-9c">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title">Phase 9C — real notification delivery providers</span>
+                    <span class="badge b-gated"><i>◆</i> gated</span><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      Replace the 9A simulated outbox outcome with real per-channel providers
+                      (email/push). The processor RPC, backoff, and dead-lettering already exist and
+                      are tested.
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">
+                        process_notification_outbox integration · provider config
+                      </dd>
+                      <dt>Why</dt>
+                      <dd>
+                        Everything upstream (events → outbox → claim/backoff) is already
+                        production-shaped.
+                      </dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd">
+                        <code>supabase/tests/notification_engine.sql</code> via db:validate
+                      </dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <li data-priority="later" data-id="subs-rename">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title">Rename subscriptions → platform_subscriptions</span>
+                    <span class="badge b-gated"><i>◆</i> gated</span><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      The SaaS-plan table's name collides with fan billing. The register wants the
+                      rename before <code>creator_subscriptions</code> carries production data.
+                      Gated migration + updated types + tests.
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">new migration · types.ts regen · cabana-store.ts</dd>
+                      <dt>Why</dt>
+                      <dd>A wrong-table write here is a billing bug by construction.</dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd"><code>bun run db:validate</code> + full gate</dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <li data-priority="later" data-id="remote-reconcile">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title">Remote schema reconciliation + migration repair</span>
+                    <span class="badge b-gated"><i>◆</i> gated · human step</span
+                    ><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      Diff the reconstructed baseline against a live <code>supabase db dump</code>,
+                      then <code>migration repair --status applied</code>. Needs a Supabase access
+                      token / DB password and <strong>mutates remote history</strong> — a deliberate
+                      human-run step, never automated from this environment.
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">supabase/ (remote project dwnricswfskypqqfknnh)</dd>
+                      <dt>Why</dt>
+                      <dd>
+                        Until done, the baseline cannot be treated as byte-exact with production.
+                      </dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd"><code>supabase db dump</code> diff review (manual)</dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <li data-priority="later" data-id="real-money">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title">Production payments (Stripe, KYC, real payouts)</span>
+                    <span class="badge b-gated"><i>◆</i> hard-gated</span
+                    ><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      Explicitly out of scope by standing constraint. When approved: processor +
+                      webhooks (signature-verified, idempotent), KYC, refunds/disputes, settling
+                      into the existing append-only ledger. The demo fee model (10% + 3%) and
+                      approve-vs-mark-paid payout split were designed to survive this swap.
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">money-actions.ts · new webhook tier · ledger RPCs</dd>
+                      <dt>Why</dt>
+                      <dd>
+                        The entire Phase 6–8C ledger exists so this lands as a settlement layer, not
+                        a rewrite.
+                      </dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd">gated design review first — no command applies yet</dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+
+              <li data-priority="later" data-id="paid-messages">
+                <details class="task">
+                  <summary>
+                    <input type="checkbox" aria-label="Mark task done" />
+                    <span class="t-title">Paid messages + private attachments</span>
+                    <span class="badge b-gated"><i>◆</i> gated</span><span class="chev">▶</span>
+                  </summary>
+                  <div class="t-body">
+                    <p>
+                      Deferred Phase 5 scope: image/video attachments on private storage with signed
+                      URLs, and paid-message unlocks through the entitlement ledger. Depends on the
+                      private-bucket pattern (exists) and monetization rules (demo).
+                    </p>
+                    <dl class="t-meta">
+                      <dt>Files</dt>
+                      <dd class="mono">messaging schema (gated migration) · cabana-messaging.ts</dd>
+                      <dt>Why</dt>
+                      <dd>
+                        Highest-demand creator feature after subscriptions; touches money + privacy
+                        at once.
+                      </dd>
+                      <dt>Validate</dt>
+                      <dd class="cmd">
+                        <code>supabase/tests/messaging.sql</code> extension via db:validate
+                      </dd>
+                    </dl>
+                  </div>
+                </details>
+              </li>
+            </ul>
+            <p class="empty-note" id="emptyNote">No tasks match the current filter.</p>
+          </div>
+        </details>
+
+        <details class="card" id="next-tasks">
+          <summary>
+            <span class="num">12</span>
+            <h2>Next Claude tasks</h2>
+            <span class="chev">▶</span>
+          </summary>
+          <div class="card-body">
+            <p>The short version — what the next session should actually do, in order:</p>
+            <ol class="build">
+              <li>
+                <b>Commit the CLAUDE.md sync</b> sitting in the working tree (review
+                <code>git diff CLAUDE.md</code> first).
+              </li>
+              <li><b>Update the session handoff</b> with today's verified gate results.</li>
+              <li>
+                <b>Fix the user_id leak</b> — move public creator reads onto
+                <code>public_creator_profiles</code>; re-run the gate.
+              </li>
+              <li><b>Verify the ?redirect= handling</b> and allow-list it if still raw.</li>
+              <li>
+                <b>Stop.</b> Phases 11C / 9C and anything schema-shaped are gated on explicit
+                approval.
+              </li>
+            </ol>
+          </div>
+        </details>
+
+        <details class="card" id="build-order">
+          <summary>
+            <span class="num">13</span>
+            <h2>Recommended build order</h2>
+            <span class="chev">▶</span>
+          </summary>
+          <div class="card-body">
+            <ol class="build">
+              <li>
+                <b>Housekeeping</b> — commit doc sync, record the gate, README, stale-doc
+                reconciliation. Zero risk, restores a clean baseline.
+              </li>
+              <li>
+                <b>Security debt burn-down</b> — safe-view migration, redirect allow-list, server
+                route-guard design. App-code only; no migrations needed.
+              </li>
+              <li>
+                <b>Product hygiene</b> — demo-surface labeling, chunk splitting, post_count
+                verification.
+              </li>
+              <li>
+                <b>Gated feature work (pick one per approval)</b> — Phase 11C audience insights
+                <em>or</em> Phase 9C delivery providers; then member-profile reporting when a
+                surface exists.
+              </li>
+              <li>
+                <b>Pre-production platform work (gated)</b> —
+                <code>platform_subscriptions</code> rename, remote schema reconciliation, server
+                route guard implementation.
+              </li>
+              <li>
+                <b>Real money, last</b> — Stripe/KYC/payouts settle into the existing ledger only
+                after everything above is stable and explicitly approved.
+              </li>
+            </ol>
+          </div>
+        </details>
+
+        <!-- ================= PROMPT ================= -->
+        <details class="card wide" open id="prompt">
+          <summary>
+            <span class="num">14</span>
+            <h2>Next Claude execution prompt</h2>
+            <span class="chev">▶</span>
+          </summary>
+          <div class="card-body">
+            <div class="prompt-box">
+              <div class="prompt-head">
+                <span class="dots"><i></i><i></i><i></i></span>
+                <span>prompt · paste into Claude Code at the repo root</span>
+                <button class="copy-btn" id="copyPrompt" type="button">
+                  Copy next Claude prompt
+                </button>
+              </div>
+              <pre class="prompt" id="promptText">
+Read CLAUDE.md and docs/CLAUDE_SESSION_HANDOFF.md before touching anything.
 
 State: Phase 11B (creator analytics) is complete. All 16 migrations rebuild from zero. The full handoff gate was re-verified 2026-07-06: lint 0 errors (6 expected react-refresh warnings), tsc clean, 332/332 unit tests, coverage 99.52/95.75/100/100 against the 95% gate, build green. Phases 11C and 9C are GATED — do not start them or write any new migration without my explicit approval.
 
@@ -933,155 +2554,194 @@ Do, in order:
 3. Check whether dashboard.tsx still consumes ?redirect= unvalidated; if so, allow-list it to same-origin, path-only targets.
 4. Finish by updating docs/CLAUDE_SESSION_HANDOFF.md: files changed, whether Supabase was touched (it should NOT be), and the gate results.
 
-Constraints (standing): demo-only integer-cents money — no Stripe, payouts, KYC, or adult content; transactions/audit_logs/activity_events are append-only; never edit src/routeTree.gen.ts or the auto-generated Supabase files; validate Supabase locally on Docker only and never push to the remote project.</pre>
-        </div>
-      </div>
-    </details>
+Constraints (standing): demo-only integer-cents money — no Stripe, payouts, KYC, or adult content; transactions/audit_logs/activity_events are append-only; never edit src/routeTree.gen.ts or the auto-generated Supabase files; validate Supabase locally on Docker only and never push to the remote project.</pre
+              >
+            </div>
+          </div>
+        </details>
+      </main>
 
-  </main>
+      <footer>
+        <p>
+          <strong>Provenance.</strong> Generated 2026-07-06 by Claude Code from the repo at commit
+          <code>43c1321</code> (main, clean except the CLAUDE.md sync). Verified live this session:
+          <code>bun run test</code> (332 passing), <code>bun run test:coverage</code>,
+          <code>bun run lint</code>, <code>bunx tsc --noEmit</code>, <code>bun run build</code>,
+          migration/table/suite counts, and FoundationPage usage. Items badged
+          <em>needs verification</em> come from the debt register or older checkpoints and were not
+          re-confirmed against current code. Checklist state lives only in this browser's
+          localStorage.
+        </p>
+      </footer>
+    </div>
 
-  <footer>
-    <p><strong>Provenance.</strong> Generated 2026-07-06 by Claude Code from the repo at commit <code>43c1321</code> (main, clean except the CLAUDE.md sync).
-    Verified live this session: <code>bun run test</code> (332 passing), <code>bun run test:coverage</code>, <code>bun run lint</code>, <code>bunx tsc --noEmit</code>, <code>bun run build</code>, migration/table/suite counts, and FoundationPage usage.
-    Items badged <em>needs verification</em> come from the debt register or older checkpoints and were not re-confirmed against current code.
-    Checklist state lives only in this browser's localStorage.</p>
-  </footer>
-</div>
+    <script>
+      (function () {
+        "use strict";
+        var LS_KEY = "cabana-status:v1:tasks";
 
-<script>
-(function () {
-  "use strict";
-  var LS_KEY = "cabana-status:v1:tasks";
+        function store() {
+          try {
+            return JSON.parse(localStorage.getItem(LS_KEY) || "{}");
+          } catch (e) {
+            return {};
+          }
+        }
+        function save(map) {
+          try {
+            localStorage.setItem(LS_KEY, JSON.stringify(map));
+          } catch (e) {}
+        }
 
-  function store() {
-    try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); }
-    catch (e) { return {}; }
-  }
-  function save(map) {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(map)); } catch (e) {}
-  }
+        var list = document.getElementById("taskList");
+        var items = Array.prototype.slice.call(list.querySelectorAll("li[data-id]"));
+        var fills = document.getElementById("progressFill");
+        var label = document.getElementById("progressLabel");
+        var emptyNote = document.getElementById("emptyNote");
+        var searchBox = document.getElementById("taskSearch");
+        var pills = Array.prototype.slice.call(document.querySelectorAll(".pill"));
+        var activeFilter = "all";
 
-  var list = document.getElementById("taskList");
-  var items = Array.prototype.slice.call(list.querySelectorAll("li[data-id]"));
-  var fills = document.getElementById("progressFill");
-  var label = document.getElementById("progressLabel");
-  var emptyNote = document.getElementById("emptyNote");
-  var searchBox = document.getElementById("taskSearch");
-  var pills = Array.prototype.slice.call(document.querySelectorAll(".pill"));
-  var activeFilter = "all";
+        // restore saved state
+        var saved = store();
+        items.forEach(function (li) {
+          var cb = li.querySelector('input[type="checkbox"]');
+          if (saved[li.dataset.id]) {
+            cb.checked = true;
+            li.classList.add("done");
+          }
+          // checkbox click shouldn't toggle the <details>
+          cb.addEventListener("click", function (ev) {
+            ev.stopPropagation();
+          });
+          cb.addEventListener("change", function () {
+            li.classList.toggle("done", cb.checked);
+            var map = store();
+            map[li.dataset.id] = cb.checked;
+            save(map);
+            renderProgress();
+          });
+        });
 
-  // restore saved state
-  var saved = store();
-  items.forEach(function (li) {
-    var cb = li.querySelector('input[type="checkbox"]');
-    if (saved[li.dataset.id]) { cb.checked = true; li.classList.add("done"); }
-    // checkbox click shouldn't toggle the <details>
-    cb.addEventListener("click", function (ev) { ev.stopPropagation(); });
-    cb.addEventListener("change", function () {
-      li.classList.toggle("done", cb.checked);
-      var map = store();
-      map[li.dataset.id] = cb.checked;
-      save(map);
-      renderProgress();
-    });
-  });
+        function renderProgress() {
+          var done = items.filter(function (li) {
+            return li.querySelector("input").checked;
+          }).length;
+          var pct = items.length ? Math.round((done / items.length) * 100) : 0;
+          fills.style.width = pct + "%";
+          label.textContent = done + " of " + items.length + " · " + pct + "%";
+        }
 
-  function renderProgress() {
-    var done = items.filter(function (li) {
-      return li.querySelector("input").checked;
-    }).length;
-    var pct = items.length ? Math.round((done / items.length) * 100) : 0;
-    fills.style.width = pct + "%";
-    label.textContent = done + " of " + items.length + " · " + pct + "%";
-  }
+        function renderCounts() {
+          var counts = { all: items.length, critical: 0, high: 0, medium: 0, later: 0 };
+          items.forEach(function (li) {
+            counts[li.dataset.priority] += 1;
+          });
+          pills.forEach(function (p) {
+            var n = p.querySelector("[data-c]");
+            if (n) n.textContent = counts[p.dataset.f];
+          });
+        }
 
-  function renderCounts() {
-    var counts = { all: items.length, critical: 0, high: 0, medium: 0, later: 0 };
-    items.forEach(function (li) { counts[li.dataset.priority] += 1; });
-    pills.forEach(function (p) {
-      var n = p.querySelector("[data-c]");
-      if (n) n.textContent = counts[p.dataset.f];
-    });
-  }
+        function applyFilters() {
+          var q = (searchBox.value || "").trim().toLowerCase();
+          var visible = 0;
+          items.forEach(function (li) {
+            var okP = activeFilter === "all" || li.dataset.priority === activeFilter;
+            var okQ = !q || li.textContent.toLowerCase().indexOf(q) !== -1;
+            var show = okP && okQ;
+            li.hidden = !show;
+            if (show) visible += 1;
+          });
+          emptyNote.style.display = visible ? "none" : "block";
+        }
 
-  function applyFilters() {
-    var q = (searchBox.value || "").trim().toLowerCase();
-    var visible = 0;
-    items.forEach(function (li) {
-      var okP = activeFilter === "all" || li.dataset.priority === activeFilter;
-      var okQ = !q || li.textContent.toLowerCase().indexOf(q) !== -1;
-      var show = okP && okQ;
-      li.hidden = !show;
-      if (show) visible += 1;
-    });
-    emptyNote.style.display = visible ? "none" : "block";
-  }
+        pills.forEach(function (p) {
+          p.addEventListener("click", function () {
+            activeFilter = p.dataset.f;
+            pills.forEach(function (o) {
+              o.setAttribute("aria-pressed", String(o === p));
+            });
+            applyFilters();
+          });
+        });
+        searchBox.addEventListener("input", applyFilters);
 
-  pills.forEach(function (p) {
-    p.addEventListener("click", function () {
-      activeFilter = p.dataset.f;
-      pills.forEach(function (o) { o.setAttribute("aria-pressed", String(o === p)); });
-      applyFilters();
-    });
-  });
-  searchBox.addEventListener("input", applyFilters);
+        document.getElementById("resetTasks").addEventListener("click", function () {
+          if (
+            !confirm("Reset the checklist? This clears all checkbox state saved in this browser.")
+          )
+            return;
+          try {
+            localStorage.removeItem(LS_KEY);
+          } catch (e) {}
+          items.forEach(function (li) {
+            li.querySelector("input").checked = false;
+            li.classList.remove("done");
+          });
+          renderProgress();
+        });
 
-  document.getElementById("resetTasks").addEventListener("click", function () {
-    if (!confirm("Reset the checklist? This clears all checkbox state saved in this browser.")) return;
-    try { localStorage.removeItem(LS_KEY); } catch (e) {}
-    items.forEach(function (li) {
-      li.querySelector("input").checked = false;
-      li.classList.remove("done");
-    });
-    renderProgress();
-  });
+        // expand / collapse all section cards
+        function setAll(open) {
+          Array.prototype.forEach.call(document.querySelectorAll("details.card"), function (d) {
+            d.open = open;
+          });
+        }
+        document.getElementById("expandAll").addEventListener("click", function () {
+          setAll(true);
+        });
+        document.getElementById("collapseAll").addEventListener("click", function () {
+          setAll(false);
+        });
 
-  // expand / collapse all section cards
-  function setAll(open) {
-    Array.prototype.forEach.call(document.querySelectorAll("details.card"), function (d) {
-      d.open = open;
-    });
-  }
-  document.getElementById("expandAll").addEventListener("click", function () { setAll(true); });
-  document.getElementById("collapseAll").addEventListener("click", function () { setAll(false); });
+        // copy helpers
+        function copyText(btn, text, doneLabel) {
+          function ok() {
+            var prev = btn.textContent;
+            btn.textContent = doneLabel || "Copied ✓";
+            setTimeout(function () {
+              btn.textContent = prev;
+            }, 1600);
+          }
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(ok, function () {
+              fallback();
+            });
+          } else {
+            fallback();
+          }
+          function fallback() {
+            var ta = document.createElement("textarea");
+            ta.value = text;
+            ta.setAttribute("readonly", "");
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+              document.execCommand("copy");
+              ok();
+            } catch (e) {}
+            document.body.removeChild(ta);
+          }
+        }
 
-  // copy helpers
-  function copyText(btn, text, doneLabel) {
-    function ok() {
-      var prev = btn.textContent;
-      btn.textContent = doneLabel || "Copied ✓";
-      setTimeout(function () { btn.textContent = prev; }, 1600);
-    }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(ok, function () { fallback(); });
-    } else { fallback(); }
-    function fallback() {
-      var ta = document.createElement("textarea");
-      ta.value = text;
-      ta.setAttribute("readonly", "");
-      ta.style.position = "fixed"; ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      try { document.execCommand("copy"); ok(); } catch (e) {}
-      document.body.removeChild(ta);
-    }
-  }
+        document.getElementById("copyPrompt").addEventListener("click", function () {
+          copyText(this, document.getElementById("promptText").textContent.trim());
+        });
 
-  document.getElementById("copyPrompt").addEventListener("click", function () {
-    copyText(this, document.getElementById("promptText").textContent.trim());
-  });
+        Array.prototype.forEach.call(document.querySelectorAll(".copy-mini"), function (btn) {
+          btn.addEventListener("click", function (ev) {
+            ev.stopPropagation();
+            copyText(btn, btn.getAttribute("data-copy"), "✓");
+          });
+        });
 
-  Array.prototype.forEach.call(document.querySelectorAll(".copy-mini"), function (btn) {
-    btn.addEventListener("click", function (ev) {
-      ev.stopPropagation();
-      copyText(btn, btn.getAttribute("data-copy"), "✓");
-    });
-  });
-
-  renderCounts();
-  renderProgress();
-  applyFilters();
-})();
-</script>
-</body>
+        renderCounts();
+        renderProgress();
+        applyFilters();
+      })();
+    </script>
+  </body>
 </html>

@@ -26,18 +26,19 @@ Fixing the branding is a one‑time configuration in **Google Cloud**, not a cod
 APIs & Services → **OAuth consent screen** (for the project that owns the OAuth client
 whose Client ID/secret are set in Supabase → Auth → Providers → Google):
 
-| Field | Value |
-| --- | --- |
-| App name | **CABANA** |
-| User support email | **admin@cabanagrp.com** |
-| App logo | CABANA logo (`public/cabana-logo.png`, 120×120 PNG, <1MB) |
-| Application home page | **https://cabanagrp.com** |
-| Authorized domain | **cabanagrp.com** |
-| Privacy policy URL | `https://cabanagrp.com/privacy` *(if/when published)* |
-| Terms of service URL | `https://cabanagrp.com/terms` *(if/when published)* |
-| Developer contact email | **admin@cabanagrp.com** |
+| Field                   | Value                                                     |
+| ----------------------- | --------------------------------------------------------- |
+| App name                | **CABANA**                                                |
+| User support email      | **admin@cabanagrp.com**                                   |
+| App logo                | CABANA logo (`public/cabana-logo.png`, 120×120 PNG, <1MB) |
+| Application home page   | **https://cabanagrp.com**                                 |
+| Authorized domain       | **cabanagrp.com**                                         |
+| Privacy policy URL      | `https://cabanagrp.com/privacy` _(if/when published)_     |
+| Terms of service URL    | `https://cabanagrp.com/terms` _(if/when published)_       |
+| Developer contact email | **admin@cabanagrp.com**                                   |
 
 Notes:
+
 - The **Authorized domain** (`cabanagrp.com`) must also be verified in Google Search
   Console under the same Google account, or Google won't accept it on the consent screen.
 - The homepage, privacy, and terms URLs must all live under the authorized domain.

@@ -12,17 +12,17 @@ This is the best possible case for reconciliation. Because the scaffold carries 
 
 ## Evidence — required verification items
 
-| Item | Status | Evidence |
-|---|---|---|
-| `profiles.account_type` | ❌ missing | Live `profiles` columns: `id, auth_user_id, role, admin_scopes, display_name, username, email, avatar_url, banner_url, bio, date_of_birth, age_verified_at, suspended_at, suspension_reason, deleted_at, created_at, updated_at`. **No `account_type`.** Different PK model too: live PK is `id` (own uuid) with a separate `auth_user_id` FK; CABANA PK **is** `auth.users.id`. |
-| creator / member / admin model | ⚠️ conflict | Live uses `profiles.role` (enum `user_role`) + `admin_scopes` (enum `admin_scope[]` = `{moderation,finance,compliance}`) + `fan_profiles`. CABANA uses `profiles.account_type` (`creator`\|`member`) + `member_profiles` + a separate `user_roles` table (enum `app_role` = `admin`\|`moderator`\|`user`). Fundamentally different authz shapes. |
-| `handle_new_user` trigger | ❌ missing | **Zero triggers on `auth.users`** (only non-internal trigger check returned `[]`). The scaffold creates profiles at the app layer. CABANA's `handle_new_user` (SECURITY DEFINER, provisions profile + role + creator_profile/member_profile) does not exist. |
-| onboarding completion state | ❌ missing (both) | No onboarding-completion column in either schema. CABANA has never persisted one (the `/auth/callback` route infers "new user" from account-creation recency). Not introduced by this reconciliation. |
-| creator profiles | ⚠️ conflict | `creator_profiles` exists in both but from different designs; live copy is **empty**. CABANA's has `handle`, `theme`, nullable `user_id` for ownerless seed profiles, its own RLS. |
-| links | ❌ missing | No `links` table live. CABANA link-in-bio core table absent. |
-| posts / feed | ⚠️ conflict | `posts`, `post_media`, `post_comments`, `post_likes`, `post_saves` exist but from the Reel design (enums `post_status`={draft,scheduled,published,archived,**deleted**}, `post_visibility`={public,subscribers,**ppv**}, plus `poll_options`/`poll_votes`/`collections`/`performers` not in CABANA). CABANA visibility is {public,followers,subscribers,purchase}. No `feed_home_posts`/`feed_creator_posts`/`can_view_post` functions exist. All empty. |
-| subscriptions / payments | ⚠️ conflict | Live has a **fuller** payments layer: `transactions`, `payouts`, `invoices`, `chargebacks`, `payment_methods`, `refund_requests`, `creator_subscriptions`, `creator_subscription_tiers`, `creator_balances`, `content_entitlements`. CABANA equivalents differ (CABANA adds `payout_requests`, `purchases`, `tips`, `subscriptions` (SaaS plans); demo-only mock refs). Enum `payout_status` and `transaction_type` collide by name with different labels. All empty. |
-| RLS policies | ⚠️ replaced | 92 live public policies, all on scaffold tables → dropped via CASCADE with their tables. CABANA migrations install their own full policy set. Storage: 14 policies across 5 buckets; CABANA-relevant ones are re-created, live-only bucket policies kept. |
+| Item                           | Status            | Evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------ | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `profiles.account_type`        | ❌ missing        | Live `profiles` columns: `id, auth_user_id, role, admin_scopes, display_name, username, email, avatar_url, banner_url, bio, date_of_birth, age_verified_at, suspended_at, suspension_reason, deleted_at, created_at, updated_at`. **No `account_type`.** Different PK model too: live PK is `id` (own uuid) with a separate `auth_user_id` FK; CABANA PK **is** `auth.users.id`.                                                                                      |
+| creator / member / admin model | ⚠️ conflict       | Live uses `profiles.role` (enum `user_role`) + `admin_scopes` (enum `admin_scope[]` = `{moderation,finance,compliance}`) + `fan_profiles`. CABANA uses `profiles.account_type` (`creator`\|`member`) + `member_profiles` + a separate `user_roles` table (enum `app_role` = `admin`\|`moderator`\|`user`). Fundamentally different authz shapes.                                                                                                                      |
+| `handle_new_user` trigger      | ❌ missing        | **Zero triggers on `auth.users`** (only non-internal trigger check returned `[]`). The scaffold creates profiles at the app layer. CABANA's `handle_new_user` (SECURITY DEFINER, provisions profile + role + creator_profile/member_profile) does not exist.                                                                                                                                                                                                          |
+| onboarding completion state    | ❌ missing (both) | No onboarding-completion column in either schema. CABANA has never persisted one (the `/auth/callback` route infers "new user" from account-creation recency). Not introduced by this reconciliation.                                                                                                                                                                                                                                                                 |
+| creator profiles               | ⚠️ conflict       | `creator_profiles` exists in both but from different designs; live copy is **empty**. CABANA's has `handle`, `theme`, nullable `user_id` for ownerless seed profiles, its own RLS.                                                                                                                                                                                                                                                                                    |
+| links                          | ❌ missing        | No `links` table live. CABANA link-in-bio core table absent.                                                                                                                                                                                                                                                                                                                                                                                                          |
+| posts / feed                   | ⚠️ conflict       | `posts`, `post_media`, `post_comments`, `post_likes`, `post_saves` exist but from the Reel design (enums `post_status`={draft,scheduled,published,archived,**deleted**}, `post_visibility`={public,subscribers,**ppv**}, plus `poll_options`/`poll_votes`/`collections`/`performers` not in CABANA). CABANA visibility is {public,followers,subscribers,purchase}. No `feed_home_posts`/`feed_creator_posts`/`can_view_post` functions exist. All empty.              |
+| subscriptions / payments       | ⚠️ conflict       | Live has a **fuller** payments layer: `transactions`, `payouts`, `invoices`, `chargebacks`, `payment_methods`, `refund_requests`, `creator_subscriptions`, `creator_subscription_tiers`, `creator_balances`, `content_entitlements`. CABANA equivalents differ (CABANA adds `payout_requests`, `purchases`, `tips`, `subscriptions` (SaaS plans); demo-only mock refs). Enum `payout_status` and `transaction_type` collide by name with different labels. All empty. |
+| RLS policies                   | ⚠️ replaced       | 92 live public policies, all on scaffold tables → dropped via CASCADE with their tables. CABANA migrations install their own full policy set. Storage: 14 policies across 5 buckets; CABANA-relevant ones are re-created, live-only bucket policies kept.                                                                                                                                                                                                             |
 
 ## Table-level map (public schema)
 
@@ -36,22 +36,22 @@ This is the best possible case for reconciliation. Because the scaffold carries 
 
 CABANA defines 20 `public` enums; live defines 26 (Reel set). **6 names collide with different labels** — these MUST be dropped before the migrations run or CABANA's `exception when duplicate_object` guards silently keep the wrong labels:
 
-| enum | live labels | CABANA labels |
-|---|---|---|
-| `payout_status` | requested,approved,paid,declined,on_hold,canceled,failed | queued,processing,paid,failed,canceled |
-| `post_status` | draft,scheduled,published,archived,deleted | draft,scheduled,published,archived |
-| `post_visibility` | public,subscribers,ppv | public,followers,subscribers,purchase |
-| `report_status` | open,assigned,resolved,dismissed,escalated | open,reviewing,resolved,dismissed |
-| `report_subject_type` | post,comment,message,profile,media | user,creator,post,comment,message |
-| `transaction_type` | (Reel set) | creator_subscription,product,post_unlock,paid_message,tip,refund,adjustment |
+| enum                  | live labels                                              | CABANA labels                                                               |
+| --------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `payout_status`       | requested,approved,paid,declined,on_hold,canceled,failed | queued,processing,paid,failed,canceled                                      |
+| `post_status`         | draft,scheduled,published,archived,deleted               | draft,scheduled,published,archived                                          |
+| `post_visibility`     | public,subscribers,ppv                                   | public,followers,subscribers,purchase                                       |
+| `report_status`       | open,assigned,resolved,dismissed,escalated               | open,reviewing,resolved,dismissed                                           |
+| `report_subject_type` | post,comment,message,profile,media                       | user,creator,post,comment,message                                           |
+| `transaction_type`    | (Reel set)                                               | creator_subscription,product,post_unlock,paid_message,tip,refund,adjustment |
 
 ## Storage buckets
 
-| bucket | live | CABANA wants | action |
-|---|---|---|---|
-| avatars | ✅ public | ✅ public | keep (CABANA insert is idempotent) |
-| banners, products, post-media | ❌ | ✅ | created by migrations |
-| creator-media, message-media, verification-documents, compliance-documents | live-only | — | keep untouched |
+| bucket                                                                     | live      | CABANA wants | action                             |
+| -------------------------------------------------------------------------- | --------- | ------------ | ---------------------------------- |
+| avatars                                                                    | ✅ public | ✅ public    | keep (CABANA insert is idempotent) |
+| banners, products, post-media                                              | ❌        | ✅           | created by migrations              |
+| creator-media, message-media, verification-documents, compliance-documents | live-only | —            | keep untouched                     |
 
 ## Reconciliation plan (files in this folder — NOT yet applied)
 
@@ -100,18 +100,18 @@ used — each migration was sent wrapped in `begin;…commit;` for atomicity).
 **Post-reconciliation cloud state (verified):** 35 tables, 20 enums, 62 functions, 86 policies,
 **all 35 tables RLS-enabled (0 unprotected)**. `profiles.account_type` ✅; `post_visibility` =
 public,followers,subscribers,purchase ✅; `payout_status` = queued,processing,paid,failed,canceled
-✅; `on_auth_user_created` trigger ✅; admin user `4d54cf94…` → account_type=creator, roles
+✅; `on_auth_user_created` trigger ✅; admin user `4d54cf94…` → account*type=creator, roles
 {admin,user}, creator handle `tylerdiorio` ✅. Internal helpers correct: `emit_notification`/
-`notif_*`/`current_audit_actor_role` owner-only; `is_current_user_admin`/`is_current_user_staff`
-executable by `authenticated` (by design). Storage: 8 buckets (4 CABANA + 4 scaffold retained).
+`notif*\*`/`current_audit_actor_role`owner-only;`is_current_user_admin`/`is_current_user_staff`executable by`authenticated`(by design). Storage: 8 buckets (4 CABANA + 4 scaffold retained).
 **Google OAuth** re-verified end-to-end (live browser on prod → 302 → accounts.google.com).
-Types regenerated → `src/integrations/supabase/types.ts` updated (added current RPC signatures).
+Types regenerated →`src/integrations/supabase/types.ts` updated (added current RPC signatures).
 Gate: lint 0 errors · tsc OK · 332/332 tests · build ✅.
 
 **`legacy_reel.profiles` (1 row) intentionally KEPT** pending your final verification (a real Google
 sign-in completing the round-trip). To remove after you confirm: `drop schema legacy_reel cascade;`.
 
 ## Not automated / decisions for you:
+
 - The scaffold's `admin_scopes` granularity ({moderation,finance,compliance}) has no CABANA analogue (CABANA gates on a single `admin` role). Scopes are preserved in `legacy_reel.profiles` for reference; not carried into authz.
 - `supabase/config.toml` still names the old ref `dwnricswfskypqqfknnh`; linking to `rpzaeqoqcaxxavltgvpe` for `db push` is a separate explicit step.
 - These files are intentionally **outside** `supabase/migrations/` so they cannot run as part of a normal `db reset`/`db push`.

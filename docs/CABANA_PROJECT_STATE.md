@@ -1,7 +1,11 @@
 # CABANA — Project State (Engineering Checkpoint)
 
 > Canonical high-level engineering snapshot.
-> Branch at capture: `feat/phase-7-notifications-activity` (through Phase 7 — notifications & activity, internal only).
+> Checkpoint: **July 9, 2026** — branch `main` @ `5963a18` ("chore(cleanup): remove retired marketing landing, orphaned assets & dead mock module"),
+> the previously-uncommitted working set now **committed** as ~14 themed commits on top of `6c35f5b` (Phase 0 QA fixes + Batch 1 Trust & Honesty + Batch 2 Core UX + two DB migrations + hygiene/cleanup — see below). **Not yet pushed or deployed** at this checkpoint.
+> Platform-evolution phases **through 11B (creator analytics) are complete**.
+> Canonical Supabase backend: cloud project `rpzaeqoqcaxxavltgvpe` ("cabanadatabase"), reconciled July 7, 2026;
+> deploy target **Vercel** (production `cabanagrp.com`).
 > Demo clock / "today" in code: **June 25, 2026**.
 > Audience: a brand-new engineer who needs to understand CABANA end-to-end in under 15 minutes.
 >
@@ -10,6 +14,41 @@
 > [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md),
 > [`docs/CLAUDE_SESSION_HANDOFF.md`](./CLAUDE_SESSION_HANDOFF.md),
 > and [`CLAUDE.md`](../CLAUDE.md). When those disagree with this file, they win and this file is stale.
+> The detailed phase write-ups and DB inventory below were captured at the **Phase 5 boundary**; Phases 6–11B
+> are summarized under "Remaining Roadmap" and enumerated fully in `CLAUDE.md`.
+
+---
+
+# July 8, 2026 — UI/UX audit + Batch 1 (Trust & Honesty)
+
+- A read-only production-readiness UI/UX audit (21 auditors + adversarial verification + coverage critic) produced
+  303 raw → **249 confirmed** findings: 0 Critical, 9 High, ~116 Medium, ~130 Low; section scores 5–7.5
+  (overall ≈6.5/10; weakest surfaces: links/store/media-kit/settings at 5). Top themes: fake-presented-as-real,
+  failures rendering as fake zeros, silent list caps, two auth visual languages, reduced-motion ignored,
+  deletes without confirm, shared "CABANA" tab titles. The full report was delivered in-session (not stored in repo).
+- Approved plan: **Batch 1 Trust & Honesty (COMPLETE, committed) → 2 Core UX (COMPLETE, committed) → 3 Accessibility →
+  4 Creator Workflow → 5 Design System → 6 Marketing & Polish**. Batches 2–6 are open work; each batch ends with
+  the full gate + approval stop.
+- **Batch 1 delivered** (17 files + 1 new component + 1 deleted asset), verified via an authenticated Playwright
+  walkthrough on a local Docker stack: `MediaKit.tsx` hero bound to the real `useCabana()` profile with
+  "Sample data — demo preview" labeling; `SettingsPanel.tsx` drops all fake connection states (Stripe rests as
+  "After payments launch", other integrations/socials "Coming soon"/"Not linked", `@aurora` handles and the fake
+  "SSL active" badge removed); `routes/admin.tsx` hub labeled as a demo shell around the 5 real tools
+  (Reports · Audit · Finance · Ledger · Payouts) with all handler-less controls disabled; `Sidebar.tsx` /
+  `ProfileEditor.tsx` "Preview public page" no longer falls back to the `aurora` demo handle; `routes/td.tsx`
+  fake follow → real Instagram link; new **`src/components/cabana/QueryErrorState.tsx`** shared error card, wired
+  into `BalanceCard`, `HistoryCard` + the four histories, `SubscribersDashboard`, `LinkManager`, `StoreManager`,
+  `AnalyticsPage`, `DashHome` (convention: query failures must NEVER render fake business data like $0.00 or
+  "No X yet"); `LinkManager` "Schedule for later" promise removed; orphaned `src/assets/aurora-hero.jpg` deleted.
+- Also committed on top of `6c35f5b`: the QA Critical/High bug-fix pass (messaging + admin-ledger Outlets,
+  admin finance `display_name`→`name` embed fix, login signup/forgot links, chart color tokens, follow-unlock
+  invalidation, composer tier warnings, **strict UUID validation restored** (+ v4 seeds), notification/activity
+  reads **recipient-scoped** to fix the admin-read leak) and migrations
+  `20260529000000_post_media_service_grant.sql` + `20260530000000_high_qa_fixes.sql` (each with a behavioral
+  test; **committed but not yet applied to the cloud project**).
+- Gate at checkpoint: `bunx tsc --noEmit` clean · `bun run lint` 0 errors (6 expected shadcn react-refresh
+  warnings) · `bun run test` **337/337** (16 files, 99.53% stmts / 95.8% branch coverage) · `bun run build`
+  green (Vercel/Nitro output).
 
 ---
 
@@ -26,7 +65,8 @@ moves real money or touches production Supabase without an explicit, gated appro
 
 ## Current architecture
 
-- **SSR web app on TanStack Start** (React 19 + Vite 7), deployed to **Cloudflare Workers**.
+- **SSR web app on TanStack Start** (React 19 + Vite 7), deployed to **Vercel** (Nitro `vercel` preset →
+  `.vercel/output`; production **cabanagrp.com**).
 - **Supabase** provides auth, Postgres (with RLS), and storage.
 - **Three Supabase trust boundaries**, chosen per call site:
   - `supabase` (anon/publishable key, RLS-enforced) — all browser React Query hooks.
@@ -57,14 +97,15 @@ moves real money or touches production Supabase without an explicit, gated appro
 | Animation                 | Framer Motion                                                    | 12.38                |
 | Backend SDK               | @supabase/supabase-js                                            | 2.105                |
 | Validation                | zod (server-action input shaping is hand-rolled in pure modules) | 3.24                 |
-| Deploy target             | Cloudflare Workers (`@cloudflare/vite-plugin`)                   | 1.25                 |
+| Deploy target             | **Vercel** (Nitro `vercel` preset → `.vercel/output`)            | —                    |
 | Language                  | TypeScript                                                       | 5.8                  |
 | Tests                     | Vitest (v8 coverage)                                             | 4.1                  |
 | Package manager / runtime | **Bun**                                                          | —                    |
 
 Vite config uses `@lovable.dev/vite-tanstack-config`, which **already bundles** tanstackStart, viteReact,
 tailwindcss, tsConfigPaths, the Cloudflare plugin, the `@` alias, and `VITE_*` env injection — do not
-re-add those plugins.
+re-add those plugins. The bundled Cloudflare plugin (and `wrangler.jsonc`, which it reads) is build-side
+only; the actual deploy target is **Vercel** via `nitro: { preset: "vercel" }` in `vite.config.ts`.
 
 ## Repository layout
 
@@ -101,8 +142,7 @@ LuminaCreatorSuite/
 │   │   ├── cabana-money.ts           # PURE integer-cents money helpers (demo only)
 │   │   ├── cabana-entitlements.ts    # PURE entitlement rules (demo only)
 │   │   ├── cabana-types.ts           # future-platform domain contracts (demo)
-│   │   ├── cabana-demo-data.ts       # deterministic mock generators (clock = 2026-06-25)
-│   │   └── *.test.ts                 # Vitest suites for the 4 pure modules
+│   │   └── *.test.ts                 # Vitest suites for the 16 pure modules (337 tests)
 │   ├── components/
 │   │   ├── ui/                       # shadcn/ui (new-york, ~46 primitives)
 │   │   └── cabana/                   # app feature components (dashboard/, auth/, foundation/)
@@ -121,10 +161,12 @@ LuminaCreatorSuite/
 
 # Completed Phases
 
-> Phase progression to date: **1A → 1C → 2A → 2B → 2C**. (There is no separately-tracked "1B" in the
+> Phase progression to date: **1A → 1C → 2A → 2B → 2C → 3 → 3.2 → 4 → 5 → 6 → 7 → 8 (+8B/8C) → 9A →
+> 9B → 10 → 11A → 11B — all complete** as of July 8, 2026. (There is no separately-tracked "1B" in the
 > current docs; phase 1 work was captured as the 1A demo-foundation and 1C hardening passes.) Every
-> phase below is green on `lint` / `tsc` / `test` / `build`. Phases 2A–2C additionally pass the SQL
-> suites on a real Docker-backed Postgres and on CI.
+> phase is green on `lint` / `tsc` / `test` / `build` plus the SQL suites on a real Docker-backed
+> Postgres and on CI. Detailed write-ups below stop at **Phase 5**; Phases 6–11B are summarized under
+> "Remaining Roadmap" below and enumerated fully in [`CLAUDE.md`](../CLAUDE.md).
 
 ## Phase 1A — Demo foundation & pure helpers
 
@@ -134,7 +176,8 @@ LuminaCreatorSuite/
   - `src/lib/cabana-types.ts` — domain types for the future platform (MemberProfile, CreatorPost,
     CreatorSubscription, Tip, Transaction, Payout, etc.), designed to map to future Supabase tables.
   - `src/lib/cabana-demo-data.ts` — deterministic mock generators; fixed demo clock **June 25, 2026**;
-    mock provider refs prefixed `mock_`.
+    mock provider refs prefixed `mock_`. _(Removed in the July 9, 2026 cleanup once its last consumer,
+    `DemoMessages`, was deleted — no longer in the tree.)_
   - `src/lib/cabana-money.ts` — pure integer-cents money helpers (demo-only money).
   - `src/lib/cabana-entitlements.ts` — pure entitlement rules.
   - `FoundationPage` shared "coming soon / demo foundation" screen; placeholder routes render through it.
@@ -350,13 +393,18 @@ LuminaCreatorSuite/
 
 # Current Database
 
-Schema is rebuilt from zero by seven ordered migrations:
-`20260511000000_baseline.sql` → `20260512000000_member_accounts.sql` →
-`20260513000000_social_relationships.sql` → `20260514000000_posts_feed.sql` →
-`20260515000000_engagement.sql` → `20260516000000_creator_subscriptions.sql` →
-`20260517000000_messaging.sql`.
+Schema is rebuilt from zero by **20 ordered migrations** — `20260511000000_baseline.sql` through
+`20260530000000_high_qa_fixes.sql` (the last two — `20260529` post-media service grant and `20260530`
+high-QA fixes — are **committed but not yet applied to the cloud project**); the full
+chain is enumerated in [`CLAUDE.md`](../CLAUDE.md). The inventory below is the **Phase 5 checkpoint**
+(first seven migrations, 22 tables). Phases 6–11B since added the monetization ledger
+(`transactions`/`creator_balances`/`payout_requests`/`payouts`/`tips`/`purchases`/`content_entitlements`),
+notifications & activity (`notifications`/`activity_events`/`notification_preferences`/`notification_outbox`),
+moderation & audit (`reports`/`audit_logs`), the notification-engine and creator-analytics RPCs, corrective
+grant migrations, profile customization columns, the post-media service grant, and the high-QA fixes
+(real `public_creator_profiles.post_count`, purchase/payout advisory locks) — see `CLAUDE.md` for those objects.
 
-## Tables (22)
+## Tables (22 — Phase 5 checkpoint)
 
 | Table                        | Purpose                                                                                     | Read access                                                                                             | Write access                                                                      |
 | ---------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
@@ -508,7 +556,8 @@ CABANA auth is Supabase Auth. Identity lives in `auth.users`; app data hangs off
 ## Guest
 
 - No session. Sees public surfaces only: marketing/landing, pricing, public creator pages `/$username`,
-  and the public placeholder routes.
+  `/discover` (real discovery + search, `noindex`), and public posts on `/feed` / `/post/$postId`
+  (visibility enforced server-side).
 - DB access: `anon` client under RLS — public reads only (`creator_profiles`, `links`, `products`, the
   two public views, `reserved_handles`); may insert `analytics_events` for a real profile. **No** access
   to `member_profiles`, `follows`, or `blocks` (grants revoked from `anon`).
@@ -533,9 +582,14 @@ CABANA auth is Supabase Auth. Identity lives in `auth.users`; app data hangs off
 
 - Any account additionally holding the `admin` role in `user_roles`.
 - Gates `/admin` via `useHasRole("admin")`. Can read all roles and manage roles (RLS via `has_role`).
-- `moderator` exists in the enum for future moderation but is not yet wired to surfaces.
+- `moderator` is wired into staff moderation (Phase 8): `is_current_user_staff()` (admin OR moderator)
+  gates the report queue and audit trail behind `StaffGate` at `/admin/reports` + `/admin/audit`.
 
 ## Signup flow
+
+Sign-in supports email/password and **Google OAuth** (`cabanaAuth.loginWithGoogle` → `/auth/callback`);
+the sign-in card serves at both `/` and `/login`. New creators land in the profile-first **4-step
+onboarding** at `/onboarding` (Identity · Links · Look · Preview) — the old seven-step wizard is gone.
 
 1. Client calls `cabanaAuth` signup (`src/lib/cabana-auth.ts`), optionally passing
    `raw_user_meta_data.account_type = 'member'` (and a display `name`).
@@ -634,11 +688,12 @@ action executes under the caller's row-level permissions.
 
 - Config: `vitest.config.ts` (standalone — **not** the Lovable `vite.config.ts`; the modules under test
   are pure, needing only the `@` alias and `node` environment).
-- Coverage is restricted to the seven pure business modules — `cabana-money`, `cabana-entitlements`,
+- Coverage is restricted to the **sixteen** pure business modules — `cabana-money`, `cabana-entitlements`,
   `cabana-account`, `cabana-relationships`, `cabana-posts`, `cabana-engagement`, `cabana-subscriptions`,
-  `cabana-messaging` — with **95%** thresholds on lines/functions/branches/statements (currently 100%
-  statements/functions/lines, ≥99.5% branches; **166 tests**: money 34, entitlements 25, account 14,
-  relationships 10, posts 33, engagement 17, subscriptions 13, messaging 20).
+  `cabana-messaging`, `cabana-notifications`, `cabana-moderation`, `cabana-finance`, `cabana-payouts`,
+  `cabana-notification-engine`, `cabana-discovery`, `cabana-dashboard`, `cabana-creator-analytics` —
+  with **95%** thresholds on lines/functions/branches/statements (**337 tests across 16 files**,
+  99.53% stmts / 95.8% branch as of July 9, 2026).
 - Run: `bun run test` (one-shot), `bun run test:watch`, `bun run test:coverage`; a single file with
   `bunx vitest run src/lib/<file>.test.ts`, or by name with `bunx vitest run -t "<name>"`.
 - **Rule of thumb:** keep new domain logic in a pure, repository-injected module so it stays unit-testable
@@ -653,18 +708,19 @@ action executes under the caller's row-level permissions.
 
 ## Smoke tests
 
-- `supabase/tests/smoke.sql` — asserts the full object inventory exists after a from-zero rebuild:
-  all 11 tables, both enums, the `account_type`/`username` columns, the two safe public views, functions,
-  signup trigger, RLS, the 3 buckets, the `aurora` seed, and reserved handles. Runs under
-  `psql -v ON_ERROR_STOP=1` so any failed assertion exits non-zero.
+- `supabase/tests/smoke.sql` — asserts the full object inventory exists after a from-zero rebuild
+  (tables, enums, columns, safe views, functions, triggers, RLS, buckets, the `aurora` seed, reserved
+  handles), extended at every phase. Runs under `psql -v ON_ERROR_STOP=1` so any failed assertion
+  exits non-zero.
 
 ## Behavioral SQL tests
 
-- `supabase/tests/member_accounts.sql` — account-type trigger branching (creator vs member provisioning)
-  and member-profile RLS isolation.
-- `supabase/tests/social_relationships.sql` — follow/block uniqueness, RLS isolation, creator follower
-  visibility, anonymous denial, safe-view columns/counts, and the protected RPC behavior (self-follow /
-  blocked-follow refusals).
+One suite per phase in `supabase/tests/` (**17 files** as of July 9, 2026): `smoke`, `member_accounts`,
+`social_relationships`, `posts_feed`, `engagement`, `creator_subscriptions`, `messaging`,
+`monetization_ledger`, `notifications` (now also asserting admin recipient-scoping / no leak),
+`admin_moderation`, `admin_payouts`, `notification_engine`, `creator_analytics`, `user_roles_policy`,
+`profile_customization`, `post_media_service_grant`, and `high_qa_fixes` (the last two committed but
+not yet applied to cloud, alongside their migrations).
 
 ## CI pipeline
 
@@ -672,7 +728,7 @@ action executes under the caller's row-level permissions.
 
 - **`verify`** (Ubuntu + Bun): `bun install --frozen-lockfile` → `lint` → `tsc --noEmit` → `test` → `build`.
 - **`db-validate`** (Ubuntu + Supabase CLI + Docker/psql): `supabase start` → `supabase db reset`
-  (from zero) → `smoke.sql` → `member_accounts.sql` → `social_relationships.sql` → `supabase stop`.
+  (from zero, all 19 migrations + seed) → the full `supabase/tests/` suite → `supabase stop`.
 
 The **handoff gate** for any session is: `bun run lint`, `bun run build`, `bunx tsc --noEmit`, and
 `bun run test` all pass (plus the SQL suites on a Docker-enabled host/CI).
@@ -681,10 +737,13 @@ The **handoff gate** for any session is: `bun run lint`, `bun run build`, `bunx 
 
 # Current Technical Debt
 
-- **Remote schema reconciliation deferred.** The baseline is verified rebuildable-from-zero on Docker/CI
-  but has **not** been diffed against the live project (`dwnricswfskypqqfknnh`). `supabase db dump` +
-  diff and `supabase migration repair --status applied 20260511000000` still need to run (requires a
-  Supabase token / DB password). Until then, do not assume the baseline is byte-exact with production.
+- ~~Remote schema reconciliation deferred~~ — **RESOLVED July 7, 2026.** The canonical backend is now the
+  cloud project `rpzaeqoqcaxxavltgvpe` ("cabanadatabase"), reconciled to the CABANA migration chain.
+  Validate new migrations on the local Docker stack first, per the standing convention.
+- **UI/UX audit Batches 3–6 open.** Findings from the July 8, 2026 audit remaining after Batches 1–2:
+  Accessibility (reduced motion, aria, focus, touch targets), Creator Workflow (post edit, delete confirms,
+  upload progress), Design System (raw-button migration), Marketing & Polish (per-route titles, terms/privacy,
+  image weight). Batch 1 (Trust & Honesty) and Batch 2 (Core UX) are done and committed.
 - **`creator_profiles` public SELECT exposes `user_id`.** The Phase 2C safe views fix this for new
   discovery surfaces, but the legacy public read path (links/products/analytics bundle in
   `cabana-store.ts`) still depends on the direct creator-profile read. Migrate that bundle to the view
@@ -697,11 +756,12 @@ The **handoff gate** for any session is: `bun run lint`, `bun run build`, `bunx 
 - **`subscriptions` naming collision.** The existing `subscriptions` table is **platform SaaS billing**,
   not fan subscriptions. It should be renamed `platform_subscriptions` (gated) before
   `creator_subscriptions` becomes production data.
-- **`moderator` role unused.** Present in `app_role` but not yet wired to any surface.
-- **No server tests for the T1 hooks / React components.** Only the seven pure modules are unit-tested;
+- **No server tests for the T1 hooks / React components.** Only the sixteen pure modules are unit-tested;
   hooks, actions, and UI are covered only indirectly (and by the SQL suites at the DB layer).
-- **Placeholder public routes carry no real data.** `/feed`, `/discover`, `/messages`, `/notifications`
-  are FoundationPage placeholders and must not receive private member/message data while public.
+- **Labeled demo surfaces remain.** Media Kit, Settings integrations, and the legacy `/admin` hub tabs are
+  still sample-data surfaces — now honestly labeled as such (Batch 1) rather than fake-presented-as-real.
+  (`/feed`, `/discover`, `/messages`, `/notifications` are no longer placeholders — all real, with
+  server-enforced visibility; `/notifications` is auth-gated client-side.)
 
 ---
 
@@ -728,15 +788,16 @@ counts into the feed safe-views/`post_count` placeholders (still `0`).
 
 Delivered: `creator_subscription_tiers` + `creator_subscriptions`, `is_active_subscriber`, mock
 subscribe/cancel RPCs, and `subscribers` post unlocking across `can_view_post`/feed/detail. Demo-only.
-See the completed-phases section above. **Deferred:** the `subscriptions`→`platform_subscriptions` rename,
-`content_entitlements`, and the `purchase` per-post unlock (needs the Phase 6 ledger).
+See the completed-phases section above. **Deferred:** the `subscriptions`→`platform_subscriptions` rename.
+(`content_entitlements` and the `purchase` per-post unlock were since delivered by the Phase 6 ledger.)
 
 ## Phase 5 — Messaging ✅ DONE (foundation)
 
 Delivered: `conversations` / `conversation_participants` / `messages` / `message_read_receipts` with
 participant-scoped RLS, the messaging RPCs, and Supabase Realtime. See the completed-phases section above.
-**Deferred:** `notifications` (+ outbox for email/push), private attachments (image/video) + signed URLs,
-paid messages/tips, and rate-limiting/reporting.
+**Since delivered:** `notifications` + outbox (Phases 7/9A/9B, internal only) and message reporting
+(Phase 8B). **Still deferred:** private attachments (image/video) + signed URLs, paid messages/tips,
+and rate-limiting.
 
 ## Phase 6 — Monetization ledger ✅ DONE (foundation, demo-only)
 
@@ -751,8 +812,8 @@ dashboard (`components/cabana/earnings/`). Fee model 10% + 3%, integer cents, `m
 own financial rows; buyers read own purchases/entitlements; admins read all; anon revoked; writes via RPCs.
 Behavioral suite `monetization_ledger.sql`. **No payment processor, cards, webhooks, KYC, or real payouts.**
 
-**Deferred (still gated):** `reports` / `audit_logs` (Group F), URL-backed admin moderation/finance
-subroutes, refunds/disputes UI, admin payout approval, paid messages.
+**Since delivered:** `reports` / `audit_logs` + URL-backed admin moderation subroutes (Phase 8/8B),
+admin finance subroutes + payout approval (Phase 8C). **Still gated:** refunds/disputes UI, paid messages.
 
 ## Phase 7 — Notifications & activity ✅ DONE (foundation, internal only)
 
@@ -767,14 +828,50 @@ to Supabase Realtime (RLS-filtered to recipient). `cabana-notifications.ts` (pur
 live sidebar badge). Users read/manage only their own rows; outbox admin-only; anon revoked. Behavioral
 suite `notifications.sql`. **No email/push provider — internal foundation only.**
 
-**Deferred (still gated):** outbox processor + real email/push provider (Resend/Firebase/Expo/web push),
-digests/batching, deep-link routing, `reports` / `audit_logs`, admin moderation/finance subroutes.
+**Since delivered:** the outbox processor (Phase 9A, simulated transport), the notification center UI
+(Phase 9B), `reports` / `audit_logs` + admin moderation/finance subroutes (Phases 8–8C). **Still gated:**
+a real email/push provider (Phase 9C), digests/batching, deep-link routing.
+
+## Phases 8 → 11B ✅ DONE (delivered after this checkpoint's detailed sections)
+
+All under the standard migration + RLS + behavioral-test gate; full detail in [`CLAUDE.md`](../CLAUDE.md):
+
+- **Phase 8 / 8B — Admin moderation & audit + member reporting.** `reports` + append-only `audit_logs`
+  (migration `20260520000000`), `is_current_user_staff()`, `StaffGate` at `/admin/reports` + `/admin/audit`;
+  member-facing `ReportButton`/`ReportDialog` (`components/cabana/reporting/`) on posts, comments, creator
+  profiles, and DMs (+ `20260521000000_report_reasons.sql`). Pure logic in `cabana-moderation.ts`.
+- **Phase 8C — Admin finance & payout workflow (admin-only).** Read-only finance over the Phase 6 ledger
+  (`cabana-finance.ts`, `AdminGate`, `/admin/finance`, `/admin/ledger`, `/admin/ledger/$transactionId` with
+  CSV export) plus the payout state machine (`cabana-payouts.ts`, `admin_review_payout` RPC, `/admin/payouts`,
+  migration `20260522000000`). `approve` authorizes; `mark_paid` settles — intentionally distinct.
+- **Phase 9A — Notification engine (backend only).** `process_notification_outbox` RPC (migration
+  `20260523000000`) activates the Phase 7 outbox with simulated delivery (retry/backoff/dead-letter);
+  pure logic in `cabana-notification-engine.ts`. No email/push providers (that is Phase 9C, still gated).
+- **Phase 9B — Notification center UI.** No schema change; `components/cabana/notifications/` over the
+  existing realtime hooks at `/dashboard/notifications` + auth-gated `/notifications`.
+- **Phase 10 — Discovery & search.** `/discover` is a real public (`noindex`) discovery + global-search
+  surface: pure `cabana-discovery.ts`, guest-callable `optionalSupabaseAuth` actions, `DiscoveryPage`.
+- **Phase 11A — Creator dashboard home.** Pure aggregation (`cabana-dashboard.ts`) now at the `/dashboard`
+  index (`components/cabana/dashboard/overview/`); `/dashboard/home` redirects there and the legacy link-in-bio
+  `DashHome` moved to `/dashboard/link-in-bio`; subscriber roster at `/dashboard/subscribers`. No new SQL.
+- **Phase 11B — Creator analytics.** `creator_content_analytics` RPC (migration `20260524000000`),
+  pure `cabana-creator-analytics.ts`, UI at `/dashboard/performance` (the legacy link-in-bio
+  `/dashboard/analytics` stays distinct).
+- **Corrective/additive migrations:** `20260525000000_baseline_grants`, `20260526000000_user_roles_admin_policy`,
+  `20260527000000_profiles_select_grant`, `20260528000000_profile_customization`,
+  `20260529000000_post_media_service_grant`, and `20260530000000_high_qa_fixes` (H5 real
+  `public_creator_profiles.post_count`, H8/H9 purchase/payout advisory locks) — the last two committed but
+  **not yet applied to cloud**.
+- **Unphased July 2026 work:** Google OAuth sign-in + `/auth/callback`, profile-first 4-step onboarding,
+  unified liquid-metal button system, Vercel deployment (prod `cabanagrp.com`), backend reconciled to the
+  cloud `cabanadatabase` project, the July 8 UI/UX audit + Batch 1 (Trust) & Batch 2 (Core UX) passes, and the
+  July 9 cleanup (retired marketing landing/orphaned assets/dead `cabana-demo-data` module) — see the top of this file.
 
 ## Production launch (gated, post-demo)
 
 - Replace mock monetization with a real payment provider (Stripe), KYC, real payouts, and
   refund/dispute/chargeback handling — explicitly out of scope until product rules are stable.
-- Complete the deferred **remote schema reconciliation** and migration-history repair.
+- ~~Complete the deferred remote schema reconciliation~~ — done July 7, 2026 (cloud `cabanadatabase`).
 - Move private media fully onto private buckets + signed URLs; add a server route guard; rate limiting,
   spam controls, audit logging, and an email/push outbox in production.
 - Only after all of the above: enable real money movement and remove demo labels.

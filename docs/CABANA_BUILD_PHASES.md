@@ -14,7 +14,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 ---
 
-## Phase 1 — Foundation Hardening & Demo UI Primitives
+## Phase 1 — Foundation Hardening & Demo UI Primitives ✅ DONE (executed as the 1A/1C passes)
 
 **Goal:** Stabilize the existing creator OS (fix dead buttons/`#` links, apply saved theme, banner upload, URL/delete validation, atomic reorder, real plan label, reconcile `/docs/data-model`) and turn the 9 placeholders into demo-data-driven UI using pure helpers. **No backend writes, no Supabase changes.** Establish the test runner.
 
@@ -45,7 +45,7 @@ Phase 1 foundation from the handoff: domain types (`cabana-types.ts`), demo data
 
 > **Split into 2A (infra), 2B (accounts), and 2C (relationships).**
 >
-> **Phase 2A — Supabase Baseline + CI — ✅ DONE.** Squashed rebuildable-from-zero baseline (`supabase/migrations/20260511000000_baseline.sql`) covering all existing tables/enums/functions/triggers/RLS/storage; demo `seed.sql`; `bun run db:validate` (reset-from-zero + `tests/smoke.sql`); CI (`.github/workflows/ci.yml`) running lint/typecheck/test/build + a Docker-based `db-validate` job. No new product tables, no `subscriptions` rename. See `supabase/README.md` and [`CABANA_DATABASE.md` §"Baseline migration"](./CABANA_DATABASE.md#baseline-migration-phase-2a). Open follow-ups: diff the reconstructed baseline against a live `supabase db dump`; confirm `major_version`; `migration repair` remote history.
+> **Phase 2A — Supabase Baseline + CI — ✅ DONE.** Squashed rebuildable-from-zero baseline (`supabase/migrations/20260511000000_baseline.sql`) covering all existing tables/enums/functions/triggers/RLS/storage; demo `seed.sql`; `bun run db:validate` (reset-from-zero + `tests/smoke.sql`); CI (`.github/workflows/ci.yml`) running lint/typecheck/test/build + a Docker-based `db-validate` job. No new product tables, no `subscriptions` rename. See `supabase/README.md` and [`CABANA_DATABASE.md` §"Baseline migration"](./CABANA_DATABASE.md#baseline-migration-phase-2a). Open follow-ups closed July 7, 2026 — the schema was reconciled to the canonical cloud project `rpzaeqoqcaxxavltgvpe` ("cabanadatabase").
 >
 > **Phase 2B — Member Accounts & Auth Infrastructure — ✅ DONE.** Migration `20260512000000_member_accounts.sql` adds account types and private member profiles; creator/member signup provisioning branches safely; `/account`, account-aware dashboard guards, protected account actions, and member RLS tests are live.
 >
@@ -96,8 +96,6 @@ own comments; creators hide comments on own posts; anon reads visible comments o
 cannot write. Likes/saves are unique per user/post and private.
 
 **Validation:** `engagement.sql` behavioral suite + smoke extensions; in `db:validate` and CI.
-
-**Next (gated):** Phase 4.
 
 ---
 
@@ -183,8 +181,9 @@ financial rows; buyers read own purchases/entitlements; admins read all; anon re
 **Hard constraint:** DEMO ONLY — no payment processor, Stripe, cards, webhooks, KYC, or real payouts. The
 ledger is append-only (reversals are new `refund` rows).
 
-**Deferred (gated):** real processor integration behind the ledger, refunds/disputes UI, admin payout
-approval flow, paid messages, notifications/push.
+**Since delivered:** admin payout approval flow (Phase 8C, `/admin/payouts`), notifications (Phases 7/9A/9B,
+internal only). **Deferred (gated):** real processor integration behind the ledger, refunds/disputes UI,
+paid messages, email/push delivery.
 
 **Validation:** `monetization_ledger.sql` behavioral suite + smoke extensions; in `db:validate` and CI.
 
@@ -210,10 +209,31 @@ admin-only; anon revoked.
 **Hard constraint:** internal only — no email/push provider (no Resend, Firebase, Expo, web push). The
 outbox is an inert future-delivery queue.
 
-**Deferred (gated):** outbox processor + a real email/push provider, digests/batching, deep-link routing
-from notifications, admin moderation/finance subroutes, reports/audit logs.
+**Since delivered:** the outbox processor (Phase 9A, simulated transport), the notification center UI
+(Phase 9B), reports/audit logs + admin moderation/finance subroutes (Phases 8–8C). **Deferred (gated):**
+a real email/push provider (Phase 9C), digests/batching, deep-link routing from notifications.
 
 **Validation:** `notifications.sql` behavioral suite + smoke extensions; in `db:validate` and CI.
+
+## Phases 8 → 11B ✅ DONE (executed numbering, July 2026)
+
+The executed sequence diverged from the original plan numbering below. Delivered under the standard
+migration + RLS + behavioral-test gate (full detail in [`CLAUDE.md`](../CLAUDE.md)):
+
+- **Phase 8 / 8B** — admin moderation & audit (`reports`, append-only `audit_logs`, `StaffGate` at
+  `/admin/reports` + `/admin/audit`) + member-facing reporting on posts/comments/profiles/DMs.
+- **Phase 8C** — admin finance & payout workflow (`/admin/finance`, `/admin/ledger`,
+  `/admin/ledger/$transactionId`, `/admin/payouts`; `admin_review_payout` RPC; approve authorizes,
+  mark_paid settles).
+- **Phase 9A** — notification engine (`process_notification_outbox`; simulated delivery with
+  retry/backoff/dead-letter; no providers). **Phase 9B** — notification center UI (no schema change).
+- **Phase 10** — discovery & search (`/discover` real, public, `noindex`, guest-callable RPCs).
+- **Phase 11A** — creator dashboard home (`/dashboard/home`, pure aggregation, no new SQL).
+  **Phase 11B** — creator analytics (`/dashboard/performance`, `creator_content_analytics` RPC).
+
+Still gated from the original plan below: real payments (original Phase 7), admin capability
+scopes/MFA/user tools, suspensions/appeals/media moderation, email/push delivery, and the compliance/
+launch phase.
 
 ### Original Phase 5 plan (full scope, for reference)
 
@@ -241,6 +261,10 @@ from notifications, admin moderation/finance subroutes, reports/audit logs.
 ---
 
 ## Phase 6 — Monetization Depth (Paid Content, Products → Orders)
+
+> **Status (July 8, 2026): partially delivered** — the paid-post `purchase` unlock shipped via the
+> monetization ledger (`purchases` + `content_entitlements`). Product orders / digital delivery /
+> `orders`/`order_items`/`product_files` remain gated.
 
 **Goal:** Extend mock monetization to paid posts/unlocks and product orders with digital delivery; complete the ledger surface; introduce `media` moderation status. Still mock-money (real processor is Phase 7).
 
@@ -292,6 +316,11 @@ from notifications, admin moderation/finance subroutes, reports/audit logs.
 
 ## Phase 8 — Admin & Operations
 
+> **Status (July 8, 2026): partially delivered** — URL-backed `/admin/reports`, `/admin/audit`,
+> `/admin/finance`, `/admin/ledger` (+`/$transactionId`), `/admin/payouts` with append-only `audit_logs`
+> shipped (executed Phases 8–8C); the legacy `/admin` hub tabs remain a labeled demo shell. `admin_users`
+> capability scopes, admin MFA, `/admin/users`, and `/admin/verification` remain gated.
+
 **Goal:** Replace the hardcoded `/admin` with server-gated, URL-backed admin on real data: user/role management, verification review, metrics, audit-log viewer, with capability-scoped permissions and MFA for admins.
 
 **Files affected:** `admin.tsx` → admin layout + subroutes; admin server actions; `lib/cabana-admin.ts`.
@@ -317,6 +346,10 @@ from notifications, admin moderation/finance subroutes, reports/audit logs.
 
 ## Phase 9 — Moderation & Trust
 
+> **Status (July 8, 2026): partially delivered** — `reports` queue + triage state machine + member report
+> buttons on posts/comments/profiles/DMs shipped (executed Phases 8/8B); blocks already enforced in RLS.
+> Suspensions, takedowns, appeals, and media moderation remain gated.
+
 **Goal:** Reports, blocks, suspensions, takedowns, appeals, and moderation queues on real data; media moderation workflow.
 
 **Files affected:** moderation server actions; `lib/cabana-moderation.ts`; report entry points across post/comment/message/profile surfaces; admin report routes.
@@ -340,6 +373,10 @@ from notifications, admin moderation/finance subroutes, reports/audit logs.
 ---
 
 ## Phase 10 — Notifications & Delivery
+
+> **Status (July 8, 2026): partially delivered** — server-generated notifications, unread counts, the
+> notification center, preferences, and the outbox processor (simulated transport) shipped (executed
+> Phases 7/9A/9B). Real email/push providers, digests/aggregation, and deep-link routing remain gated.
 
 **Goal:** Durable notifications generated from server events, unread counts, notification center, and email/push via an outbox (independent of source transactions), with user preferences.
 

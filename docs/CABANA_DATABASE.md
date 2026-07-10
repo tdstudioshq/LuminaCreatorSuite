@@ -20,7 +20,7 @@ hand-maintained pending Lovable regeneration.
 | Table              | Columns (current)                                                                                                                   | Notes                                                                                   |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `profiles`         | `id` (=auth.users.id), `email`, `name`, `account_type`, `created_at`, `updated_at`                                                  | Shared identity row; `account_type` defaults to `creator`                               |
-| `creator_profiles` | `id`, `user_id` (nullable!), `handle`, `name`, `bio`, `avatar_url`, `banner_url`, `theme`, `plan`, `created_at`, `updated_at`       | Public creator surface. `user_id` nullable allows ownerless seeds (`aurora`, `oliviac`) |
+| `creator_profiles` | `id`, `user_id` (nullable!), `handle`, `name`, `bio`, `avatar_url`, `banner_url`, `theme`, `plan`, `created_at`, `updated_at`       | Public creator surface. `user_id` nullable allows the ownerless `aurora` demo seed (only `aurora` is seeded) |
 | `member_profiles`  | `id`, `user_id`, `username`, `display_name`, `bio`, `avatar_url`, timestamps                                                        | Full row owner-only; safe public subset is exposed through `public_member_profiles`     |
 | `follows`          | `id`, `follower_id` → profiles, `following_creator_id` → creator_profiles, `created_at`                                             | Unique account→creator relationship; authenticated-only base table                      |
 | `blocks`           | `id`, `blocker_id` → profiles, `blocked_user_id` → profiles, `reason`, `created_at`                                                 | Unique private account→account relationship; authenticated-only base table              |
@@ -86,9 +86,10 @@ feeds, messaging, notifications, subscriptions, or payments.
   280 characters, reverse FK index. Only the blocker can select/insert/delete; anonymous access is
   revoked.
 - **Safe views** — `public_creator_profiles` and `public_member_profiles` expose only username,
-  display name, avatar/banner, bio, placeholder verification/post counts, and aggregate
-  follower/following counts. They expose no auth/profile UUIDs, email, plan, theme, or private
-  metadata.
+  display name, avatar/banner, bio, a placeholder verification flag, a **real published-post count**
+  (`post_count` — the hardcoded `0` was replaced by an actual count in migration
+  `20260530000000_high_qa_fixes.sql`, H5), and aggregate follower/following counts. They expose no
+  auth/profile UUIDs, email, plan, theme, or private metadata.
 - **Protected relationship RPCs** — accept creator usernames, derive the actor from `auth.uid()`,
   and expose no identifiers. The TanStack server actions call them with the caller's authenticated
   RLS-scoped Supabase client; no service role is used.
@@ -255,8 +256,10 @@ tables), so events fire uniformly for both direct-insert and SECURITY DEFINER RP
 
 **Validation:** `supabase/tests/notifications.sql` covers event generation (follow/like/comment/message/
 payout), unread counts, mark-read + mark-all-read under RLS, preferences, outbox row creation,
-idempotency (no duplicate on re-fire), self-notification suppression, recipient isolation, outbox
-admin-only, and anonymous denial. Runs in `db:validate` and CI.
+idempotency (no duplicate on re-fire), self-notification suppression, recipient isolation,
+**admin recipient-scoping** (an admin whose "read all" policy sees every row still gets only their own
+back from the recipient-scoped personal-center query — no leak), outbox admin-only, and anonymous
+denial. Runs in `db:validate` and CI.
 
 ## 2. Target Production Schema
 

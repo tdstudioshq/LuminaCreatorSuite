@@ -4,6 +4,13 @@
 >
 > Last updated: June 25, 2026
 >
+> **Status (July 8, 2026): this plan is fully executed.** The build has since shipped through Phase 11B
+> (posts, engagement, subscriptions, messaging, ledger, notifications, moderation, admin finance/payouts,
+> discovery, dashboard, analytics — all demo-money). §§2–3, the §6 route table, and §15 describe the
+> **June 2026 starting state**, not the current app. Current status lives in
+> [`CLAUDE.md`](../CLAUDE.md), [`CABANA_BUILD_PHASES.md`](./CABANA_BUILD_PHASES.md), and
+> [`CABANA_PROJECT_STATE.md`](./CABANA_PROJECT_STATE.md).
+>
 > Source of truth: [`CABANA_ARCHITECTURE.md`](../CABANA_ARCHITECTURE.md)
 
 ## 1. Current App Summary
@@ -476,7 +483,7 @@ All admin mutations must be server-authorized and append an `audit_logs` record.
 6. Added dashboard navigation entries only for routes that exist.
 7. Documented the database, RLS, monetization, messaging, notification, and admin plan.
 
-### Next: Phase 1B — demo UI primitives
+### Phase 1B — demo UI primitives ✅ done
 
 1. Add pure money and entitlement helpers.
 2. Add demo post cards and member cards.
@@ -486,7 +493,7 @@ All admin mutations must be server-authorized and append an `audit_logs` record.
 6. Render demo inbox and notification lists.
 7. Add component/unit tests for demo state transitions.
 
-### Phase 2 — database foundation
+### Phase 2 — database foundation ✅ done (executed as Phases 2A–2C + 3/3.2)
 
 1. Capture a complete current Supabase baseline migration.
 2. Rebuild a clean local/staging instance from zero.
@@ -496,7 +503,7 @@ All admin mutations must be server-authorized and append an `audit_logs` record.
 6. Add private post-media storage.
 7. Replace demo public post reads with RLS-safe queries.
 
-### Phase 3 — subscriptions and mock entitlements
+### Phase 3 — subscriptions and mock entitlements ✅ done (executed as Phases 4 + 6, demo-only)
 
 1. Add creator tiers.
 2. Add mock creator subscriptions and transactions.
@@ -504,14 +511,14 @@ All admin mutations must be server-authorized and append an `audit_logs` record.
 4. Add subscriber-only post rendering.
 5. Add demo tips and balances.
 
-### Phase 4 — messaging and notifications
+### Phase 4 — messaging and notifications ✅ done (executed as Phases 5 + 7/9A/9B; email/push providers still gated)
 
 1. Add production tables and RLS.
 2. Add participant-scoped messaging.
 3. Add Realtime.
 4. Add notification triggers/outbox.
 
-### Phase 5 — admin and moderation
+### Phase 5 — admin and moderation ✅ done (executed as Phases 8–8C)
 
 1. Add reports/audit tables.
 2. Replace hardcoded admin panels.
