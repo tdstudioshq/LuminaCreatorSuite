@@ -12,6 +12,7 @@ import {
   normalizePostMediaInput,
   normalizePostPriceCents,
   normalizePostVisibility,
+  resolveBatchPostMedia,
   resolvePublishPatch,
 } from "./cabana-posts";
 
@@ -377,5 +378,103 @@ describe("mapFeedPost", () => {
     });
     expect(out.locked).toBe(true);
     expect(out.media).toEqual([]);
+  });
+});
+
+describe("resolveBatchPostMedia", () => {
+  type Row = { post_id: string; id: string; position: number };
+  type Signed = { id: string; url: string; position: number };
+
+  /** Build an injectable repo whose `canView` allows only `authorized` ids. */
+  function repo(opts: {
+    authorized: string[];
+    rows: Row[];
+    fetchCalls?: string[][];
+    unsignable?: string[];
+  }) {
+    return {
+      canView: async (postId: string) => opts.authorized.includes(postId),
+      fetchMedia: async (ids: string[]) => {
+        opts.fetchCalls?.push(ids);
+        // Real repo scopes to `ids`; default to honoring that contract.
+        return opts.rows.filter((r) => ids.includes(r.post_id));
+      },
+      postIdOf: (r: Row) => r.post_id,
+      sign: async (r: Row): Promise<Signed | null> =>
+        opts.unsignable?.includes(r.id)
+          ? null
+          : { id: r.id, url: `signed:${r.id}`, position: r.position },
+      positionOf: (s: Signed) => s.position,
+    };
+  }
+
+  it("signs media only for authorized posts; an unauthorized id yields no url", async () => {
+    const fetchCalls: string[][] = [];
+    const out = await resolveBatchPostMedia<Row, Signed>(["allowed", "denied"], {
+      ...repo({
+        authorized: ["allowed"],
+        rows: [{ post_id: "allowed", id: "m1", position: 0 }],
+        fetchCalls,
+      }),
+    });
+    expect(out.allowed).toEqual([{ id: "m1", url: "signed:m1", position: 0 }]);
+    expect(out.denied).toEqual([]); // never authorized → never signed
+    // The service-role read was scoped to the authorized id only (no leak).
+    expect(fetchCalls).toEqual([["allowed"]]);
+  });
+
+  it("drops an over-returned row for an unauthorized post (defense in depth)", async () => {
+    // Even if the repository ignores the authorized filter and returns a denied
+    // post's media, it must never be signed/surfaced.
+    const out = await resolveBatchPostMedia<Row, Signed>(["ok", "denied"], {
+      canView: async (id) => id === "ok",
+      fetchMedia: async () => [
+        { post_id: "ok", id: "a", position: 1 },
+        { post_id: "denied", id: "b", position: 0 },
+      ],
+      postIdOf: (r) => r.post_id,
+      sign: async (r) => ({ id: r.id, url: `signed:${r.id}`, position: r.position }),
+      positionOf: (s) => s.position,
+    });
+    expect(out.ok.map((m) => m.id)).toEqual(["a"]);
+    expect(out.denied).toEqual([]);
+  });
+
+  it("sorts each post's media by position and returns [] for media-less posts", async () => {
+    const out = await resolveBatchPostMedia<Row, Signed>(["p1", "p2"], {
+      ...repo({
+        authorized: ["p1", "p2"],
+        rows: [
+          { post_id: "p1", id: "b", position: 2 },
+          { post_id: "p1", id: "a", position: 1 },
+        ],
+      }),
+    });
+    expect(out.p1.map((m) => m.id)).toEqual(["a", "b"]);
+    expect(out.p2).toEqual([]);
+  });
+
+  it("omits media whose signing fails", async () => {
+    const out = await resolveBatchPostMedia<Row, Signed>(["p1"], {
+      ...repo({
+        authorized: ["p1"],
+        rows: [
+          { post_id: "p1", id: "ok", position: 0 },
+          { post_id: "p1", id: "bad", position: 1 },
+        ],
+        unsignable: ["bad"],
+      }),
+    });
+    expect(out.p1.map((m) => m.id)).toEqual(["ok"]);
+  });
+
+  it("returns an empty map for no ids, and all-empty entries when none authorized", async () => {
+    expect(
+      await resolveBatchPostMedia<Row, Signed>([], repo({ authorized: [], rows: [] })),
+    ).toEqual({});
+    const none = await resolveBatchPostMedia<Row, Signed>(["x", "y"], {
+      ...repo({ authorized: [], rows: [{ post_id: "x", id: "m", position: 0 }] }),
+    });
+    expect(none).toEqual({ x: [], y: [] });
   });
 });

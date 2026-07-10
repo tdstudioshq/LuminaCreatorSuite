@@ -5,9 +5,10 @@
 // straight to the private `post-media` bucket via the authed browser client
 // (owner-scoped by RLS), then the row is recorded through `addPostMedia`.
 // ============================================================================
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthSession } from "@/lib/cabana-auth";
+import { useFeedBatchGate } from "@/lib/feed-batch-context";
 import {
   addPostMedia,
   archivePost,
@@ -33,22 +34,26 @@ const postMediaKey = (postId: string) => ["post-media", postId] as const;
 // ─────────────────────────────── Reads ──────────────────────────────────────
 
 /** A creator's visible feed (works for guests; entitlement enforced server-side). */
-export function useCreatorFeed(username: string) {
+export function useCreatorFeed(username: string, limit = 20) {
   const normalized = username.toLowerCase();
   return useQuery({
-    queryKey: creatorFeedKey(normalized),
+    queryKey: [...creatorFeedKey(normalized), limit],
     enabled: !!normalized,
-    queryFn: () => getCreatorFeed({ data: { username: normalized } }),
+    // Keep the current page rendered while "Load more" grows the limit.
+    placeholderData: keepPreviousData,
+    queryFn: () => getCreatorFeed({ data: { username: normalized, limit } }),
   });
 }
 
 /** The signed-in viewer's home feed (followed creators). */
-export function useHomeFeed() {
+export function useHomeFeed(limit = 20) {
   const { user, loading } = useAuthSession();
   return useQuery({
-    queryKey: homeFeedKey,
+    queryKey: [...homeFeedKey, limit],
     enabled: !loading && !!user,
-    queryFn: () => getHomeFeed({ data: {} }),
+    // Keep the current page rendered while "Load more" grows the limit.
+    placeholderData: keepPreviousData,
+    queryFn: () => getHomeFeed({ data: { limit } }),
   });
 }
 
@@ -64,10 +69,18 @@ export function useOwnPosts() {
 
 /** Authorization-gated signed media URLs for one post. */
 export function usePostMediaUrls(postId: string | null, enabled = true) {
+  // Inside a <FeedBatchScope> the scope batch-fetches + seeds this exact cache,
+  // so the card only OBSERVES it (no per-card request). Outside a scope this is
+  // a no-op and the hook fetches individually (e.g. post detail).
+  const batched = useFeedBatchGate();
   return useQuery({
     queryKey: postMediaKey(postId ?? ""),
-    enabled: enabled && !!postId,
+    enabled: enabled && !!postId && !batched,
     queryFn: () => getPostMediaUrls({ data: { postId: postId! } }),
+    // Signed URLs are valid ~30 min; hold the cached URL just under that TTL so
+    // navigation/refocus doesn't needlessly re-sign and re-download byte-identical
+    // media. Access-changing mutations still invalidate ["post-media"] explicitly.
+    staleTime: 25 * 60_000,
   });
 }
 

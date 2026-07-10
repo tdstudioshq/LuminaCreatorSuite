@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
 import { SocialShell } from "@/components/cabana/social/SocialShell";
 import { useCabana } from "@/lib/cabana-store";
 import { usePost } from "@/lib/use-engagement";
@@ -10,7 +11,7 @@ import { CommentComposer } from "./CommentComposer";
 import { CommentList } from "./CommentList";
 
 export function PostDetail({ postId }: { postId: string }) {
-  const { data: post, isLoading, isError } = usePost(postId);
+  const { data: post, isLoading, isError, refetch } = usePost(postId);
   const { profile } = useCabana();
   const purchaseUnlock = usePurchaseUnlock();
   const isOwner =
@@ -39,7 +40,13 @@ export function PostDetail({ postId }: { postId: string }) {
           <Centered>
             <Loader2 className="h-5 w-5 animate-spin" />
           </Centered>
-        ) : isError || !post ? (
+        ) : isError ? (
+          <QueryErrorState
+            title="Couldn’t load this post"
+            message="Something went wrong while fetching this post. Please try again."
+            onRetry={() => void refetch()}
+          />
+        ) : !post ? (
           <div className="glass-strong rounded-3xl p-8 text-center">
             <p className="text-sm font-medium">Post not found</p>
             <p className="mt-1 text-xs text-muted-foreground">

@@ -1,10 +1,12 @@
 import { useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Crown, Globe, ImagePlus, Loader2, Lock, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import type { PostVisibility } from "@/lib/cabana-posts";
 import { CAPTION_MAX, IMAGE_MIME_ALLOWLIST, MEDIA_PER_POST_MAX } from "@/lib/cabana-posts";
 import { dollarsToCents } from "@/lib/cabana-money";
 import { useCreatePost, usePublishPost, useUploadPostMedia } from "@/lib/use-posts";
+import { useMyTiers } from "@/lib/use-subscriptions";
 
 const VISIBILITY_OPTIONS: { value: PostVisibility; label: string; icon: typeof Globe }[] = [
   { value: "public", label: "Public", icon: Globe },
@@ -31,6 +33,14 @@ export function PostComposer() {
     isPurchase && Number.isFinite(parsedPrice) ? dollarsToCents(parsedPrice) : null;
   const priceValid = !isPurchase || (priceCents !== null && priceCents > 0);
   const canSubmit = (caption.trim().length > 0 || files.length > 0) && priceValid && !busy;
+
+  // Subscribers-only posts are unlockable only through an active tier; without
+  // one the content would be permanently inaccessible to everyone but the
+  // creator, so publishing is blocked (drafts stay allowed).
+  const myTiers = useMyTiers();
+  const hasActiveTier = (myTiers.data ?? []).some((t) => t.isActive);
+  const subscribersUnsellable = visibility === "subscribers" && myTiers.isSuccess && !hasActiveTier;
+  const canPublish = canSubmit && !subscribersUnsellable;
 
   function addFiles(list: FileList | null) {
     if (!list) return;
@@ -109,12 +119,12 @@ export function PostComposer() {
         <button
           onClick={() => fileInput.current?.click()}
           disabled={files.length >= MEDIA_PER_POST_MAX}
-          className="btn-ghost !px-3 !py-2 text-xs disabled:opacity-50"
+          className="btn-ghost !px-3 !py-2 text-xs disabled:opacity-60"
         >
           <ImagePlus className="h-4 w-4" /> Image
         </button>
 
-        <div className="ml-auto flex items-center gap-1 rounded-full bg-white/5 p-1">
+        <div className="ml-auto flex flex-wrap items-center gap-1 rounded-2xl bg-white/5 p-1 sm:rounded-full">
           {VISIBILITY_OPTIONS.map((opt) => {
             const Icon = opt.icon;
             const active = visibility === opt.value;
@@ -132,6 +142,16 @@ export function PostComposer() {
           })}
         </div>
       </div>
+
+      {subscribersUnsellable && (
+        <p className="rounded-xl bg-amber-400/10 px-3 py-2 text-[11px] leading-relaxed text-amber-200/90">
+          Subscribers-only posts need an active subscription tier so fans can unlock them.{" "}
+          <Link to="/dashboard/subscribers" className="font-semibold underline underline-offset-2">
+            Create a tier
+          </Link>{" "}
+          first — you can still save this as a draft.
+        </p>
+      )}
 
       {isPurchase && (
         <div className="flex flex-col gap-1.5">
@@ -162,14 +182,14 @@ export function PostComposer() {
         <button
           onClick={() => void submit(false)}
           disabled={!canSubmit}
-          className="btn-ghost !px-4 !py-2.5 text-xs disabled:opacity-50"
+          className="btn-ghost !px-4 !py-2.5 text-xs disabled:opacity-60"
         >
           Save draft
         </button>
         <button
           onClick={() => void submit(true)}
-          disabled={!canSubmit}
-          className="btn-luxury !px-5 !py-2.5 text-xs disabled:opacity-50"
+          disabled={!canPublish}
+          className="btn-luxury !px-5 !py-2.5 text-xs disabled:opacity-60"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Publish

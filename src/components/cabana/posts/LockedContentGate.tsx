@@ -45,7 +45,7 @@ export function LockedContentGate({
       : "Follow this creator to see this content.";
 
   return (
-    <div className="relative isolate flex min-h-64 flex-col items-center justify-center gap-4 overflow-hidden rounded-[24px] border border-white/[0.09] px-6 py-9 text-center shadow-[inset_0_1px_0_oklch(1_0_0/0.08)]">
+    <div className="relative isolate flex min-h-64 flex-col items-center justify-center gap-4 overflow-hidden rounded-3xl border border-white/[0.09] px-6 py-9 text-center shadow-[inset_0_1px_0_oklch(1_0_0/0.08)]">
       <div className="absolute inset-0 -z-20 bg-[linear-gradient(145deg,oklch(0.22_0.03_280/0.75),oklch(0.13_0.015_280/0.9))]" />
       <div className="absolute -left-10 top-0 -z-10 h-40 w-40 rounded-full bg-primary/15 blur-3xl" />
       <div className="absolute -right-8 bottom-0 -z-10 h-44 w-44 rounded-full bg-iridescent opacity-15 blur-3xl" />

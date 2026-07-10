@@ -55,7 +55,7 @@ export function CommentComposer({ postId }: { postId: string }) {
       <button
         onClick={() => void submit()}
         disabled={addComment.isPending || body.trim().length === 0}
-        className="btn-luxury !px-3 !py-2 text-xs disabled:opacity-50"
+        className="btn-luxury !px-3 !py-2 text-xs disabled:opacity-60"
         aria-label="Post comment"
       >
         {addComment.isPending ? (

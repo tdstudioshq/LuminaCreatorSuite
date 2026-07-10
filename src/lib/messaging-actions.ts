@@ -42,6 +42,14 @@ function cursor(raw: unknown): string | null {
   return raw;
 }
 
+/** Clamp an optional numeric limit to 1..max (the RPC's own server-side cap). */
+function clampLimit(raw: unknown, fallback: number, max: number): number {
+  if (raw == null) return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) throw new Error("Invalid limit.");
+  return Math.min(max, Math.max(1, Math.trunc(n)));
+}
+
 /** Build a MessagingRepository over the caller's RLS-scoped client. */
 function createMessagingRepository(supabase: Db, userId: string): MessagingRepository {
   return {
@@ -136,15 +144,16 @@ export const getConversation = createServerFn({ method: "GET" })
 
 export const getMessages = createServerFn({ method: "GET" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
-  .inputValidator((raw: { conversationId?: unknown; cursor?: unknown }) => ({
+  .inputValidator((raw: { conversationId?: unknown; cursor?: unknown; limit?: unknown }) => ({
     conversationId: uuid(raw?.conversationId, "conversation id"),
     cursor: cursor(raw?.cursor),
+    limit: clampLimit(raw?.limit, 50, 100),
   }))
   .handler(async ({ context, data }): Promise<Message[]> => {
     const { data: rows, error } = await (context.supabase as Db).rpc("conversation_messages", {
       _conversation_id: data.conversationId,
       _cursor: data.cursor ?? undefined,
-      _limit: 50,
+      _limit: data.limit,
     });
     if (error) throw new Error(error.message);
     // RPC returns newest-first; present oldest-first for the thread.

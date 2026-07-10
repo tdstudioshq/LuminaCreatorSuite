@@ -27,14 +27,24 @@ export function useFollow(username: string) {
   const relationship = useRelationship(username);
   const normalized = username.toLowerCase();
 
+  // Follow state gates content entitlement, so a change must refresh every
+  // query that renders locked/unlocked posts — not just the relationship.
+  const applyState = (state: unknown) => {
+    queryClient.setQueryData(relationshipKey(normalized), state);
+    queryClient.invalidateQueries({ queryKey: ["creator-feed", normalized] });
+    queryClient.invalidateQueries({ queryKey: ["home-feed"] });
+    queryClient.invalidateQueries({ queryKey: ["post"] });
+    queryClient.invalidateQueries({ queryKey: ["post-media"] });
+  };
+
   const followMutation = useMutation({
     mutationFn: () => followCreator({ data: { username: normalized } }),
-    onSuccess: (state) => queryClient.setQueryData(relationshipKey(normalized), state),
+    onSuccess: applyState,
   });
 
   const unfollowMutation = useMutation({
     mutationFn: () => unfollowCreator({ data: { username: normalized } }),
-    onSuccess: (state) => queryClient.setQueryData(relationshipKey(normalized), state),
+    onSuccess: applyState,
   });
 
   const following = relationship.data?.following ?? false;

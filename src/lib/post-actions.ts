@@ -36,10 +36,22 @@ import {
   normalizePostMediaInput,
   normalizePostPriceCents,
   normalizePostVisibility,
+  resolveBatchPostMedia,
   resolvePublishPatch,
 } from "@/lib/cabana-posts";
 
 type Db = SupabaseClient<Database>;
+
+/** Raw `post_media` row shape read by the batched signer. */
+type BatchMediaRow = {
+  id: string;
+  post_id: string;
+  kind: Database["public"]["Enums"]["post_media_kind"];
+  storage_path: string;
+  width: number | null;
+  height: number | null;
+  position: number;
+};
 
 const MEDIA_SIGNED_URL_TTL_SECONDS = 60 * 30; // 30 minutes
 const POST_MEDIA_BUCKET = "post-media";
@@ -64,12 +76,30 @@ function normalizeUuid(raw: unknown, label: string): string {
   return raw.toLowerCase();
 }
 
+/** Validate + dedupe a batch of post ids, clamped to the feed page cap (≤50). */
+function normalizePostIdList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) throw new Error("A list of post ids is required.");
+  const seen = new Set<string>();
+  for (const item of raw) seen.add(normalizeUuid(item, "post id"));
+  const ids = [...seen];
+  if (ids.length > 50) throw new Error("Too many post ids (max 50).");
+  return ids;
+}
+
 function normalizeCursor(raw: unknown): string | null {
   if (raw == null || raw === "") return null;
   if (typeof raw !== "string" || Number.isNaN(Date.parse(raw))) {
     throw new Error("Invalid feed cursor.");
   }
   return raw;
+}
+
+/** Feed page size, clamped to the RPCs' server-side cap (1..50, default 20). */
+function normalizeFeedLimit(raw: unknown): number {
+  if (raw == null) return 20;
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(n)) throw new Error("Invalid feed limit.");
+  return Math.min(50, Math.max(1, Math.trunc(n)));
 }
 
 // ─────────────────────────────── Creator writes ─────────────────────────────
@@ -314,9 +344,10 @@ export const getOwnPosts = createServerFn({ method: "GET" })
 /** A creator's visible feed (guest-callable; entitlement enforced in the RPC). */
 export const getCreatorFeed = createServerFn({ method: "GET" })
   .middleware([attachSupabaseToken, optionalSupabaseAuth])
-  .inputValidator((raw: { username?: unknown; cursor?: unknown }) => ({
+  .inputValidator((raw: { username?: unknown; cursor?: unknown; limit?: unknown }) => ({
     username: typeof raw?.username === "string" ? raw.username.trim().toLowerCase() : "",
     cursor: normalizeCursor(raw?.cursor),
+    limit: normalizeFeedLimit(raw?.limit),
   }))
   .handler(async ({ context, data }): Promise<FeedPost[]> => {
     if (!data.username) throw new Error("Creator username is required.");
@@ -324,7 +355,7 @@ export const getCreatorFeed = createServerFn({ method: "GET" })
     const { data: rows, error } = await supabase.rpc("feed_creator_posts", {
       _username: data.username,
       _cursor: data.cursor ?? undefined,
-      _limit: 20,
+      _limit: data.limit,
     });
     if (error) throw new Error(error.message);
     return (rows ?? []).map(mapFeedPost);
@@ -333,12 +364,15 @@ export const getCreatorFeed = createServerFn({ method: "GET" })
 /** The authenticated viewer's home feed (followed creators). */
 export const getHomeFeed = createServerFn({ method: "GET" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
-  .inputValidator((raw: { cursor?: unknown }) => ({ cursor: normalizeCursor(raw?.cursor) }))
+  .inputValidator((raw: { cursor?: unknown; limit?: unknown }) => ({
+    cursor: normalizeCursor(raw?.cursor),
+    limit: normalizeFeedLimit(raw?.limit),
+  }))
   .handler(async ({ context, data }): Promise<FeedPost[]> => {
     const { supabase } = context;
     const { data: rows, error } = await supabase.rpc("feed_home_posts", {
       _cursor: data.cursor ?? undefined,
-      _limit: 20,
+      _limit: data.limit,
     });
     if (error) throw new Error(error.message);
     return (rows ?? []).map(mapFeedPost);
@@ -398,4 +432,58 @@ export const getPostMediaUrls = createServerFn({ method: "GET" })
       }),
     );
     return signed.filter((m): m is SignedPostMedia => m !== null);
+  });
+
+/**
+ * Batched twin of `getPostMediaUrls` (H-08): sign media for many posts in ONE
+ * round-trip instead of one server-fn call per feed card. Security is identical
+ * to the singular fn — `can_view_post` authorizes EACH post under the caller's
+ * RLS, and only allowed posts' objects are read/signed with the service role.
+ * Returns a `{ [postId]: SignedPostMedia[] }` map with an entry for every
+ * requested id (empty array when not viewable or media-less).
+ */
+export const getPostMediaUrlsBatch = createServerFn({ method: "GET" })
+  .middleware([attachSupabaseToken, optionalSupabaseAuth])
+  .inputValidator((raw: { postIds?: unknown }) => ({
+    postIds: normalizePostIdList(raw?.postIds),
+  }))
+  .handler(async ({ context, data }): Promise<Record<string, SignedPostMedia[]>> => {
+    const supabase = context.supabase as Db;
+    // Pure orchestration (authorize → fetch only authorized → sign) lives in
+    // `resolveBatchPostMedia`; this just wires the RLS-scoped authz check and the
+    // service-role reads/signing into it. The service role is safe ONLY because
+    // `can_view_post` gates every post first — see the pure fn's security tests.
+    return resolveBatchPostMedia<BatchMediaRow, SignedPostMedia>(data.postIds, {
+      canView: async (postId) => {
+        const { data: allowed, error } = await supabase.rpc("can_view_post", { _post_id: postId });
+        if (error) throw new Error(error.message);
+        return allowed === true;
+      },
+      fetchMedia: async (authorizedIds) => {
+        const { data: media, error } = await supabaseAdmin
+          .from("post_media")
+          .select("id, post_id, kind, storage_path, width, height, position")
+          .in("post_id", authorizedIds)
+          .order("position", { ascending: true });
+        if (error) throw new Error(error.message);
+        return (media ?? []) as BatchMediaRow[];
+      },
+      postIdOf: (row) => row.post_id,
+      sign: async (row) => {
+        const { data: urlData } = await supabaseAdmin.storage
+          .from(POST_MEDIA_BUCKET)
+          .createSignedUrl(row.storage_path, MEDIA_SIGNED_URL_TTL_SECONDS);
+        return urlData?.signedUrl
+          ? {
+              id: row.id,
+              url: urlData.signedUrl,
+              kind: row.kind,
+              width: row.width,
+              height: row.height,
+              position: row.position,
+            }
+          : null;
+      },
+      positionOf: (signed) => signed.position,
+    });
   });

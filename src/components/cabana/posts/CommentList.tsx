@@ -1,11 +1,17 @@
+import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { EyeOff, Loader2, MessageCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
 import { ReportButton } from "@/components/cabana/reporting/ReportButton";
 import { usePostComments, useDeleteComment, useHideComment } from "@/lib/use-engagement";
 
+const COMMENTS_PAGE_SIZE = 30;
+const COMMENTS_MAX_LIMIT = 100; // server-side clamp on the comments RPC
+
 export function CommentList({ postId, isOwner = false }: { postId: string; isOwner?: boolean }) {
-  const { data: comments, isLoading, isError } = usePostComments(postId);
+  const [limit, setLimit] = useState(COMMENTS_PAGE_SIZE);
+  const { data: comments, isLoading, isError, refetch } = usePostComments(postId, true, limit);
   const deleteComment = useDeleteComment(postId);
   const hideComment = useHideComment(postId);
 
@@ -26,11 +32,7 @@ export function CommentList({ postId, isOwner = false }: { postId: string; isOwn
     );
   }
   if (isError) {
-    return (
-      <div className="glass rounded-2xl p-6 text-center text-sm text-muted-foreground">
-        Couldn’t load comments.
-      </div>
-    );
+    return <QueryErrorState title="Couldn’t load comments" onRetry={() => void refetch()} />;
   }
   if (!comments || comments.length === 0) {
     return (
@@ -42,63 +44,80 @@ export function CommentList({ postId, isOwner = false }: { postId: string; isOwn
   }
 
   return (
-    <ul className="space-y-3">
-      {comments.map((c) => {
-        const initial = (c.authorDisplayName || c.authorUsername || "?").charAt(0).toUpperCase();
-        return (
-          <li key={c.id} className="glass flex gap-3 rounded-2xl p-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/5 text-xs font-medium">
-              {c.authorAvatarUrl ? (
-                <img src={c.authorAvatarUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                initial
-              )}
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="truncate text-sm font-medium">{c.authorDisplayName}</span>
-                {c.authorUsername && (
-                  <span className="truncate text-[11px] text-muted-foreground">
-                    @{c.authorUsername}
-                  </span>
+    <div className="space-y-3">
+      <ul className="space-y-3">
+        {comments.map((c) => {
+          const initial = (c.authorDisplayName || c.authorUsername || "?").charAt(0).toUpperCase();
+          return (
+            <li key={c.id} className="glass flex gap-3 rounded-2xl p-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/5 text-xs font-medium">
+                {c.authorAvatarUrl ? (
+                  <img src={c.authorAvatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  initial
                 )}
-                <time className="ml-auto text-[10px] text-muted-foreground/70">
-                  {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
-                </time>
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-sm font-medium">{c.authorDisplayName}</span>
+                  {c.authorUsername && (
+                    <span className="truncate text-[11px] text-muted-foreground">
+                      @{c.authorUsername}
+                    </span>
+                  )}
+                  <time className="ml-auto text-[10px] text-muted-foreground/70">
+                    {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
+                  </time>
+                </div>
+                <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground/90">
+                  {c.body}
+                </p>
+                <div className="mt-1.5 flex items-center gap-2">
+                  {c.mine && (
+                    <button
+                      onClick={() => void run(deleteComment.mutateAsync(c.id), "Comment deleted.")}
+                      className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-red-300/80"
+                    >
+                      <Trash2 className="h-3 w-3" /> Delete
+                    </button>
+                  )}
+                  {isOwner && !c.mine && (
+                    <button
+                      onClick={() => void run(hideComment.mutateAsync(c.id), "Comment hidden.")}
+                      className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-amber-300/80"
+                    >
+                      <EyeOff className="h-3 w-3" /> Hide
+                    </button>
+                  )}
+                  {!c.mine && (
+                    <ReportButton
+                      subjectType="comment"
+                      subjectId={c.id}
+                      subjectLabel="comment"
+                      className="h-auto gap-1 px-0 py-0 text-[11px] font-normal hover:bg-transparent hover:text-amber-300/80"
+                    />
+                  )}
+                </div>
               </div>
-              <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground/90">
-                {c.body}
-              </p>
-              <div className="mt-1.5 flex items-center gap-2">
-                {c.mine && (
-                  <button
-                    onClick={() => void run(deleteComment.mutateAsync(c.id), "Comment deleted.")}
-                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-red-300/80"
-                  >
-                    <Trash2 className="h-3 w-3" /> Delete
-                  </button>
-                )}
-                {isOwner && !c.mine && (
-                  <button
-                    onClick={() => void run(hideComment.mutateAsync(c.id), "Comment hidden.")}
-                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-amber-300/80"
-                  >
-                    <EyeOff className="h-3 w-3" /> Hide
-                  </button>
-                )}
-                {!c.mine && (
-                  <ReportButton
-                    subjectType="comment"
-                    subjectId={c.id}
-                    subjectLabel="comment"
-                    className="h-auto gap-1 px-0 py-0 text-[11px] font-normal hover:bg-transparent hover:text-amber-300/80"
-                  />
-                )}
-              </div>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+            </li>
+          );
+        })}
+      </ul>
+      {comments.length >= limit && limit < COMMENTS_MAX_LIMIT ? (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => setLimit(COMMENTS_MAX_LIMIT)}
+            className="btn-ghost text-xs"
+          >
+            Load more comments
+          </button>
+        </div>
+      ) : comments.length >= COMMENTS_MAX_LIMIT ? (
+        <p className="text-center text-[11px] text-muted-foreground">
+          Showing the latest 100 comments.
+        </p>
+      ) : null}
+    </div>
   );
 }

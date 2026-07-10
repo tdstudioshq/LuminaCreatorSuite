@@ -33,10 +33,9 @@ export function PostCard({
   return (
     <motion.article
       initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-30px" }}
-      transition={{ duration: 0.5, delay: index * 0.05 }}
-      className="group/post relative overflow-hidden rounded-[30px] border border-white/[0.085] bg-[linear-gradient(150deg,oklch(0.18_0.02_280/0.76),oklch(0.14_0.015_280/0.72))] shadow-[0_28px_80px_-58px_oklch(0_0_0/0.95),inset_0_1px_0_oklch(1_0_0/0.075)] transition-all hover:border-white/[0.13] hover:bg-[linear-gradient(150deg,oklch(0.19_0.022_280/0.8),oklch(0.15_0.017_280/0.76))]"
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: Math.min(index * 0.05, 0.4) }}
+      className="group/post relative overflow-hidden rounded-xl border border-white/[0.085] bg-[linear-gradient(150deg,oklch(0.18_0.02_280/0.76),oklch(0.14_0.015_280/0.72))] shadow-[0_28px_80px_-58px_oklch(0_0_0/0.95),inset_0_1px_0_oklch(1_0_0/0.075)] transition-all hover:border-white/[0.13] hover:bg-[linear-gradient(150deg,oklch(0.19_0.022_280/0.8),oklch(0.15_0.017_280/0.76))]"
     >
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent opacity-0 transition-opacity group-hover/post:opacity-100" />
       <header className="flex items-start gap-3.5 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
@@ -103,7 +102,7 @@ export function PostCard({
             </p>
           )}
           {post.media.length > 0 && (
-            <div className="mx-3 overflow-hidden rounded-[22px] border border-white/[0.075] bg-black/20 sm:mx-4">
+            <div className="mx-3 overflow-hidden rounded-3xl border border-white/[0.075] bg-black/20 sm:mx-4">
               <PostMediaGallery postId={post.postId} flush />
             </div>
           )}

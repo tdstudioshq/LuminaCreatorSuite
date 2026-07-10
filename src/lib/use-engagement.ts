@@ -5,8 +5,10 @@
 // update optimistically (pure `nextLikeState`/`nextSaveState`) and reconcile
 // with the server-returned `EngagementState`.
 // ============================================================================
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useAuthSession } from "@/lib/cabana-auth";
+import { useFeedBatchGate } from "@/lib/feed-batch-context";
 import {
   type EngagementState,
   EMPTY_ENGAGEMENT,
@@ -37,23 +39,33 @@ export function usePost(postId: string | null) {
   return useQuery({
     queryKey: ["post", postId ?? ""],
     enabled: !!postId,
+    // A missing post resolves deterministically (null / not-found) — retrying
+    // the same lookup just delays the terminal state.
+    retry: false,
     queryFn: () => getPost({ data: { postId: postId! } }),
   });
 }
 
 export function usePostEngagementState(postId: string | null) {
+  // Inside a <FeedBatchScope> the scope batch-fetches + seeds this cache, so the
+  // card only OBSERVES it (no per-card request); outside a scope it fetches as
+  // before. usePostLike/usePostSave read through this hook, so the whole card
+  // (bar + like + save) makes zero engagement requests when batched.
+  const batched = useFeedBatchGate();
   return useQuery({
     queryKey: engagementKey(postId ?? ""),
-    enabled: !!postId,
+    enabled: !!postId && !batched,
     queryFn: () => getPostEngagementState({ data: { postId: postId! } }),
   });
 }
 
-export function usePostComments(postId: string | null, enabled = true) {
+export function usePostComments(postId: string | null, enabled = true, limit = 30) {
   return useQuery({
-    queryKey: commentsKey(postId ?? ""),
+    queryKey: [...commentsKey(postId ?? ""), limit],
     enabled: enabled && !!postId,
-    queryFn: () => getPostComments({ data: { postId: postId! } }),
+    // Keep the current page rendered while "Load more" grows the limit.
+    placeholderData: keepPreviousData,
+    queryFn: () => getPostComments({ data: { postId: postId!, limit } }),
   });
 }
 
@@ -76,6 +88,7 @@ function useEngagementToggle(
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.previous) qc.setQueryData(key, ctx.previous);
+      toast.error("Couldn’t update. Please try again.");
     },
     onSuccess: (state) => qc.setQueryData(key, state),
   });

@@ -32,9 +32,11 @@ const BUTTON_RADIUS: Record<ButtonStyle, string> = {
 import { trackPageView, trackLinkClick, trackProductClick } from "@/lib/cabana-analytics";
 import { comingSoon } from "@/lib/coming-soon";
 import { useFollow } from "@/lib/use-relationships";
+import { usePurchaseUnlock } from "@/lib/use-money";
 import { useCreatorFeed, usePostMediaUrls } from "@/lib/use-posts";
 import type { FeedPost } from "@/lib/cabana-posts";
 import { PostCard } from "@/components/cabana/posts/PostCard";
+import { FeedBatchScope } from "@/components/cabana/posts/FeedBatchScope";
 import { ReportButton } from "@/components/cabana/reporting/ReportButton";
 import { CreatorSubscribePanel } from "@/components/cabana/subscriptions/CreatorSubscribePanel";
 import { useCreatorTiers } from "@/lib/use-subscriptions";
@@ -46,9 +48,10 @@ export const Route = createFileRoute("/$username")({
   component: CreatorProfileRoute,
   head: ({ params }) => ({
     meta: [
-      { title: "CABANA" },
+      { title: `@${params.username} · CABANA` },
       { name: "description", content: `The official CABANA of @${params.username}.` },
-      { property: "og:title", content: "CABANA" },
+      { property: "og:title", content: `@${params.username} · CABANA` },
+      { name: "twitter:title", content: `@${params.username} · CABANA` },
     ],
   }),
 });
@@ -291,14 +294,14 @@ export function CreatorProfile({ username }: { username: string }) {
                           aria-label="View subscription options"
                         >
                           <Crown className="h-4 w-4 text-iridescent" />
-                          <span className="hidden sm:inline">Subscribe</span>
+                          <span>Subscribe</span>
                         </button>
                       ) : null}
                       <button
                         type="button"
                         onClick={() => void handleMessage()}
                         disabled={startConversation.isPending}
-                        className="btn-ghost flex min-h-10 items-center justify-center gap-2 !rounded-full !px-3.5 !py-2.5 text-xs disabled:opacity-50 sm:!px-4"
+                        className="btn-ghost flex min-h-10 items-center justify-center gap-2 !rounded-full !px-3.5 !py-2.5 text-xs disabled:opacity-60 sm:!px-4"
                         aria-label="Message creator"
                       >
                         <Mail className="h-4 w-4" />
@@ -436,6 +439,9 @@ export function CreatorProfile({ username }: { username: string }) {
   );
 }
 
+const FEED_PAGE_SIZE = 20;
+const FEED_MAX_LIMIT = 50; // server-side clamp on the feed RPC
+
 function CreatorPosts({
   username,
   onUnlock,
@@ -447,7 +453,11 @@ function CreatorPosts({
   unlockPending: boolean;
   isOwner: boolean;
 }) {
-  const { data: posts, isLoading, isError, refetch } = useCreatorFeed(username);
+  const [limit, setLimit] = useState(FEED_PAGE_SIZE);
+  const { data: posts, isLoading, isError, refetch } = useCreatorFeed(username, limit);
+  // Paid posts unlock through the mock purchase flow (same wiring as
+  // PostDetail); the follow toggle only backs followers-locked cards.
+  const purchaseUnlock = usePurchaseUnlock();
   if (isLoading) {
     return <ProfileContentLoading />;
   }
@@ -475,18 +485,55 @@ function CreatorPosts({
       />
     );
   }
+  const nonLocked = posts.filter((p) => !p.locked);
+  const engagementPostIds = nonLocked.map((p) => p.postId);
+  const mediaPostIds = nonLocked.filter((p) => p.media.length > 0).map((p) => p.postId);
   return (
     <div className="space-y-5 p-4 sm:p-5">
-      {posts.map((post, i) => (
-        <PostCard
-          key={post.postId}
-          post={post}
-          index={i}
-          onUnlock={onUnlock}
-          unlockPending={unlockPending}
-          isOwner={isOwner}
-        />
-      ))}
+      <FeedBatchScope mediaPostIds={mediaPostIds} engagementPostIds={engagementPostIds}>
+        {posts.map((post, i) => {
+          const isPurchase = post.visibility === "purchase";
+          return (
+            <PostCard
+              key={post.postId}
+              post={post}
+              index={i}
+              onUnlock={
+                isPurchase
+                  ? () =>
+                      purchaseUnlock.mutate(post.postId, {
+                        onSuccess: () =>
+                          toast.success("Unlocked (demo) — no real payment was processed."),
+                        onError: (e) =>
+                          toast.error(e instanceof Error ? e.message : "Could not unlock."),
+                      })
+                  : onUnlock
+              }
+              unlockPending={
+                isPurchase
+                  ? purchaseUnlock.isPending && purchaseUnlock.variables === post.postId
+                  : unlockPending
+              }
+              isOwner={isOwner}
+            />
+          );
+        })}
+        {posts.length >= limit && limit < FEED_MAX_LIMIT ? (
+          <div className="flex justify-center pt-1">
+            <button
+              type="button"
+              onClick={() => setLimit(FEED_MAX_LIMIT)}
+              className="btn-ghost text-xs"
+            >
+              Load more posts
+            </button>
+          </div>
+        ) : posts.length >= FEED_MAX_LIMIT ? (
+          <p className="pt-1 text-center text-[11px] text-muted-foreground">
+            Showing the latest 50 posts.
+          </p>
+        ) : null}
+      </FeedBatchScope>
     </div>
   );
 }
@@ -608,11 +655,17 @@ function ProductsTab({
           className="group relative aspect-[3/4] overflow-hidden rounded-2xl border border-white/[0.08] bg-background text-left shadow-[0_24px_55px_-38px_oklch(0_0_0/0.95)] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           aria-label={`View ${p.title}`}
         >
-          <img
-            src={p.img}
-            alt={p.title}
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-          />
+          {p.img ? (
+            <img
+              src={p.img}
+              alt={p.title}
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/[0.04] text-muted-foreground">
+              <Package className="h-6 w-6" />
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent" />
           <span className="absolute right-2.5 top-2.5 rounded-full border border-white/15 bg-black/45 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-widest backdrop-blur-md">
             {p.type}
@@ -677,7 +730,7 @@ function LinksCard({
 }) {
   const rowRadius = BUTTON_RADIUS[buttonStyle] ?? "rounded-2xl";
   return (
-    <section className="overflow-hidden rounded-[28px] border border-white/[0.09] bg-[linear-gradient(150deg,oklch(0.19_0.02_280/0.68),oklch(0.14_0.015_280/0.58))] p-5 shadow-[0_24px_70px_-50px_oklch(0_0_0/0.95),inset_0_1px_0_oklch(1_0_0/0.08)]">
+    <section className="overflow-hidden rounded-xl border border-white/[0.09] bg-[linear-gradient(150deg,oklch(0.19_0.02_280/0.68),oklch(0.14_0.015_280/0.58))] p-5 shadow-[0_24px_70px_-50px_oklch(0_0_0/0.95),inset_0_1px_0_oklch(1_0_0/0.08)]">
       <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-primary">
         Creator links
       </p>
@@ -736,8 +789,8 @@ function EmptyState({
 }) {
   return (
     <div className="p-5 sm:p-6">
-      <div className="rounded-[28px] border border-dashed border-white/[0.1] bg-white/[0.02] px-6 py-14 text-center">
-        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] border border-white/[0.1] bg-white/[0.04] text-primary shadow-[inset_0_1px_0_oklch(1_0_0/0.08)]">
+      <div className="rounded-xl border border-dashed border-white/[0.1] bg-white/[0.02] px-6 py-14 text-center">
+        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-white/[0.1] bg-white/[0.04] text-primary shadow-[inset_0_1px_0_oklch(1_0_0/0.08)]">
           <Icon className="h-6 w-6" />
         </span>
         <h2 className="mt-5 font-display text-xl font-semibold">{title}</h2>
@@ -778,7 +831,7 @@ function ProfileContentLoading() {
       {PROFILE_LOADING_PLACEHOLDERS.map((item) => (
         <div
           key={item}
-          className="h-64 animate-pulse rounded-[28px] border border-white/[0.07] bg-white/[0.035]"
+          className="h-64 animate-pulse rounded-xl border border-white/[0.07] bg-white/[0.035]"
         />
       ))}
     </div>
@@ -802,7 +855,7 @@ function ProfileStatus({
     <SocialShell>
       <div className="mx-auto flex min-h-screen max-w-[720px] items-center justify-center border-x border-white/[0.07] px-5 py-16">
         <div className="w-full max-w-md rounded-[32px] border border-white/[0.09] bg-white/[0.035] p-8 text-center shadow-luxury sm:p-10">
-          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] border border-white/[0.1] bg-white/[0.05] text-primary">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-white/[0.1] bg-white/[0.05] text-primary">
             <Icon className="h-6 w-6" />
           </span>
           <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">

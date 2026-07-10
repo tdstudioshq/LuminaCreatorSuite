@@ -15,16 +15,26 @@ import { useAuthSession } from "@/lib/cabana-auth";
 import { useCabana, type CabanaProfile } from "@/lib/cabana-store";
 import { useHomeFeed } from "@/lib/use-posts";
 import { PostCard } from "./PostCard";
+import { FeedBatchScope } from "./FeedBatchScope";
 
 const FILTERS = ["All", "Photos", "Free", "Locked"] as const;
 const LOADING_PLACEHOLDERS = [0, 1] as const;
+const FEED_PAGE_SIZE = 20;
+const FEED_MAX_LIMIT = 50; // server-side clamp on the feed RPCs
 type Filter = (typeof FILTERS)[number];
 
 export function HomeFeed() {
   const { user, loading: sessionLoading } = useAuthSession();
   const { profile } = useCabana();
-  const { data: posts, isLoading, isError, refetch } = useHomeFeed();
+  const [limit, setLimit] = useState(FEED_PAGE_SIZE);
+  const { data: posts, isLoading, isError, refetch } = useHomeFeed(limit);
   const [filter, setFilter] = useState<Filter>("All");
+
+  // Batch media/engagement for the whole fetched set (not just the current
+  // filter) so switching filters never triggers new per-card requests.
+  const nonLocked = (posts ?? []).filter((p) => !p.locked);
+  const engagementPostIds = nonLocked.map((p) => p.postId);
+  const mediaPostIds = nonLocked.filter((p) => p.media.length > 0).map((p) => p.postId);
 
   // Client-side, presentational filtering over the already-fetched feed.
   const visiblePosts = (posts ?? []).filter((p) => {
@@ -49,10 +59,12 @@ export function HomeFeed() {
               Creator updates
             </p>
             <div className="mt-0.5 flex items-baseline gap-2.5">
-              <h1 className="font-display text-2xl font-semibold tracking-[-0.025em]">Home feed</h1>
+              <h1 className="font-display text-2xl font-semibold tracking-tight">Home feed</h1>
               {user && posts ? (
                 <span className="text-[11px] text-muted-foreground">
-                  {posts.length} {posts.length === 1 ? "post" : "posts"}
+                  {visiblePosts.length < posts.length
+                    ? `${visiblePosts.length} of ${posts.length} posts`
+                    : `${posts.length} ${posts.length === 1 ? "post" : "posts"}`}
                 </span>
               ) : null}
             </div>
@@ -75,7 +87,7 @@ export function HomeFeed() {
           {sessionLoading ? (
             <FeedLoading />
           ) : !user ? (
-            <div className="rounded-[30px] border border-white/[0.09] bg-[linear-gradient(145deg,oklch(0.2_0.022_280/0.62),oklch(0.145_0.016_280/0.58))] p-8 text-center shadow-luxury sm:p-10">
+            <div className="rounded-xl border border-white/[0.09] bg-[linear-gradient(145deg,oklch(0.2_0.022_280/0.62),oklch(0.145_0.016_280/0.58))] p-8 text-center shadow-luxury sm:p-10">
               <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-iridescent text-background shadow-glow-sm">
                 <Rows3 className="h-6 w-6" />
               </span>
@@ -137,7 +149,26 @@ export function HomeFeed() {
               }
             />
           ) : (
-            visiblePosts.map((post, i) => <PostCard key={post.postId} post={post} index={i} />)
+            <FeedBatchScope mediaPostIds={mediaPostIds} engagementPostIds={engagementPostIds}>
+              {visiblePosts.map((post, i) => (
+                <PostCard key={post.postId} post={post} index={i} />
+              ))}
+              {posts.length >= limit && limit < FEED_MAX_LIMIT ? (
+                <div className="flex justify-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setLimit(FEED_MAX_LIMIT)}
+                    className="btn-ghost text-xs"
+                  >
+                    Load more posts
+                  </button>
+                </div>
+              ) : posts.length >= FEED_MAX_LIMIT ? (
+                <p className="pt-1 text-center text-[11px] text-muted-foreground">
+                  Showing your latest 50 posts.
+                </p>
+              ) : null}
+            </FeedBatchScope>
           )}
         </section>
       </div>
@@ -152,7 +183,7 @@ function FeedComposer({ profile }: { profile: CabanaProfile }) {
   const openComposer = () => navigate({ to: "/dashboard/posts" });
 
   return (
-    <div className="mb-5 overflow-hidden rounded-[28px] border border-white/[0.1] bg-[linear-gradient(145deg,oklch(0.22_0.025_280/0.78),oklch(0.15_0.018_280/0.72))] shadow-[0_24px_70px_-42px_oklch(0.78_0.18_280/0.8),inset_0_1px_0_oklch(1_0_0/0.1)]">
+    <div className="mb-5 overflow-hidden rounded-xl border border-white/[0.1] bg-[linear-gradient(145deg,oklch(0.22_0.025_280/0.78),oklch(0.15_0.018_280/0.72))] shadow-[0_24px_70px_-42px_oklch(0.78_0.18_280/0.8),inset_0_1px_0_oklch(1_0_0/0.1)]">
       <div className="flex gap-3.5 p-4 pb-3 sm:p-5 sm:pb-4">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-iridescent text-sm font-semibold text-background ring-2 ring-white/10">
           {profile?.avatar ? (
@@ -245,7 +276,7 @@ function FeedLoading() {
       {LOADING_PLACEHOLDERS.map((item) => (
         <div
           key={item}
-          className="h-72 animate-pulse rounded-[28px] border border-white/[0.07] bg-white/[0.035]"
+          className="h-72 animate-pulse rounded-xl border border-white/[0.07] bg-white/[0.035]"
         />
       ))}
     </div>
@@ -264,7 +295,7 @@ function FeedState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[30px] border border-dashed border-white/[0.1] bg-white/[0.02] px-6 py-12 text-center">
+    <div className="rounded-xl border border-dashed border-white/[0.1] bg-white/[0.02] px-6 py-12 text-center">
       <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.1] bg-white/[0.045] text-primary">
         <Icon className="h-5 w-5" />
       </span>

@@ -32,10 +32,28 @@ function uuid(raw: unknown, label: string): string {
   return raw.toLowerCase();
 }
 
+/** Validate + dedupe a batch of post ids, clamped to the feed page cap (≤50). */
+function idList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) throw new Error("A list of post ids is required.");
+  const seen = new Set<string>();
+  for (const item of raw) seen.add(uuid(item, "post id"));
+  const ids = [...seen];
+  if (ids.length > 50) throw new Error("Too many post ids (max 50).");
+  return ids;
+}
+
 function cursor(raw: unknown): string | null {
   if (raw == null || raw === "") return null;
   if (typeof raw !== "string" || Number.isNaN(Date.parse(raw))) throw new Error("Invalid cursor.");
   return raw;
+}
+
+/** Comments page size, clamped to the RPC's server-side cap (1..100, default 30). */
+function commentsLimit(raw: unknown): number {
+  if (raw == null) return 30;
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(n)) throw new Error("Invalid comments limit.");
+  return Math.min(100, Math.max(1, Math.trunc(n)));
 }
 
 async function readEngagementState(supabase: Db, postId: string): Promise<EngagementState> {
@@ -182,18 +200,40 @@ export const getPostEngagementState = createServerFn({ method: "GET" })
     return readEngagementState(context.supabase as Db, data.postId);
   });
 
+/**
+ * Batched twin of `getPostEngagementState` (H-08): resolve engagement state for
+ * many posts in ONE round-trip instead of one server-fn call per feed card.
+ * Security is identical — `post_engagement_state` runs per post under the
+ * caller's RLS (counts only; never who liked/saved). Returns a
+ * `{ [postId]: EngagementState }` map.
+ */
+export const getPostEngagementStateBatch = createServerFn({ method: "GET" })
+  .middleware([attachSupabaseToken, optionalSupabaseAuth])
+  .inputValidator((raw: { postIds?: unknown }) => ({ postIds: idList(raw?.postIds) }))
+  .handler(async ({ context, data }): Promise<Record<string, EngagementState>> => {
+    const supabase = context.supabase as Db;
+    const out: Record<string, EngagementState> = {};
+    await Promise.all(
+      data.postIds.map(async (postId) => {
+        out[postId] = await readEngagementState(supabase, postId);
+      }),
+    );
+    return out;
+  });
+
 export const getPostComments = createServerFn({ method: "GET" })
   .middleware([attachSupabaseToken, optionalSupabaseAuth])
-  .inputValidator((raw: { postId?: unknown; cursor?: unknown }) => ({
+  .inputValidator((raw: { postId?: unknown; cursor?: unknown; limit?: unknown }) => ({
     postId: uuid(raw?.postId, "post id"),
     cursor: cursor(raw?.cursor),
+    limit: commentsLimit(raw?.limit),
   }))
   .handler(async ({ context, data }): Promise<Comment[]> => {
     const supabase = context.supabase as Db;
     const { data: rows, error } = await supabase.rpc("post_comments_list", {
       _post_id: data.postId,
       _cursor: data.cursor ?? undefined,
-      _limit: 30,
+      _limit: data.limit,
     });
     if (error) throw new Error(error.message);
     return (rows ?? []).map(mapComment);

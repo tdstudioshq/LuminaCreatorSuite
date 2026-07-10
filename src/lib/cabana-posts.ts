@@ -351,3 +351,67 @@ export function mapFeedPost(row: RawFeedRow): FeedPost {
     media: mapFeedMedia(row.media),
   };
 }
+
+// ─────────────────────── Batched media access (H-08) ────────────────────────
+
+/**
+ * Repository injected into {@link resolveBatchPostMedia}. Keeps the pure
+ * orchestration free of Supabase/storage while the security-critical ordering
+ * (authorize → fetch only authorized → sign) stays unit-testable.
+ */
+export type BatchPostMediaRepo<TRow, TSigned> = {
+  /** Authorize the caller for one post under their RLS (mirrors `can_view_post`). */
+  canView: (postId: string) => Promise<boolean>;
+  /** Read media rows for ONLY the authorized post ids (service-role read). */
+  fetchMedia: (authorizedPostIds: string[]) => Promise<TRow[]>;
+  /** Which post a media row belongs to. */
+  postIdOf: (row: TRow) => string;
+  /** Sign one media row into an output item; null when signing failed. */
+  sign: (row: TRow) => Promise<TSigned | null>;
+  /** Position used to order a post's media. */
+  positionOf: (signed: TSigned) => number;
+};
+
+/**
+ * Batched media resolver (H-08 twin of the singular `getPostMediaUrls` flow).
+ * For a set of post ids it (1) authorizes EACH post under the caller's RLS,
+ * (2) fetches media for ONLY the authorized ids, then (3) signs + groups them by
+ * post (sorted by position). Returns a map with an entry for every requested id —
+ * `[]` when the caller isn't authorized or the post has no media.
+ *
+ * Security property (see `cabana-posts.test.ts`): a post that fails
+ * authorization is never fetched or signed, and an over-returned row for an
+ * unauthorized post is dropped (defense in depth) — so an unauthorized id in the
+ * batch can never yield a signed URL while authorized ids still resolve.
+ */
+export async function resolveBatchPostMedia<TRow, TSigned>(
+  postIds: string[],
+  repo: BatchPostMediaRepo<TRow, TSigned>,
+): Promise<Record<string, TSigned[]>> {
+  const out: Record<string, TSigned[]> = {};
+  for (const id of postIds) out[id] = [];
+  if (postIds.length === 0) return out;
+
+  const authz = await Promise.all(
+    postIds.map(async (id) => ((await repo.canView(id)) ? id : null)),
+  );
+  const authorized = authz.filter((id): id is string => id !== null);
+  if (authorized.length === 0) return out;
+  const authorizedSet = new Set(authorized);
+
+  const rows = await repo.fetchMedia(authorized);
+  await Promise.all(
+    rows.map(async (row) => {
+      const postId = repo.postIdOf(row);
+      // Defense in depth: never surface media for a post the caller wasn't
+      // authorized to view, even if the repository over-returned rows. out[postId]
+      // is guaranteed present (authorized ⊆ postIds, all pre-initialized above).
+      if (!authorizedSet.has(postId)) return;
+      const signed = await repo.sign(row);
+      if (signed != null) out[postId].push(signed);
+    }),
+  );
+
+  for (const id of authorized) out[id].sort((a, b) => repo.positionOf(a) - repo.positionOf(b));
+  return out;
+}

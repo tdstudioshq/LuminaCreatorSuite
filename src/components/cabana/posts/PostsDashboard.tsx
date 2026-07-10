@@ -3,6 +3,7 @@ import { Archive, Loader2, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Post } from "@/lib/cabana-posts";
 import { useArchivePost, useDeletePost, useOwnPosts, usePublishPost } from "@/lib/use-posts";
+import { useMyTiers } from "@/lib/use-subscriptions";
 import { PostComposer } from "./PostComposer";
 import { PostVisibilityBadge } from "./PostVisibilityBadge";
 import { PostMediaGallery } from "./PostMediaGallery";
@@ -19,6 +20,10 @@ export function PostsDashboard() {
   const publishPost = usePublishPost();
   const archivePost = useArchivePost();
   const deletePost = useDeletePost();
+  // Same guard as the composer: a subscribers-only post published with no
+  // active tier would be permanently inaccessible to every fan.
+  const myTiers = useMyTiers();
+  const hasActiveTier = (myTiers.data ?? []).some((t) => t.isActive);
 
   async function run(action: Promise<unknown>, ok: string) {
     try {
@@ -33,7 +38,7 @@ export function PostsDashboard() {
     <div className="space-y-8">
       <div>
         <p className="eyebrow text-muted-foreground mb-1.5">Creator publishing</p>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Posts</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tighter">Posts</h1>
         <p className="mt-2 max-w-prose text-sm text-muted-foreground">
           Publish public updates or followers-only drops. Followers-only media stays private and is
           served through authorized, expiring links.
@@ -74,8 +79,15 @@ export function PostsDashboard() {
                     {post.status !== "published" && (
                       <button
                         onClick={() => void run(publishPost.mutateAsync(post.id), "Published.")}
-                        className="btn-ghost !px-2.5 !py-1.5 text-[11px]"
-                        title="Publish"
+                        disabled={
+                          post.visibility === "subscribers" && myTiers.isSuccess && !hasActiveTier
+                        }
+                        className="btn-ghost !px-2.5 !py-1.5 text-[11px] disabled:opacity-60"
+                        title={
+                          post.visibility === "subscribers" && myTiers.isSuccess && !hasActiveTier
+                            ? "Create an active subscription tier first — fans have no way to unlock a subscribers-only post without one."
+                            : "Publish"
+                        }
                       >
                         <Send className="h-3.5 w-3.5" /> Publish
                       </button>
