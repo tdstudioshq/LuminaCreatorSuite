@@ -1,6 +1,6 @@
 # CABANA — Claude Agent Session Handoff
 
-> Prepared June 25, 2026 · Last updated July 8, 2026
+> Prepared June 25, 2026 · Last updated July 10, 2026
 >
 > Workspace: `/Users/tdstudiosny/LuminaCreatorSuite`
 
@@ -15,6 +15,66 @@ Use these documents as the source of truth:
 1. [`CABANA_ARCHITECTURE.md`](../CABANA_ARCHITECTURE.md)
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
+
+## Session update — July 10, 2026 (Production smoke-test harness + approved cloud apply of 20260529/30 — GREEN)
+
+Built the post-deploy production smoke test (`bun run smoke:prod`), ran it against production, and —
+**with Tyler's explicit approval — applied migrations `20260529` + `20260530` to the cloud DB** (the
+only cloud change; nothing else touched, nothing deployed). Code changes are uncommitted on `main`.
+
+- **First production run (`smoke_1783659742376`): 7 PASS · 1 FAIL · 1 SKIP.** The FAIL was a
+  GENUINE PRODUCTION FINDING, not a script bug: `public_creator_profiles.post_count` stayed 0
+  after publishing a probe post (delta 0) — migration `20260530` (H5: real published-post count
+  instead of hardcoded 0) was not applied to the cloud DB, consistent with commit `1042cbd`.
+- **Cloud apply (approved by Tyler):** validated on local Docker first (`bun run db:validate`
+  from-zero: all 20 migrations + seed + behavioral tests incl. `post_media_service_grant.sql` and
+  `high_qa_fixes.sql` — green). Read-only cloud preflight confirmed H5/H8/H9 absent and
+  `20260527`/`20260528` present (`20260529`'s grant already existed on hosted via platform default
+  ACLs, as its own comment predicts — the apply was an idempotent re-grant). Applied exactly the
+  two migration files, transaction-wrapped, via the Supabase Management API SQL endpoint
+  (`/v1/projects/rpzaeqoqcaxxavltgvpe/database/query`, CLI keychain token). Post-verified on cloud:
+  view has real counts with grants intact; both functions now take `pg_advisory_xact_lock`.
+  ⚠️ The cloud `supabase_migrations.schema_migrations` ledger uses reconcile-era date-stamped
+  versions (22 rows, `202607031700xx`/`202607040900xx`) — NOT the repo's `202605xx` numbering. It
+  was deliberately left untouched; any future `supabase db push` must account for this mismatched
+  history before trusting it.
+- **Re-run after apply (`smoke_1783660560715`): 7 PASS · 0 FAIL · 1 SKIP · 1 FLAKY (exit 0).**
+  DB-STATE now passes (post*count tracked a published probe post, 0 → 1). REALTIME-MESSAGING was
+  FLAKY (first attempt timed out, retry passed — by-design semantics, not a failure).
+  ADMIN-FINANCE SKIPs legitimately (cloud ledger has zero transactions; demo ledger rows exist
+  only in local seed). CLEANUP-RESIDUE verified nothing `smoke*\*` was left behind. Everything else
+  passed: headers/freshness, avatar RLS, public + locked post-media paths, notification scoping
+  (incl. the staff-leak fix), dual realtime subscriptions.
+
+- **Files added/changed:** `scripts/smoke-prod.ts` (the harness; ~1,400 lines, manifest of every
+  RPC/table/bucket it touches with file:line source citations at the top), `.env.smoke.example`
+  (credential template, pre-filled cloud URL + publishable key), `.gitignore` (`!.env.smoke.example`
+  negation; `.env.smoke` itself stays ignored), `package.json` (`smoke:prod` script), `CLAUDE.md`
+  (new "Post-deploy verification" section: coverage, gaps, run-after-every-deploy).
+- **What it does:** 9 checks as real users only (anon + two password sessions, publishable key;
+  aborts on a service-role key): DEPLOY-FRESHNESS (5 security headers + `/dashboard/link-in-bio`
+  serving the app shell vs a multi-segment 404 control — single-segment paths match `/$username`,
+  so the control MUST be multi-segment), AVATAR-STORAGE (owner upload/download + anon rejection),
+  POST-MEDIA-PUBLIC (`can_view_post` + feed + owner-signed URL fetch), POST-MEDIA-LOCKED (locked stub,
+  zero post-media references — scan is bucket-specific because `avatar_url` is legitimately a public
+  storage URL on every row), NOTIFICATION-SCOPING (targeted dedupe-key existence — the follow emit is
+  ON CONFLICT DO NOTHING so re-runs assert existence; prefs/block states SKIP), REALTIME-MESSAGING
+  (two simultaneous per-instance-topic subscriptions, retry-once→FLAKY), DB-STATE (anon-denied
+  creator*content_analytics + post_count DELTA across a published probe post — plain "is a number"
+  can't detect the pre-H5 hardcoded 0), ADMIN-FINANCE (creator-name joins, null-only), and a final
+  CLEANUP-RESIDUE scan. All created data is `smoke*<ts>`-prefixed, cleaned in `finally`blocks + a
+startup sweep scoped to A's own creator profile.`signOut({ scope: "local" })` everywhere — the
+  default global scope would revoke ALL of the real admin's sessions on every run.
+- **Verification so far:** lint 0 errors · `bunx tsc --noEmit` clean · 337/337 vitest · build green ·
+  fail-fast no-credentials path proven live (exit 2 with instructions) · a 44-agent adversarial
+  review of the script vs source/migrations found 16 confirmed defects (all fixed; the two biggest:
+  global-scope signOut, single-segment 404 control) · deploy-freshness logic dry-run against live
+  production (headers present; control 404s; `/dashboard/link-in-bio` 200s — prod is serving this
+  cycle's build).
+- **Recommended next task:** commit this session's smoke-test files (they are uncommitted on
+  `main`), and run `bun run smoke:prod` after every future production deploy per the CLAUDE.md
+  "Post-deploy verification" section. ADMIN-FINANCE stays SKIP until the cloud ledger has
+  transactions.
 
 ## Session update — July 9, 2026 (Ground-truth audit → Phase 0 fixes → themed commits → hygiene → docs)
 
@@ -36,7 +96,7 @@ The whole set is now COMMITTED on `main` (it was previously uncommitted at `6c35
     authorized ids still resolve.
   - **M-18 version-pinned.** Documented that `auth-client-middleware.ts`'s non-OK-`Response`→throw
     coercion depends on TanStack Start's internal `ctx.result` shape (pinned `@tanstack/react-start
-    ^1.167.50`), so a future upgrade re-verifies it.
+^1.167.50`), so a future upgrade re-verifies it.
   - **Notification leak test.** Added a behavioral test (`notifications.sql`) proving an admin reads
     every user's notifications unfiltered (the "Admins read all" policy) but only their own through
     the recipient-scoped query the actions now run.
@@ -49,7 +109,7 @@ The whole set is now COMMITTED on `main` (it was previously uncommitted at `6c35
   to their dominant theme with secondary changes noted in each commit body (not hunk-split).
 - **Phase 2 — hygiene.**
   - **Lockfiles:** kept BOTH. `bun.lock` is load-bearing (CI's main job runs `bun install
-    --frozen-lockfile`; local dev installs/runs via bun), `pnpm-lock.yaml` is for Vercel's hoisted
+--frozen-lockfile`; local dev installs/runs via bun), `pnpm-lock.yaml` is for Vercel's hoisted
     prod build + the `verify-prod-deps` CI job. NOT drift — deleting `bun.lock` would red CI.
   - **Cloudflare config:** kept `wrangler.jsonc` + `@cloudflare/vite-plugin`. Verified the Vercel
     build passes WITHOUT `wrangler.jsonc` and the framework config doesn't statically import the

@@ -37,7 +37,10 @@ bunx vitest run -t "rounds half up"            # run tests matching a name
 
 bun run db:reset       # supabase db reset (rebuild local DB from migrations + seed)
 bun run db:validate    # scripts/db-validate.sh — rebuilds a fresh Supabase from zero, runs smoke checks
+bun run smoke:prod     # scripts/smoke-prod.ts — post-deploy production smoke test (see "Post-deploy verification")
 ```
+
+⚠️ **NEVER run `supabase db push` against cloud** — the cloud `schema_migrations` ledger holds 22 reconcile-era versions, not this repo's `202605xx` numbers, so push would attempt to re-apply already-applied migrations. Apply cloud SQL via the Management API pattern only (see the July 9–10 handoff), until a dedicated migration-history repair session reconciles it.
 
 **Tests** use **vitest** (`vitest.config.ts`, separate from `vite.config.ts`). They cover only the _pure_ business layer (no React/Supabase/browser): `cabana-money`, `cabana-entitlements`, `cabana-account`, `cabana-relationships`, `cabana-posts`, `cabana-engagement`, `cabana-subscriptions`, `cabana-messaging`, `cabana-notifications`, `cabana-moderation`, `cabana-finance`, `cabana-payouts`, `cabana-notification-engine`, `cabana-discovery`, `cabana-dashboard`, `cabana-creator-analytics`. Coverage thresholds are **95%** lines/functions/branches/statements over exactly those files — keep new domain logic in a pure, repository-injected module (like `cabana-relationships.ts`) so it stays testable without a DB.
 
@@ -152,6 +155,14 @@ Hard constraints when working here:
 - Treat the `transactions` ledger as **append-only**: never update historical money; record reversals as new `refund` rows. The immutability trigger permits only FK-null cascades (so accounts can be deleted while ledger rows are retained). Likewise `activity_events` is an append-only canonical log.
 - Do **not** add new tables, write new migrations, or rename existing tables without an approved migration + RLS design + behavioral tests (the Phase 2B–8 tables landed under exactly that gate; the rest of Phase 8 and phases beyond it are gated and must not start automatically). `audit_logs` is **append-only** (system/trigger-written; no client write grant) — never edit/delete audit rows. Note: existing `subscriptions` = CABANA SaaS plans; fan-to-creator subscriptions must use `creator_subscriptions`.
 - Keep domain logic Supabase-ready with RLS-ready ownership models; keep changes small and reviewable.
+
+## Post-deploy verification
+
+**Run `bun run smoke:prod` after every production deploy** (`scripts/smoke-prod.ts`; credentials in the gitignored `.env.smoke` — template + instructions in `.env.smoke.example`; one-time member-account setup via `bun run smoke:prod --setup`). It smoke-tests production (cabanagrp.com + the cloud Supabase backend) **as real users**: anon + two password sessions on the publishable key only — it aborts if given a service-role key, never touches payouts/moderation-writes/tips/purchases, prefixes all created data `smoke_<ts>`, cleans up in `finally` blocks plus a startup sweep, and ends with a residue scan. Exit 1 only on real FAILs (a check that passes on retry is FLAKY, not FAIL).
+
+What it covers: deploy freshness (security headers + a this-cycle route serving the app shell vs the 404 sentinel), avatar-bucket upload/download + anon-upload rejection, the public-post media path (`can_view_post` + `feed_creator_posts` + storage serving), locked-post stubs leaking zero storage URLs to anon, notification recipient scoping (including the staff-account leak fix — reads through the app's `.eq("recipient_id", …)` path), two simultaneous realtime message subscriptions on distinct per-instance topics, and DB state (`creator_content_analytics` denying anon but existing, real `post_count`, admin finance name joins).
+
+What it can **not** cover: the Google OAuth leg (needs a real browser + Google account), visual/UI rendering (it never runs a browser — pair with a manual look at the deployed app), the service-role signing path itself (`getPostMediaUrls` signs with `supabaseAdmin` inside the Vercel function; the script verifies the same `can_view_post` gate + object serving via the owner-scoped signer instead), and email/push delivery (none exists yet). Known intentional residue per run: system-written notification/activity rows (clients can't delete them; the script marks its notification read) and empty conversation rows (no user-facing delete path; messages are soft-deleted).
 
 ## Environment
 

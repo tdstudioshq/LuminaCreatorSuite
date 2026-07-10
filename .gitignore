@@ -49,6 +49,8 @@ supabase/reconcile/backups/
 AGENTS.md
 .vercel
 .env*
-# Keep the secret-free template tracked (this negation must follow the .env* rule
-# above — last matching rule wins — or .env.example gets re-ignored).
+# Keep the secret-free templates tracked (these negations must follow the .env* rule
+# above — last matching rule wins — or they get re-ignored). `.env.smoke` (real
+# smoke-test credentials for scripts/smoke-prod.ts) stays ignored via .env*.
 !.env.example
+!.env.smoke.example

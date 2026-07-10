@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "db:reset": "supabase db reset",
-    "db:validate": "bash scripts/db-validate.sh"
+    "db:validate": "bash scripts/db-validate.sh",
+    "smoke:prod": "bun scripts/smoke-prod.ts"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",
