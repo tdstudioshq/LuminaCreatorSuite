@@ -78,8 +78,18 @@ deploy is a separate approved step (then `bun run smoke:prod`).
   transactions), CLEANUP-RESIDUE clean. No cloud schema/data touched. Remaining manual step: a
   signed-in visual pass over the notification center (`/dashboard/notifications`, `/notifications`,
   badges, preference toggle) — smoke cannot verify UI rendering.
-- **Next:** Tyler's visual pass on the deployed notification center, then pick the next gated phase
-  (11C audience insights / 9C providers / tech debt — all require approval and scoping).
+- **Manual pass DONE (July 10):** Tyler verified the deployed notification center — 9B fully closed.
+- **Phase 11C scoping (July 10, awaiting Tyler's pick):** three options proposed. **A** — no
+  migration: follower growth (creator-readable `follows.created_at`), audience composition/funnel
+  (follows × creator_subscriptions × own transactions), subscriber cohorts, link-in-bio reach
+  (`analytics_events`); pure `cabana-audience.ts` + actions + hook + UI. **B (recommended)** — A plus
+  ONE creator-scoped SECURITY DEFINER read RPC (11B pattern; migration `20260531`) for what RLS
+  hides: engaged-follower rate + activity recency (count-only, no liker/saver identities) and top
+  supporters (names only where already creator-visible). **C** — full demographics/geo/device
+  collection: new capture tables + server-side geo + retention/privacy decisions; large, deferred
+  recommendation. Open sub-decisions for B: `/dashboard/audience` route vs. tab in
+  `/dashboard/performance`; top-supporters named vs. anonymized.
+- **Next:** Tyler picks the 11C option (gated — no SQL drafted yet), or 9C providers / tech debt.
 
 ## Session update — July 10, 2026 (Production smoke-test harness + approved cloud apply of 20260529/30 — GREEN; legacy_reel closed)
 
