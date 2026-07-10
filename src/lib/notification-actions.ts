@@ -17,6 +17,8 @@ import {
   type ActivityItem,
   type NotificationItem,
   type NotificationPreferences,
+  buildMarkAllReadCommand,
+  buildNotificationsListQuery,
   mapActivityEvent,
   mapNotification,
   mapPreferences,
@@ -36,14 +38,6 @@ function boolOrUndefined(raw: unknown): boolean | undefined {
   return raw === true;
 }
 
-/** Clamp an optional numeric limit to 1..max. */
-function clampLimit(raw: unknown, fallback: number, max: number): number {
-  if (raw == null) return fallback;
-  const n = Number(raw);
-  if (!Number.isFinite(n)) throw new Error("Invalid limit.");
-  return Math.min(max, Math.max(1, Math.trunc(n)));
-}
-
 // ─────────────────────────────── Reads ──────────────────────────────────────
 
 // These are PERSONAL-center reads, so they filter to the caller explicitly.
@@ -51,20 +45,27 @@ function clampLimit(raw: unknown, fallback: number, max: number): number {
 // "Admins read all" SELECT policies would otherwise pour every user's private
 // notifications/activity into an admin's own notification center.
 
-/** The caller's notifications, newest first (limit clamped to 1..200, default 50). */
+/**
+ * The caller's notifications, newest first. Optional unread-only and
+ * per-type filters; the pure `buildNotificationsListQuery` validates the type
+ * and clamps the limit to 1..200 (default 50, the H-08 clamp).
+ */
 export const getNotifications = createServerFn({ method: "GET" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
-  .inputValidator((raw: { limit?: unknown } | undefined) => ({
-    limit: clampLimit(raw?.limit, 50, 200),
-  }))
+  .inputValidator((raw: { limit?: unknown; unreadOnly?: unknown; type?: unknown } | undefined) =>
+    buildNotificationsListQuery(raw),
+  )
   .handler(async ({ context, data }): Promise<NotificationItem[]> => {
     const { supabase, userId } = context;
-    const { data: rows, error } = await supabase
+    let query = supabase
       .from("notifications")
       .select("*")
       .eq("recipient_id", userId)
       .order("created_at", { ascending: false })
       .limit(data.limit);
+    if (data.unreadOnly) query = query.is("read_at", null);
+    if (data.type) query = query.eq("type", data.type);
+    const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
     return (rows ?? []).map(mapNotification);
   });
@@ -147,15 +148,20 @@ export const markNotificationUnread = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Mark all of the caller's unread notifications read. */
+/**
+ * Mark all of the caller's unread notifications read — a single recipient-scoped
+ * UPDATE (never per-row). The pure `buildMarkAllReadCommand` carries the
+ * recipient filter explicitly (unit-tested); RLS is the enforcement backstop.
+ */
 export const markAllNotificationsRead = createServerFn({ method: "POST" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ ok: true }> => {
     const { supabase, userId } = context;
+    const command = buildMarkAllReadCommand(userId, Date.now());
     const { error } = await supabase
       .from("notifications")
-      .update({ read_at: new Date().toISOString() })
-      .eq("recipient_id", userId)
+      .update({ read_at: command.readAt })
+      .eq("recipient_id", command.recipientId)
       .is("read_at", null);
     if (error) throw new Error(error.message);
     return { ok: true };

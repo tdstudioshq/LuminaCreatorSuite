@@ -12,6 +12,7 @@ import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthSession } from "@/lib/cabana-auth";
+import { evaluatePreference, type NotificationType } from "@/lib/cabana-notifications";
 import {
   getActivityFeed,
   getNotificationPreferences,
@@ -71,16 +72,25 @@ function useNotificationsRealtime(userId: string | undefined) {
 
 // ─────────────────────────────── Reads ──────────────────────────────────────
 
-export function useNotifications(limit = 50) {
+export type NotificationListFilters = {
+  /** Only unread rows (server-side filter). */
+  unreadOnly?: boolean;
+  /** Only one notification type; omit for all types (server-side filter). */
+  type?: NotificationType;
+};
+
+export function useNotifications(limit = 50, filters: NotificationListFilters = {}) {
   const { user, loading } = useAuthSession();
   useNotificationsRealtime(user?.id);
+  const unreadOnly = filters.unreadOnly === true;
+  const type = filters.type ?? null;
   return useQuery({
     // Extends notificationsKey, so the prefix-matching realtime/mutation
     // invalidations still hit this query.
-    queryKey: [...notificationsKey, limit],
+    queryKey: [...notificationsKey, limit, unreadOnly, type],
     enabled: !loading && !!user,
-    queryFn: () => getNotifications({ data: { limit } }),
-    // Keep the current list visible while a raised limit refetches.
+    queryFn: () => getNotifications({ data: { limit, unreadOnly, type } }),
+    // Keep the current list visible while a raised limit or filter refetches.
     placeholderData: (previous) => previous,
   });
 }
@@ -111,6 +121,18 @@ export function useNotificationPreferences() {
     enabled: !loading && !!user,
     queryFn: () => getNotificationPreferences(),
   });
+}
+
+/**
+ * Whether in-app notification display is enabled for the current user, decided
+ * by the pure `evaluatePreference`. The center and every unread badge share
+ * this gate so display stays consistent across surfaces: a disabled in_app
+ * preference suppresses the list AND the badges. Defaults to enabled while
+ * preferences load (or on error) so badges don't flash-hide for everyone.
+ */
+export function useInAppNotificationsEnabled(): { enabled: boolean; isLoading: boolean } {
+  const { data: prefs, isLoading } = useNotificationPreferences();
+  return { enabled: prefs ? evaluatePreference(prefs, "in_app") : true, isLoading };
 }
 
 // ─────────────────────────────── Mutations ──────────────────────────────────
