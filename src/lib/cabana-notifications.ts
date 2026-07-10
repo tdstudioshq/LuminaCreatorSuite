@@ -2,9 +2,11 @@
 // CABANA — notifications & activity domain layer (PURE)
 // ----------------------------------------------------------------------------
 // No React, no Supabase, no browser APIs, no side effects. Single source of
-// truth for the Phase 7 notifications/activity slice: row → domain mapping,
+// truth for the Phase 7/9B notifications/activity slice: row → domain mapping,
 // title/body formatting, grouping, unread counts, preference + outbox
-// evaluation, and the idempotency-key scheme that mirrors the SQL triggers.
+// evaluation, list-query validation (H-08 limit clamp + unread/type filters),
+// the recipient-scoped mark-all-read command, and the idempotency-key scheme
+// that mirrors the SQL triggers.
 // The server actions (`notification-actions.ts`) and hooks (`use-notifications.ts`)
 // delegate display + rule logic here so it stays testable without a DB.
 //
@@ -77,6 +79,17 @@ const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   payout_requested: "Payout",
   system: "System",
 };
+
+/**
+ * Every notification type, in display order (the labels record is
+ * `Record<NotificationType, string>`, so this list is compile-time exhaustive).
+ * Drives the center's type filter and the server-side filter validation.
+ */
+export const NOTIFICATION_TYPES = Object.keys(NOTIFICATION_TYPE_LABELS) as NotificationType[];
+
+export function isNotificationType(value: unknown): value is NotificationType {
+  return typeof value === "string" && (NOTIFICATION_TYPES as string[]).includes(value);
+}
 
 // ─────────────────────────────── Mappers ────────────────────────────────────
 
@@ -312,6 +325,71 @@ export function isOutboxEligible(
 ): boolean {
   if (channel === "in_app") return false;
   return evaluatePreference(prefs, channel);
+}
+
+// ─────────────────────────────── List queries + write commands ──────────────
+
+/** Default page size for the notifications list. */
+export const NOTIFICATIONS_PAGE_SIZE = 50;
+/** Server-side hard cap on a notifications list read (H-08 clamp). */
+export const NOTIFICATIONS_LIMIT_MAX = 200;
+
+export type NotificationsListQuery = {
+  /** Clamped to 1..NOTIFICATIONS_LIMIT_MAX. */
+  limit: number;
+  /** Restrict the read to unread rows. */
+  unreadOnly: boolean;
+  /** Restrict the read to one notification type; null = all types. */
+  type: NotificationType | null;
+};
+
+/**
+ * Normalize raw list-query input (untrusted RPC payload or UI state) into a
+ * validated query: limit clamped to 1..max (default one page), `unreadOnly`
+ * true only on a literal `true`, and `type` either a known notification type
+ * or null ("all" and null/undefined both mean unfiltered). Throws on a
+ * non-numeric limit or an unknown type rather than silently widening the read.
+ */
+export function buildNotificationsListQuery(raw?: {
+  limit?: unknown;
+  unreadOnly?: unknown;
+  type?: unknown;
+}): NotificationsListQuery {
+  let limit = NOTIFICATIONS_PAGE_SIZE;
+  if (raw?.limit != null) {
+    const n = Number(raw.limit);
+    if (!Number.isFinite(n)) throw new Error("Invalid limit.");
+    limit = Math.min(NOTIFICATIONS_LIMIT_MAX, Math.max(1, Math.trunc(n)));
+  }
+  let type: NotificationType | null = null;
+  if (raw?.type != null && raw.type !== "all") {
+    if (!isNotificationType(raw.type)) throw new Error("Invalid notification type filter.");
+    type = raw.type;
+  }
+  return { limit, unreadOnly: raw?.unreadOnly === true, type };
+}
+
+export type MarkAllReadCommand = {
+  /** The ONLY recipient whose rows the write may touch — the caller's own id. */
+  recipientId: string;
+  /** ISO timestamp to stamp into read_at. */
+  readAt: string;
+  /** The write must skip rows that are already read. */
+  onlyUnread: true;
+};
+
+/**
+ * Build the mark-all-read write as a single recipient-scoped command (one
+ * UPDATE, never per-row). The command carries the recipient filter explicitly
+ * so the scoping is unit-testable; the server action applies it verbatim and
+ * RLS remains the enforcement backstop.
+ */
+export function buildMarkAllReadCommand(recipientId: unknown, nowMs: number): MarkAllReadCommand {
+  if (typeof recipientId !== "string" || recipientId.trim() === "") {
+    throw new Error("A recipient id is required to mark notifications read.");
+  }
+  if (!Number.isFinite(nowMs)) throw new Error("Invalid timestamp.");
+  return { recipientId, readAt: new Date(nowMs).toISOString(), onlyUnread: true };
 }
 
 // ─────────────────────────────── Idempotency keys ───────────────────────────

@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 import type { Database } from "@/integrations/supabase/types";
 import {
+  NOTIFICATION_TYPES,
+  NOTIFICATIONS_LIMIT_MAX,
+  NOTIFICATIONS_PAGE_SIZE,
   activityLabel,
+  buildMarkAllReadCommand,
+  buildNotificationsListQuery,
   countUnread,
   defaultPreferences,
   evaluatePreference,
   formatNotification,
   groupNotificationsByDay,
+  isNotificationType,
   isOutboxEligible,
   mapActivityEvent,
   mapNotification,
@@ -292,5 +298,108 @@ describe("resolveNotificationTarget", () => {
         entityId: null,
       }),
     ).toBeNull();
+  });
+});
+
+describe("NOTIFICATION_TYPES / isNotificationType", () => {
+  it("enumerates all ten notification types in display order", () => {
+    expect(NOTIFICATION_TYPES).toEqual([
+      "new_follower",
+      "post_liked",
+      "post_commented",
+      "post_saved",
+      "new_subscriber",
+      "tip_received",
+      "purchase_made",
+      "message_received",
+      "payout_requested",
+      "system",
+    ]);
+  });
+
+  it("accepts every enumerated type and rejects everything else", () => {
+    for (const type of NOTIFICATION_TYPES) expect(isNotificationType(type)).toBe(true);
+    expect(isNotificationType("all")).toBe(false);
+    expect(isNotificationType("")).toBe(false);
+    expect(isNotificationType("liked")).toBe(false);
+    expect(isNotificationType(undefined)).toBe(false);
+    expect(isNotificationType(null)).toBe(false);
+    expect(isNotificationType(3)).toBe(false);
+  });
+});
+
+describe("buildNotificationsListQuery", () => {
+  it("defaults to one unfiltered page", () => {
+    expect(buildNotificationsListQuery()).toEqual({
+      limit: NOTIFICATIONS_PAGE_SIZE,
+      unreadOnly: false,
+      type: null,
+    });
+    expect(buildNotificationsListQuery({})).toEqual({
+      limit: NOTIFICATIONS_PAGE_SIZE,
+      unreadOnly: false,
+      type: null,
+    });
+  });
+
+  it("clamps the limit to 1..NOTIFICATIONS_LIMIT_MAX and truncates fractions", () => {
+    expect(buildNotificationsListQuery({ limit: 100 }).limit).toBe(100);
+    expect(buildNotificationsListQuery({ limit: 0 }).limit).toBe(1);
+    expect(buildNotificationsListQuery({ limit: -5 }).limit).toBe(1);
+    expect(buildNotificationsListQuery({ limit: 10_000 }).limit).toBe(NOTIFICATIONS_LIMIT_MAX);
+    expect(buildNotificationsListQuery({ limit: 33.9 }).limit).toBe(33);
+    expect(buildNotificationsListQuery({ limit: "75" }).limit).toBe(75);
+  });
+
+  it("throws on a non-numeric limit instead of widening the read", () => {
+    expect(() => buildNotificationsListQuery({ limit: "lots" })).toThrow("Invalid limit.");
+    expect(() => buildNotificationsListQuery({ limit: Number.NaN })).toThrow("Invalid limit.");
+  });
+
+  it("treats unreadOnly as true only on a literal true", () => {
+    expect(buildNotificationsListQuery({ unreadOnly: true }).unreadOnly).toBe(true);
+    expect(buildNotificationsListQuery({ unreadOnly: "true" }).unreadOnly).toBe(false);
+    expect(buildNotificationsListQuery({ unreadOnly: 1 }).unreadOnly).toBe(false);
+    expect(buildNotificationsListQuery({ unreadOnly: undefined }).unreadOnly).toBe(false);
+  });
+
+  it("passes known types through, maps all/null to unfiltered, and rejects unknowns", () => {
+    expect(buildNotificationsListQuery({ type: "tip_received" }).type).toBe("tip_received");
+    expect(buildNotificationsListQuery({ type: "all" }).type).toBeNull();
+    expect(buildNotificationsListQuery({ type: null }).type).toBeNull();
+    expect(() => buildNotificationsListQuery({ type: "spam" })).toThrow(
+      "Invalid notification type filter.",
+    );
+    expect(() => buildNotificationsListQuery({ type: 7 })).toThrow(
+      "Invalid notification type filter.",
+    );
+  });
+});
+
+describe("buildMarkAllReadCommand", () => {
+  it("scopes the write to exactly the caller's recipient id and only unread rows", () => {
+    const command = buildMarkAllReadCommand("user-1", NOW);
+    expect(command.recipientId).toBe("user-1");
+    expect(command.onlyUnread).toBe(true);
+    expect(command.readAt).toBe(new Date(NOW).toISOString());
+  });
+
+  it("refuses to build an unscoped command (missing/blank/non-string recipient)", () => {
+    expect(() => buildMarkAllReadCommand("", NOW)).toThrow(
+      "A recipient id is required to mark notifications read.",
+    );
+    expect(() => buildMarkAllReadCommand("   ", NOW)).toThrow(
+      "A recipient id is required to mark notifications read.",
+    );
+    expect(() => buildMarkAllReadCommand(undefined, NOW)).toThrow(
+      "A recipient id is required to mark notifications read.",
+    );
+    expect(() => buildMarkAllReadCommand(null, NOW)).toThrow(
+      "A recipient id is required to mark notifications read.",
+    );
+  });
+
+  it("rejects a non-finite timestamp", () => {
+    expect(() => buildMarkAllReadCommand("user-1", Number.NaN)).toThrow("Invalid timestamp.");
   });
 });
