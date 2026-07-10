@@ -1,5 +1,7 @@
 import { formatDistanceToNow } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Activity, Loader2 } from "lucide-react";
+import { EmptyState } from "@/components/cabana/EmptyState";
+import { QueryErrorState } from "@/components/cabana/QueryErrorState";
 import { activityLabel, formatNotification } from "@/lib/cabana-notifications";
 import { useActivityFeed } from "@/lib/use-notifications";
 import { NotificationIcon } from "./notification-icons";
@@ -25,13 +27,20 @@ export function ActivityFeed() {
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
       ) : isError ? (
-        <SectionError
+        <QueryErrorState
           title="Couldn't load activity"
-          description={error instanceof Error ? error.message : "Please try again."}
+          message={error instanceof Error ? error.message : "Please try again."}
           onRetry={() => void refetch()}
+          className="m-6"
         />
       ) : items.length === 0 ? (
-        <p className="px-6 py-12 text-center text-sm text-muted-foreground">No activity yet.</p>
+        <div className="p-6">
+          <EmptyState
+            icon={Activity}
+            title="No activity yet"
+            description="Events on your account — follows, engagement, sales, messages — will be logged here."
+          />
+        </div>
       ) : (
         <ul>
           {items.map((event) => {
@@ -59,25 +68,5 @@ export function ActivityFeed() {
         </ul>
       )}
     </section>
-  );
-}
-
-function SectionError({
-  title,
-  description,
-  onRetry,
-}: {
-  title: string;
-  description: string;
-  onRetry: () => void;
-}) {
-  return (
-    <div className="px-6 py-12 text-center">
-      <p className="text-sm font-medium">{title}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-      <button onClick={onRetry} className="btn-ghost mt-4 !px-3 !py-2 text-xs">
-        Try again
-      </button>
-    </div>
   );
 }
