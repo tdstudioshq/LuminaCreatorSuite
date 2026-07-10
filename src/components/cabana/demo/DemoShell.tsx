@@ -1,9 +1,8 @@
 /**
- * Shared presentation for the demo-data dashboard pages.
- *
- * These pages are intentionally demo-only: they render from the deterministic
- * mock layer (`CABANA_DEMO_DATA`) and the pure money helpers. They never touch
- * Supabase, never move money, and always carry a visible "Demo data" label.
+ * Shared presentation primitives (badge + shell) for demo-labeled dashboard
+ * surfaces. Money in CABANA is demo-only (no processor), so the earnings pages
+ * that use this render REAL, RLS-scoped ledger data but carry a visible "Demo"
+ * label via DemoBadge. These primitives never touch Supabase or move money.
  */
 import { Sparkles } from "lucide-react";
 
