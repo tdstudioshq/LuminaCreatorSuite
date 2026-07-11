@@ -16,6 +16,45 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
+## Session update — July 11, 2026 PM (Release B: three DB security fixes committed, pushed, CI-green, and applied to cloud)
+
+Continuing the backlog program (master plan in `~/.claude/plans/expressive-napping-pike.md`). After Release A
+(`2c649e2`, below), three isolated **Release B** database security/integrity fixes were each built with a
+local reproduction, an additive/corrective migration, a behavioral SQL test (registered in
+`scripts/db-validate.sh` + `.github/workflows/ci.yml`), the full gate + from-zero `db:validate`, then
+committed, pushed (CI green), and **applied to cloud** (`rpzaeqoqcaxxavltgvpe`) via the Management-API SQL
+method — once, transaction-wrapped, exact committed bytes; ledger untouched; each followed by post-apply
+verification + `bun run smoke:prod` (green). Cloud is now current through **`20260535`**.
+
+- **`fdae839` — cross-post media injection (`20260533000000_post_media_ownership_check.sql`).** The
+  `post_media` write policy's WITH CHECK validated only `owner_user_id`, so any creator could attach media to
+  another creator's post (or republish a victim's private path) via raw PostgREST. Fix: USING unchanged
+  (owner-only), WITH CHECK additionally requires the caller to own the target post (`is_current_user_creator`
+  on `posts.creator_profile_id`) and `storage_path`'s first segment = caller uid. Also corrected the
+  misleading `post-actions.ts:279` comment. Cloud pre-scan: 0 injected rows.
+- **`9f6d864` — recalc_creator_balance cross-user write (`20260534000000_recalc_creator_balance_internal_only.sql`).**
+  The function was granted EXECUTE to `authenticated` but is only invoked via `PERFORM` inside SECURITY
+  DEFINER RPCs; any user could recompute/pollute any creator's `creator_balances` for arbitrary currencies.
+  Fix: revoke EXECUTE from `public`/`anon`/`authenticated` (internal-only; owner/`service_role` retain it);
+  `search_path` already `''`. Moved the `admin_payouts.sql` recalc call out of its authenticated role block.
+  Cloud pre-scan: 4 benign zero-value USD rows (empty ledger), no exploit signature.
+- **`5bbbc98` — analytics_events ingestion hardening (`20260535000000_analytics_events_hardening.sql`).**
+  Unconstrained anon inserts allowed arbitrary `event_type`, unbounded `metadata`/`target_id`, and explicit
+  `id`/`created_at` (backdating); owner reads had no index. Fix (NOT VALID CHECKs so a cloud apply can't
+  fail on historical rows): event_type allow-list (`page_view`|`link_click`|`product_click`, from
+  `CabanaEventType`); metadata must be a JSON object ≤ 4 KB and `target_id` ≤ 256; `(profile_id, created_at desc)`
+  index; INSERT grant narrowed from table-wide to the four intended columns so `id`/`created_at` stay defaults.
+  RLS policies unchanged; `smoke.sql` grant assertion updated to column-scoped. Cloud pre-scan: 6 legit
+  `page_view` rows, 0 junk.
+
+**State at session end:** `HEAD == origin/main == 5bbbc98` (0 ahead/0 behind), working tree clean (only the
+untracked local `.claude/`), CI green, cloud current through `20260535`, `smoke:prod` green. Gates:
+`lint` 0 errors (6 expected shadcn warnings) · `tsc` clean · `test` **353/353** (17 pure modules) · `build`
+green · `db:validate` from-zero all **22** SQL suites. **Two Release-B security findings from the plan remain
+open (not started):** none outstanding from the ones scoped this session; the broader 20-item backlog
+(Releases C–G) is unstarted. Next recommended: resume the master plan (e.g. item 5 links/products counter
+grants, item 8 creator-profile uniqueness) — each as its own isolated, gated slice.
+
 ## Session update — July 11, 2026 (Backlog program kickoff + Release A landed — supersedes the two July-10 PM entries below)
 
 **State reconciliation (Phase-0 verified read-only this session).** The two July-10 PM entries below
