@@ -1,9 +1,8 @@
 # CABANA — Project State (Engineering Checkpoint)
 
 > Canonical high-level engineering snapshot.
-> Checkpoint: **July 9, 2026** — branch `main` @ `5963a18` ("chore(cleanup): remove retired marketing landing, orphaned assets & dead mock module"),
-> the previously-uncommitted working set now **committed** as ~14 themed commits on top of `6c35f5b` (Phase 0 QA fixes + Batch 1 Trust & Honesty + Batch 2 Core UX + two DB migrations + hygiene/cleanup — see below). **Not yet pushed or deployed** at this checkpoint.
-> Platform-evolution phases **through 11B (creator analytics) are complete**.
+> Checkpoint: **July 11, 2026** — branch `main` @ `8b482b4`, **`main == origin/main`** (pushed, CI green), production Vercel deploy READY from `8b482b4`. (An earlier checkpoint here read `5963a18` / "Not yet pushed or deployed" — that is superseded; the whole working set shipped and cloud is current through `20260532`.)
+> Platform-evolution phases **through 11B (creator analytics) are complete**, plus the **Phase 11C DB layer** (audience-insights RPC `20260531`, applied to cloud); the 11C frontend has not started. Migrations `20260529`+`20260530` were applied to cloud July 10, 2026.
 > Canonical Supabase backend: cloud project `rpzaeqoqcaxxavltgvpe` ("cabanadatabase"), reconciled July 7, 2026;
 > deploy target **Vercel** (production `cabanagrp.com`).
 > Demo clock / "today" in code: **June 25, 2026**.
@@ -47,7 +46,7 @@
   `20260529000000_post_media_service_grant.sql` + `20260530000000_high_qa_fixes.sql` (each with a behavioral
   test; **committed but not yet applied to the cloud project**).
 - Gate at checkpoint: `bunx tsc --noEmit` clean · `bun run lint` 0 errors (6 expected shadcn react-refresh
-  warnings) · `bun run test` **337/337** (16 files, 99.53% stmts / 95.8% branch coverage) · `bun run build`
+  warnings) · `bun run test` **353/353** (17 files, 95% gate on lines/functions/branches/statements) · `bun run build`
   green (Vercel/Nitro output).
 
 ---
@@ -127,7 +126,7 @@ LuminaCreatorSuite/
 │   │   ├── client.server.ts          # service-role admin client (server)   [auto-gen]
 │   │   ├── auth-middleware.ts         # requireSupabaseAuth (server)         [auto-gen]
 │   │   ├── auth-client-middleware.ts  # attachSupabaseToken (client)         [editable]
-│   │   ├── auth-attacher.ts           # global functionMiddleware            [auto-gen]
+│   │   ├── optional-auth-middleware.ts # optionalSupabaseAuth (guest-callable) [editable]
 │   │   └── types.ts                   # generated DB types                   [auto-gen]
 │   ├── lib/
 │   │   ├── cabana-store.ts           # T1 creator data hooks (profile/links/products)
@@ -142,7 +141,7 @@ LuminaCreatorSuite/
 │   │   ├── cabana-money.ts           # PURE integer-cents money helpers (demo only)
 │   │   ├── cabana-entitlements.ts    # PURE entitlement rules (demo only)
 │   │   ├── cabana-types.ts           # future-platform domain contracts (demo)
-│   │   └── *.test.ts                 # Vitest suites for the 16 pure modules (337 tests)
+│   │   └── *.test.ts                 # Vitest suites for the 17 pure modules (353 tests)
 │   ├── components/
 │   │   ├── ui/                       # shadcn/ui (new-york, ~46 primitives)
 │   │   └── cabana/                   # app feature components (dashboard/, auth/, foundation/)
@@ -625,9 +624,11 @@ compiles to a client-importable RPC bridge, and the `start.ts` import-protection
 
 Client-side TanStack **function middleware** (`auth-client-middleware.ts`). Before a server-function RPC
 leaves the browser, it reads the current Supabase session and attaches
-`Authorization: Bearer <access_token>` (or nothing if signed out). A generated global companion,
-`attachSupabaseAuth` (`auth-attacher.ts`), is registered as a global `functionMiddleware` in `start.ts`
-so the header is attached app-wide; the per-action middleware makes the dependency explicit.
+`Authorization: Bearer <access_token>` (or nothing if signed out). It is composed **per server function**
+as the first client middleware in every `src/lib/*-actions.ts` chain — there is no global
+`functionMiddleware` in `start.ts`. (The earlier generated `attachSupabaseAuth`/`auth-attacher.ts`
+global-middleware companion was never registered and the dead file was removed; `attachSupabaseToken`
+is its strict superset and is the live mechanism.)
 
 ## `requireSupabaseAuth`
 
@@ -691,9 +692,9 @@ action executes under the caller's row-level permissions.
 - Coverage is restricted to the **sixteen** pure business modules — `cabana-money`, `cabana-entitlements`,
   `cabana-account`, `cabana-relationships`, `cabana-posts`, `cabana-engagement`, `cabana-subscriptions`,
   `cabana-messaging`, `cabana-notifications`, `cabana-moderation`, `cabana-finance`, `cabana-payouts`,
-  `cabana-notification-engine`, `cabana-discovery`, `cabana-dashboard`, `cabana-creator-analytics` —
-  with **95%** thresholds on lines/functions/branches/statements (**337 tests across 16 files**,
-  99.53% stmts / 95.8% branch as of July 9, 2026).
+  `cabana-notification-engine`, `cabana-discovery`, `cabana-dashboard`, `cabana-creator-analytics`,
+  `cabana-redirect` — with **95%** thresholds on lines/functions/branches/statements
+  (**353 tests across 17 files** as of July 11, 2026).
 - Run: `bun run test` (one-shot), `bun run test:watch`, `bun run test:coverage`; a single file with
   `bunx vitest run src/lib/<file>.test.ts`, or by name with `bunx vitest run -t "<name>"`.
 - **Rule of thumb:** keep new domain logic in a pure, repository-injected module so it stays unit-testable

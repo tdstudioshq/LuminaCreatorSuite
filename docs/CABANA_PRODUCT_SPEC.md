@@ -8,6 +8,67 @@
 
 ---
 
+## 0. Product Boundary Decision Record (opened July 11, 2026 — awaiting Tyler's rulings)
+
+> **Status: OPEN.** Backlog item 19 found that the product boundary has been _executed in code_ (both a
+> link-in-bio creator OS **and** a demo-money subscription platform shipped) but never _recorded as
+> decided_ — and the three "source of truth" docs disagree with each other and with the tree. This record
+> exists to capture Tyler's explicit ruling on each open question so downstream code items (microsite
+> fate, the `subscriptions`→`platform_subscriptions` rename, `products.price`→`price_cents`, and every
+> "M8"-gated row) have a decided boundary to build against. **No code/schema changes here** — each ruling
+> that mandates work becomes its own gated backlog item. Fill in each **Ruling** line; recommended
+> defaults are marked but non-binding.
+
+**D1 — Link-in-bio pillar: permanent product pillar, or legacy/maintenance-only?**
+Evidence both ways: §1 sells the unified four-vendor bundle (pillar), but the Batch 2 "two-homes" IA
+demoted `DashHome` to `/dashboard/link-in-bio` ("My Page") and a legacy `/dashboard/analytics`
+(page-view/click) coexists with the subscription `/dashboard/performance`. The ruling drives whether the
+legacy link-in-bio + its analytics get continued investment or a documented sunset path.
+- _Recommended:_ keep as a permanent pillar (it is core to the "unified creator OS" thesis), but freeze
+  new investment in the **legacy** page-view analytics surface.
+- **Ruling:** _(pending Tyler)_
+
+**D2 — Bespoke microsites (`/td`, `/thetejeda`, `/eldondolla`, `/danielasanchez`) + `/demo`→aurora.**
+~975 hardcoded lines, zero DB reads; marked "optional" in two tech-debt sections. Keep as white-glove
+bespoke pages, migrate to a templated `$username` variant system, or delete?
+- _Recommended:_ keep the four real microsites (they are live client pages); migrating to a shared
+  renderer is an optional G-release refactor. Delete `/demo` (public aurora alias) as a dead surface.
+- **Ruling:** _(pending Tyler)_
+
+**D3 — SaaS platform billing (Atelier/Studio/Maison/Empire).**
+The baseline still provisions a free-plan `subscriptions` row per signup and stamps `profiles.plan`
+(shown in the Sidebar), but **no app code queries the `subscriptions` table** and there is no
+pricing/upgrade surface. Real future second revenue system, or shelved?
+- _Recommended:_ shelve for now; keep the provisioning + plan display (harmless, owner-read-only). Revisit
+  as part of/after M8. If shelved, the `subscriptions`→`platform_subscriptions` rename stays deferred.
+- **Ruling:** _(pending Tyler)_
+
+**D4 — "Invitation-led" positioning.**
+§1 calls CABANA "invitation-led", but signup is fully open (creator/member choice, no invite/access
+code). Real launch gate to build, or wording to drop?
+- _Recommended:_ drop the "invitation-led" wording until/unless an invite gate is a funded feature.
+- **Ruling:** _(pending Tyler)_
+
+**D5 — The real-money milestone currently called "M8".**
+"M8" gates all real-money work in ~8 tech-debt rows but is **defined nowhere** (no M-milestone lineage
+exists in this repo). Name it, scope it, and set entry criteria — consolidated in
+[`CABANA_M8_READINESS.md`](./CABANA_M8_READINESS.md).
+- _Recommended:_ adopt the existing "Phase 7 — Payments & Payouts (Real Money)" definition
+  (`CABANA_BUILD_PHASES.md`) as the canonical M8 scope; ratify the readiness checklist.
+- **Ruling:** _(pending Tyler)_
+
+**D6 — Permanence of the no-adult-content constraint.**
+Worded as a "current" non-goal in §2 while CLAUDE.md treats it as a hard constraint; Phase 8B added a
+`sexual_content` **report** reason (a safety category, not adult functionality). A permanent ruling
+materially changes the age-assurance/compliance/legal roadmap.
+- _Recommended:_ make it a **permanent** hard constraint (keeps CLAUDE.md, compliance scope, and legal
+  posture consistent; the report reason stays a safety tool).
+- **Ruling:** _(pending Tyler)_
+
+**Sign-off:** _(Tyler — date + initials once D1–D6 are ruled)_ ____________________
+
+---
+
 ## 1. Vision
 
 CABANA is a **premium, invitation-led creator subscription platform**. It combines the things creators currently buy from four different vendors — a link-in-bio page, a storefront, a media kit/analytics suite, and a fan subscription/messaging network — into one cinematic, mobile-first product with a luxury dark visual identity.

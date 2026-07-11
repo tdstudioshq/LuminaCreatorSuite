@@ -2,10 +2,13 @@
 
 > Target production schema for the full creator-subscription platform, plus the documented current state.
 >
-> This document records the implemented schema through Phase 2C and plans later additions. The
-> Phase 2A baseline, Phase 2B member accounts, and Phase 2C relationship migration rebuild cleanly
-> from zero. No posts, messaging, payments, or `creator_subscriptions` are authorized without
-> explicit approval and an RLS/test plan.
+> **This document is partially stale (flagged July 11, 2026).** Its §1 write-up stops around Phase 7,
+> but the implemented schema now spans **22 migrations (`20260511`→`20260532`)** — posts, engagement,
+> creator subscriptions, messaging, the monetization ledger, notifications, moderation, admin payouts,
+> the notification engine, creator analytics, and audience insights are all live against real tables +
+> RLS (money remains demo-only). Treat CLAUDE.md's migration chain + `supabase/migrations/` as the
+> source of truth for what exists; the full §1 back-fill is a tracked docs follow-up. New schema still
+> requires explicit approval + an RLS/test plan before it is written.
 >
 > Conventions: UUID (prefer time-ordered, e.g. UUIDv7, for high-volume event/message tables) primary keys · `timestamptz` everywhere · money as **integer minor units (cents) + explicit `currency`** · index every foreign key · RLS predicates use `(select auth.uid())`.
 
@@ -13,9 +16,9 @@
 
 ## 1. Current Implemented Schema
 
-Source: checked-in migrations plus `src/integrations/supabase/types.ts`. Eleven tables, two enums,
-safe public profile views, and protected database helpers. Phase 2B/2C type additions are
-hand-maintained pending Lovable regeneration.
+Source: checked-in migrations plus `src/integrations/supabase/types.ts`. **Note (July 11, 2026): the
+table/enum counts below describe only the early phases and are stale — the live schema spans all 22
+migrations (see the header note).** Phase 2B onward type additions are hand-maintained in `types.ts`.
 
 | Table              | Columns (current)                                                                                                                   | Notes                                                                                   |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
@@ -52,7 +55,7 @@ keeps full-table SELECT for owner reads. `subscriptions` name collides with futu
 
 **Validation:** `bun run db:validate` resets a local instance from zero and runs `supabase/tests/smoke.sql`. Requires Docker; runs in CI (`.github/workflows/ci.yml` → `db-validate` job). See `supabase/README.md`.
 
-**Known risks / not yet done:** (1) The baseline was **reconstructed from `types.ts` + the incremental migrations**, not dumped from the live DB (no DB access in the authoring environment) — it must be diffed against a real `supabase db dump` before being trusted as byte-exact. (2) Postgres `major_version` in `config.toml` is set to 15; confirm against the remote. (3) Remote migration history still lists the 4 incrementals — run `supabase migration repair --status applied 20260511000000` after verifying, so the squash isn't re-applied (see `supabase/README.md`).
+**Known risks / not yet done:** (1) The baseline was **reconstructed from `types.ts` + the incremental migrations**, not dumped from the live DB — diff it against a real `supabase db dump` before trusting it as byte-exact. (2) Postgres `major_version` in `config.toml` is `15`; the cloud project runs Postgres 17 (`config.toml` is local-tooling-only and deliberately untouched). (3) ⚠️ **OBSOLETE / DO NOT RUN — `supabase migration repair` / `db push` against cloud.** This predates the July 2026 cloud reconcile: the cloud `supabase_migrations` ledger now holds reconcile-era versions that do **not** match this repo's `202605xx` numbering, so `db push` would re-apply already-applied DDL. Per CLAUDE.md, **never `supabase db push` to cloud** — apply cloud SQL via the Management-API pattern only, and the ledger repair is a dedicated gated task (backlog item 1). The prior "run `migration repair`/`db push`" instruction has been removed here and in `supabase/README.md`.
 
 <a id="member-accounts-phase-2b"></a>
 
@@ -200,7 +203,7 @@ reference.
 
 - **Enums** — `transaction_type` (`creator_subscription|product|post_unlock|paid_message|tip|refund|adjustment`),
   `transaction_status` (`pending|succeeded|failed|refunded|disputed`), `payout_status`
-  (`queued|processing|paid|failed|canceled`), `payout_request_status` (`requested|approved|rejected|paid`).
+  (`queued|processing|paid|failed|canceled`), `payout_request_status` (`requested|approved|rejected|paid|on_hold` — `on_hold` added in `20260522`).
 - **`transactions`** — every financial event; **append-only / immutable**. A BEFORE UPDATE/DELETE trigger
   (`prevent_ledger_mutation`) blocks any change to monetary/identity fields and all deletes, permitting only
   FK columns being nulled by `ON DELETE SET NULL` (so accounts can be deleted while the ledger row is

@@ -16,7 +16,59 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
+## Session update — July 11, 2026 (Backlog program kickoff + Release A landed — supersedes the two July-10 PM entries below)
+
+**State reconciliation (Phase-0 verified read-only this session).** The two July-10 PM entries below
+are **SUPERSEDED** on commit/push/cloud-apply/deploy status — they described an in-progress working set
+that has since shipped:
+
+- HEAD is `8b482b4` and **`main == origin/main`** (pushed; the "9 commits ahead / push blocked" note
+  below is resolved). CI is green on `8b482b4`.
+- Migrations **`20260531` (audience insights) and `20260532` (creator_profiles anon column grant) are
+  BOTH applied to cloud** (`rpzaeqoqcaxxavltgvpe`) — verified live this session: anon
+  `GET /rest/v1/creator_profiles?select=user_id` → **42501 permission denied**, `select=handle` → 200,
+  `rpc/creator_audience_insights` anon → 42501 (exists, denied). **Cloud is current through `20260532`;
+  nothing is ahead of cloud.** Do NOT re-apply `20260531`/`20260532`.
+- Production Vercel deploy is **READY and built from exactly `8b482b4`**. 🔎 Phase-0 discovery: that
+  deploy came via the **GitHub integration (auto-deploy on push to `main`)**, alongside the documented
+  prebuilt-CLI flow — **two deploy paths are live**, neither gated by CI-green or `smoke:prod`. This
+  dual-path fact is otherwise undocumented (tracked under backlog items 1/14/16).
+
+**Program.** Tyler approved a controlled 20-item audit-backlog program (master plan in
+`~/.claude/plans/expressive-napping-pike.md`; classification via a 41-agent read-only workflow). Two
+security findings emerged sharper than the backlog framing and are queued for Release B (DB hardening):
+🔴 **cross-post media injection** (`post_media` INSERT grant + owner-only WITH-CHECK lets any user attach
+media to any creator's post, invisibly) and 🟠 **`recalc_creator_balance`** authenticated grant (cross-user
+junk balance-row writes). Neither is fixed yet — Release B, gated on approval + Management-API apply.
+
+**Release A landed this session (docs + CI + one tiny app fix; no cloud SQL, not yet committed):**
+
+- **Item 15 (docs reconcile):** this closing entry + tech-debt header/counts (22 migrations, 19 SQL
+  suites) + purge of the dangerous `supabase migration repair` guidance in `CABANA_DATABASE.md` and
+  `supabase/README.md` + `CABANA_DATABASE.md` header/`on_hold` fixes.
+- **Item 4 (dead auth middleware):** deleted the never-registered `src/integrations/supabase/auth-attacher.ts`
+  (0 imports) and corrected the false "`attachSupabaseAuth` registered in `start.ts`" claims in CLAUDE.md,
+  `CABANA_ARCHITECTURE.md`, `CABANA_PROJECT_STATE.md`, and tech-debt — the live mechanism is per-function
+  `attachSupabaseToken` composition. (Lockfile Start-version alignment deferred to Release C.)
+- **Item 3a (redirect allow-list):** new pure, unit-tested `src/lib/cabana-redirect.ts` (`sanitizeRedirect`,
+  in the 95% coverage set) wired into `LoginCard`; `reset-password.tsx` now shows an invalid/expired-link
+  state instead of failing at submit. The Google OAuth leg still drops the deep link (documented; carry-
+  through deferred to Release C).
+- **Item 14 (CI/toolchain pins):** `ci.yml` bun `1.3.14` / supabase-CLI `2.107.0` / pnpm `9.15.0` /
+  node `22.20.0` (no more `latest`); `package.json` gains `packageManager: pnpm@9.15.0` + `engines.node: 22.x`;
+  new `.nvmrc`. Both frozen installs (bun + pnpm) verified locally. ⚠️ `engines.node`/`packageManager`
+  influence the **Vercel build image** — the next auto-deploy will build on node 22 (already the CI-tested
+  major); verify the live function runtime per item 14 before pinning `vercel.functions.runtime`.
+- **Items 19 + 20 (decision docs):** Product Boundary Decision Record scaffold in `CABANA_PRODUCT_SPEC.md`
+  + new `docs/CABANA_M8_READINESS.md`, each listing the open decisions awaiting Tyler's ruling.
+
+**Gates (Release A):** `bun run lint`, `bunx tsc --noEmit`, `bun run test` all green on the working tree
+(`bun run build` per CI). Next: commit Release A, then Release B (cross-post-injection fix first) on approval.
+
 ## Session update — July 10, 2026 PM (🔴 anon `user_id` REST leak closed at the DB layer — migration `20260532`, UNCOMMITTED, cloud NOT applied)
+
+> **⚠️ SUPERSEDED (see the July 11 entry above):** `20260532` is now committed (`8b482b4`), pushed, and
+> applied to cloud (live-verified). The "UNCOMMITTED / cloud NOT applied" status below is historical.
 
 A full trust-nothing audit (23-agent fan-out + all gates re-run) confirmed a real Critical: although
 the July-10 app fix removed `user_id` from `useCreatorByHandle`'s wire, the base table's **anon grant
@@ -50,6 +102,10 @@ ONLY that fix (no other audit findings touched):
   `20260532` is the only migration now ahead of cloud.
 
 ## Session update — July 10, 2026 PM (Full audit GREEN + Phase 11C Option B drafted + 🔴 user_id leak fixed — all UNCOMMITTED)
+
+> **⚠️ SUPERSEDED (see the July 11 entry above):** the "9 commits ahead / push blocked" and "nothing
+> committed / not deployed" claims below are resolved — the whole working set shipped as `95539c5` +
+> `8b482b4`, `main == origin/main`, and production is deployed from `8b482b4`.
 
 Tyler approved Phase 11C **Option B** (tab within `/dashboard/performance`; **named** top supporters,
 creator-only; engagement aggregates stay anonymous). A full fresh-audit pass verified docs vs. tree

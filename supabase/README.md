@@ -6,15 +6,18 @@ Local database, migrations, and the from-zero rebuild proof.
 
 ```
 supabase/
-├── config.toml                 # local stack config (ports, db version, seed, auth)
-├── migrations/
-│   └── 20260511000000_baseline.sql   # squashed, rebuildable-from-zero baseline
-├── seed.sql                    # demo data (aurora) applied by `db reset`
-├── tests/
-│   └── smoke.sql               # post-reset schema/seed assertions
+├── config.toml                 # LOCAL stack config (ports, db version, seed, auth) — local-tooling only
+├── migrations/                 # 22 ordered migrations, 20260511 → 20260532; rebuild from zero
+├── seed.sql                    # demo data (aurora + demo member/reports/payouts) applied by `db reset`
+├── tests/                      # 19 SQL behavioral suites (run by db:validate + CI)
+├── reconcile/                  # one-time July-2026 cloud reconciliation scripts (history, not the chain)
 └── _archive/
-    └── pre_baseline_migrations/  # the 4 original incremental migrations (reference only)
+    └── pre_baseline_migrations/  # the 4 original pre-squash incrementals (reference only)
 ```
+
+The canonical backend is the **cloud project `rpzaeqoqcaxxavltgvpe` ("cabanadatabase")**, current
+through `20260532`. `config.toml`'s `project_id` still names the retired `dwnricswfskypqqfknnh` — that
+is **local-tooling-only and deliberately untouched**; do not "fix" it or `supabase link` casually.
 
 ## Requirements
 
@@ -25,51 +28,34 @@ supabase/
 ## Commands
 
 ```bash
-# Rebuild a fresh local database from zero (applies baseline migration + seed)
+# Rebuild a fresh local database from zero (applies all 22 migrations + seed)
 bun run db:reset            # = supabase db reset
 
-# Full validation: preflight → reset from zero → schema/seed smoke checks
+# Full validation: preflight → reset from zero → 19 SQL behavioral suites
 bun run db:validate
 ```
 
 `bun run db:validate` exits non-zero with a clear message if the Supabase CLI or
 Docker is unavailable — it never reports a pass it did not perform.
 
-## The baseline
+## Migrations
 
-`migrations/20260511000000_baseline.sql` is a **squashed reconstruction** of the
-complete current schema: tables, the `app_role` enum, functions
-(`handle_new_user`, `has_role`, `validate_creator_handle`, `touch_updated_at`),
-triggers (signup provisioning, `updated_at` touches, handle validation), all RLS
-policies, the three public storage buckets with owner-scoped object policies,
-reserved-handle data, and the SECURITY DEFINER revokes.
+`migrations/` holds 22 ordered migrations that rebuild the full schema from zero (validated locally by
+`db:reset`/`db:validate` and in CI's from-zero Docker job). `20260511000000_baseline.sql` is a squashed
+reconstruction of the early schema (tables, `app_role` enum, `handle_new_user`/`has_role`/handle-
+validation functions + triggers, RLS policies, the three public storage buckets, reserved handles, and
+SECURITY DEFINER revokes); everything from Phase 3 onward is an additive migration with its own RLS +
+GRANTs + behavioral test.
 
-It was reconstructed from the four incremental migrations (now in
-`_archive/pre_baseline_migrations/`), `src/integrations/supabase/types.ts`, and
-`CABANA_ARCHITECTURE.md`, because the incremental set could **not** rebuild from
-zero on its own (it `ALTER`ed tables whose `CREATE` statements lived only in the
-remote project).
+## ⚠️ Applying SQL to cloud — never `db push`
 
-## Reconciling with the remote project
+> **OBSOLETE — DO NOT FOLLOW the old "reconcile with remote" runbook (`supabase link` +
+> `supabase migration repair --status applied …` + `db push`).** That predated the July-2026 cloud
+> reconcile. The cloud `supabase_migrations` ledger now holds reconcile-era versions that do **not**
+> match this repo's `202605xx` numbering, so **`supabase db push` would attempt to re-apply
+> already-applied DDL** and `migration repair` would corrupt the ledger.
 
-The remote project already has the four incremental migrations in its history.
-Before pushing this baseline to remote, reconcile history so the squash is not
-re-applied on top of existing objects:
-
-```bash
-supabase link --project-ref dwnricswfskypqqfknnh
-# Verify the live schema matches the baseline (ideally diff a real dump):
-supabase db dump --schema public,storage > /tmp/remote.sql   # requires DB access
-# Mark the baseline as already-applied remotely instead of re-running it:
-supabase migration repair --status applied 20260511000000
-```
-
-Do not `db push` the baseline to production without this step. See
-`docs/CABANA_DATABASE.md` → "Baseline migration" for the full risk list.
-
-## Scope (Phase 2A)
-
-This baseline captures the **existing** schema only. It does **not** add
-`member_profiles`, posts, messaging, notifications, payments, or
-`creator_subscriptions`, and does **not** rename `subscriptions`. Those are
-later build phases.
+Per CLAUDE.md: **never run `supabase db push` against cloud.** Apply cloud SQL via the **Management-API
+pattern** only (read-only preflight → local `db:validate` from zero → transaction-wrapped apply →
+post-verify → `smoke:prod`), and only with explicit approval. Reconciling the cloud migration ledger to
+this repo's versions is a dedicated, gated task (backlog item 1) — not part of any routine workflow.

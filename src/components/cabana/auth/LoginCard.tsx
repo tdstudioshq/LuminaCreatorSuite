@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { cabanaAuth, useAuthSession } from "@/lib/cabana-auth";
+import { sanitizeRedirect } from "@/lib/cabana-redirect";
 import { LiquidMetalButton } from "@/components/ui/liquid-metal-button";
 import cabanaLogo from "@/assets/cabana-logo.png";
 
@@ -13,8 +14,16 @@ import cabanaLogo from "@/assets/cabana-logo.png";
  */
 export function LoginCard() {
   const navigate = useNavigate();
+  // `?redirect=` is attacker-controllable, so sanitize it to a same-origin
+  // internal path before it reaches navigate() (defeats open-redirect/phishing).
+  // Both navigations below inherit this single sanitized value.
+  // NOTE: the Google OAuth leg does NOT preserve this deep link — loginWithGoogle
+  // pins redirectTo to /auth/callback, which routes purely by account type. A
+  // guest deep-linked via ?redirect= who signs in with Google lands on their
+  // default home, not the requested path. Carrying it through the OAuth
+  // round-trip is deferred to the auth-hardening item (Release C).
   const redirectTo = useRouterState({
-    select: (s) => new URLSearchParams(s.location.searchStr).get("redirect") || "/dashboard",
+    select: (s) => sanitizeRedirect(new URLSearchParams(s.location.searchStr).get("redirect")),
   });
   const { user } = useAuthSession();
   const [username, setUsername] = useState("");

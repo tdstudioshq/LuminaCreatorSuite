@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { AuthShell, AuthField } from "@/components/cabana/auth/AuthShell";
 import { Button } from "@/components/ui/button";
-import { cabanaAuth } from "@/lib/cabana-auth";
+import { cabanaAuth, useAuthSession } from "@/lib/cabana-auth";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
@@ -14,6 +14,12 @@ export const Route = createFileRoute("/reset-password")({
 
 function ResetPasswordPage() {
   const navigate = useNavigate();
+  // The reset email link establishes a short-lived recovery session (supabase
+  // parses the URL token on load). `useAuthSession` resolves it via
+  // onAuthStateChange + getSession, so `user` is null when the link is missing,
+  // expired, or already consumed — surface that up front instead of failing at
+  // submit time.
+  const { user, loading: sessionLoading } = useAuthSession();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,7 +53,18 @@ function ResetPasswordPage() {
         </>
       }
     >
-      {done ? (
+      {sessionLoading ? (
+        <div className="text-center py-6">
+          <p className="text-sm text-muted-foreground">Checking your reset link…</p>
+        </div>
+      ) : !user ? (
+        <div className="text-center py-6 space-y-4">
+          <p className="text-sm text-foreground">This reset link is invalid or has expired.</p>
+          <Button asChild variant="cta" className="w-full">
+            <Link to="/forgot-password">Request a new link</Link>
+          </Button>
+        </div>
+      ) : done ? (
         <div className="text-center py-6">
           <div className="mx-auto w-12 h-12 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center">
             <Check className="w-5 h-5 text-primary" />
