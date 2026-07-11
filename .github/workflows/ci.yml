@@ -195,6 +195,11 @@ jobs:
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
             -v ON_ERROR_STOP=1 -f supabase/tests/recalc_creator_balance_grant.sql
 
+      - name: Behavioral checks (analytics_events hardening — event_type/payload/index)
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 -f supabase/tests/analytics_events_hardening.sql
+
       - name: Stop Supabase
         if: always()
         run: supabase stop || true

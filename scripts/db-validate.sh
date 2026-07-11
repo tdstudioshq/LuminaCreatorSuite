@@ -79,6 +79,8 @@ if command -v psql >/dev/null 2>&1; then
   psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/post_media_ownership.sql
   echo "▸ Running recalc_creator_balance internal-only checks (cross-user write fix)…"
   psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/recalc_creator_balance_grant.sql
+  echo "▸ Running analytics_events hardening checks (event_type/payload/index)…"
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/analytics_events_hardening.sql
   echo "✓ db:validate passed — fresh rebuild + smoke + behavioral checks succeeded."
 else
   echo "⚠ psql not found — 'supabase db reset' succeeded (migration + seed applied cleanly),"

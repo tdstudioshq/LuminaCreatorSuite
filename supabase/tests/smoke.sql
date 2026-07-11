@@ -566,12 +566,15 @@ begin
   ) then
     raise exception 'MISSING GRANT: authenticated DELETE on links';
   end if;
-  if not exists (
-    select 1 from information_schema.role_table_grants
+  -- anon INSERT on analytics_events is COLUMN-SCOPED to the 4 tracking columns
+  -- (20260535) — no table-wide INSERT — so check role_column_grants.
+  if (
+    select count(*) from information_schema.role_column_grants
     where table_schema = 'public' and table_name = 'analytics_events'
       and grantee = 'anon' and privilege_type = 'INSERT'
-  ) then
-    raise exception 'MISSING GRANT: anon INSERT on analytics_events';
+      and column_name in ('profile_id', 'event_type', 'target_id', 'metadata')
+  ) <> 4 then
+    raise exception 'MISSING GRANT: anon column-scoped INSERT on analytics_events';
   end if;
   raise notice 'CABANA role-grant smoke passed: anon/authenticated reach the baseline tables.';
 end $$;
