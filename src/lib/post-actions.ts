@@ -276,7 +276,13 @@ export const addPostMedia = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }): Promise<PostMediaItem> => {
     const { supabase, userId } = context;
-    // Confirm the caller owns the parent post (RLS only lets owners select it).
+    // Pre-flight existence check for a friendly "Post not found" error. Post
+    // OWNERSHIP is enforced at the database, not here: the post_media INSERT
+    // policy's WITH CHECK (migration 20260533) requires the caller to own the
+    // target post and storage_path to sit under the caller's own folder, so a
+    // cross-post injection is rejected even via a raw PostgREST insert that
+    // bypasses this handler. (This select alone does NOT prove ownership —
+    // posts have public/follower SELECT policies.)
     const { data: post, error: postErr } = await supabase
       .from("posts")
       .select("id")

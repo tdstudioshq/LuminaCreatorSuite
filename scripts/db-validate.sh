@@ -75,6 +75,8 @@ if command -v psql >/dev/null 2>&1; then
   psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/audience_insights.sql
   echo "▸ Running creator_profiles anon column-grant checks (user_id leak fix)…"
   psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/creator_profiles_anon_grant.sql
+  echo "▸ Running post_media ownership checks (cross-post injection fix)…"
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/post_media_ownership.sql
   echo "✓ db:validate passed — fresh rebuild + smoke + behavioral checks succeeded."
 else
   echo "⚠ psql not found — 'supabase db reset' succeeded (migration + seed applied cleanly),"
