@@ -16,6 +16,39 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
+## Session update — July 10, 2026 PM (🔴 anon `user_id` REST leak closed at the DB layer — migration `20260532`, UNCOMMITTED, cloud NOT applied)
+
+A full trust-nothing audit (23-agent fan-out + all gates re-run) confirmed a real Critical: although
+the July-10 app fix removed `user_id` from `useCreatorByHandle`'s wire, the base table's **anon grant
+was still table-wide**, so `GET /rest/v1/creator_profiles?select=user_id` returned auth UUIDs for
+every creator — **verified live against cloud** (HTTP 200 + masked UUIDs). This session implements
+ONLY that fix (no other audit findings touched):
+
+- **Migration (additive, no policy/data change):** `supabase/migrations/20260532000000_creator_profiles_anon_column_grant.sql`
+  — `revoke select on public.creator_profiles from anon`, then re-`grant select` to anon on the **13
+  public columns only** (`user_id` omitted). The `Public can view creator profiles` policy is
+  UNCHANGED; `authenticated` keeps full-table SELECT (owner reads of `user_id` via
+  `useCabana`/`getMyProfileId` still work). Preflight confirmed repo == cloud columns (14 each,
+  identical) and that **no anon app path selects `user_id`** (the only anon read is the scoped
+  `useCreatorByHandle`). Rollback: `revoke select … from anon; grant select on … to anon;`.
+- **Behavioral test:** `supabase/tests/creator_profiles_anon_grant.sql` — column-privilege catalog
+  asserts (13 public cols granted, `user_id` denied, `authenticated` full), anon behavioral read
+  (public cols succeed, row still visible via the unchanged policy, `user_id` raises 42501),
+  authenticated owner reads own `user_id`. Registered in `scripts/db-validate.sh` AND
+  `.github/workflows/ci.yml` (now 19 SQL suites).
+- **Gates (all green this session):** `bunx tsc --noEmit` clean · `bun run lint` 0 errors / 6 expected
+  shadcn warnings · `bun run test` **347/347** · `bun run build` green · `bun run db:validate`
+  from-zero green incl. the new suite (3/3 sub-checks). **Local REST proof** against the reset stack:
+  anon public-col query → 200 + rows; anon `user_id` / `select=*` → **42501 permission denied**;
+  authenticated JWT `user_id` → 200 (column returned). Grant introspection: anon SELECT columns = the
+  13 public ones, `user_id` not among them (anon retains only harmless `REFERENCES`).
+- **Not done (out of scope, by request):** no other High/Medium/Low audit findings; no code changes
+  (preflight proved none needed); **cloud NOT applied** (needs Management-API apply + approval, then
+  `smoke:prod`); not committed/pushed/deployed. `CABANA_TECH_DEBT.md` §6, `CABANA_DATABASE.md`, and
+  CLAUDE.md's migration chain + test list updated to match.
+- **Note:** cloud is already current through `20260531` (audience insights applied + verified July 10);
+  `20260532` is the only migration now ahead of cloud.
+
 ## Session update — July 10, 2026 PM (Full audit GREEN + Phase 11C Option B drafted + 🔴 user_id leak fixed — all UNCOMMITTED)
 
 Tyler approved Phase 11C **Option B** (tab within `/dashboard/performance`; **named** top supporters,

@@ -180,6 +180,11 @@ jobs:
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
             -v ON_ERROR_STOP=1 -f supabase/tests/audience_insights.sql
 
+      - name: Behavioral checks (creator_profiles anon column grant — user_id leak fix)
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 -f supabase/tests/creator_profiles_anon_grant.sql
+
       - name: Stop Supabase
         if: always()
         run: supabase stop || true

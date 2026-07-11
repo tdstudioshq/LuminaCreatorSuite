@@ -20,7 +20,7 @@ hand-maintained pending Lovable regeneration.
 | Table              | Columns (current)                                                                                                                   | Notes                                                                                   |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `profiles`         | `id` (=auth.users.id), `email`, `name`, `account_type`, `created_at`, `updated_at`                                                  | Shared identity row; `account_type` defaults to `creator`                               |
-| `creator_profiles` | `id`, `user_id` (nullable!), `handle`, `name`, `bio`, `avatar_url`, `banner_url`, `theme`, `plan`, `created_at`, `updated_at`       | Public creator surface. `user_id` nullable allows the ownerless `aurora` demo seed (only `aurora` is seeded) |
+| `creator_profiles` | `id`, `user_id` (nullable!), `handle`, `name`, `bio`, `avatar_url`, `banner_url`, `theme`, `plan`, `created_at`, `updated_at` (+ `headline`, `accent_color`, `button_style` from `20260528`) | Public creator surface. `user_id` nullable allows the ownerless `aurora` demo seed. **anon SELECT is column-scoped** (`20260532`) to the public columns — `user_id` is not anon-readable; `authenticated` keeps full-table SELECT |
 | `member_profiles`  | `id`, `user_id`, `username`, `display_name`, `bio`, `avatar_url`, timestamps                                                        | Full row owner-only; safe public subset is exposed through `public_member_profiles`     |
 | `follows`          | `id`, `follower_id` → profiles, `following_creator_id` → creator_profiles, `created_at`                                             | Unique account→creator relationship; authenticated-only base table                      |
 | `blocks`           | `id`, `blocker_id` → profiles, `blocked_user_id` → profiles, `reason`, `created_at`                                                 | Unique private account→account relationship; authenticated-only base table              |
@@ -36,8 +36,11 @@ hand-maintained pending Lovable regeneration.
 accept creator usernames and derive the actor from `auth.uid()`; they never return UUIDs.
 
 **Known current-schema weaknesses** (carried into tech debt): prices/scheduling stored as strings;
-no post/publish model; `creator_profiles.user_id` nullable and exposed by public `select("*")`;
-`subscriptions` name collides with future fan subscriptions.
+no post/publish model; `creator_profiles.user_id` still nullable (ownerless demo seed). The public
+`select("*")` **user_id leak is fixed**: migration `20260532` replaces the anon table-wide
+SELECT on `creator_profiles` with a **column-scoped** anon SELECT on the 13 public columns only
+(`user_id` excluded); the `Public can view creator profiles` policy is unchanged and `authenticated`
+keeps full-table SELECT for owner reads. `subscriptions` name collides with future fan subscriptions.
 
 <a id="baseline-migration-phase-2a"></a>
 
