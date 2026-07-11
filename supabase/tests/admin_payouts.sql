@@ -138,13 +138,17 @@ begin
   if v_status <> 'rejected' then raise exception 'reject did not set rejected (got %)', v_status; end if;
   select status into v_payout_status from public.payouts where payout_request_id = v_req2;
   if v_payout_status <> 'canceled' then raise exception 'rejected payout not canceled (got %)', v_payout_status; end if;
+  reset role;
 
   -- Available restored: net 8700 − paid-out 5000 − reserved 0 = 3700.
+  -- recalc_creator_balance is internal-only (20260534) — no client-role EXECUTE
+  -- grant — so invoke it here as the test superuser, outside the authenticated
+  -- admin session above. (admin_review_payout already recomputed the balance
+  -- internally; this re-derives it explicitly for the assertion.)
   perform public.recalc_creator_balance(v_creator_profile_id, 'USD');
   select available_cents into v_available from public.creator_balances
   where creator_profile_id = v_creator_profile_id and currency = 'USD';
   if v_available <> 3700 then raise exception 'expected available 3700 after reject, got %', v_available; end if;
-  reset role;
 
   -- 4. Anonymous denial: execute is revoked from anon.
   perform set_config('request.jwt.claims', '{}', true);

@@ -1,0 +1,39 @@
+-- ============================================================================
+-- CABANA — recalc_creator_balance made internal-only (20260534)
+--
+-- Corrective, additive-only. No table/column/enum/RLS-policy/data change and
+-- no change to the function body; only its EXECUTE grants are narrowed.
+--
+-- Problem (cross-user write / least-privilege violation): recalc_creator_balance
+-- (Phase 6, 20260518) recomputes and UPSERTS a creator's cached balance
+-- projection into public.creator_balances. It is granted EXECUTE to all
+-- `authenticated`, but NO application path calls it directly — it is invoked
+-- only via PERFORM inside SECURITY DEFINER RPCs (create_mock_tip,
+-- create_mock_purchase, request_payout, admin_review_payout) that run as the
+-- function owner and therefore need no caller-level grant. The stray
+-- `authenticated` grant lets ANY signed-in user
+-- `POST /rest/v1/rpc/recalc_creator_balance` with an ARBITRARY
+-- _creator_profile_id and _currency:
+--   * cross-user balance recompute for any creator (heavy transactions+payouts
+--     scan — an unthrottled DoS vector), and
+--   * because _currency is unvalidated and creator_balances.currency is
+--     unconstrained text, permanent insertion of unbounded zero-value junk rows
+--     into ANY creator's creator_balances (one per arbitrary currency string),
+--     which the owner cannot remove (clients hold SELECT-only) and which surface
+--     in the creator's and admin's finance views.
+-- Reproduced locally: creator B invoked recalc_creator_balance(A's profile,
+-- 'HACKCUR') and a junk 'HACKCUR' row appeared in A's creator_balances.
+--
+-- Fix: revoke EXECUTE from the client roles, matching the internal-only pattern
+-- used for emit_notification / notif_* (20260519). The function stays owned by
+-- and executable by its definer, so every internal PERFORM caller (all
+-- SECURITY DEFINER) keeps working unchanged, and legitimate purchase / tip /
+-- subscription / payout / refund / admin workflows still recompute balances via
+-- those RPCs. The function already pins `set search_path = ''` (unchanged).
+--
+-- Rollback (restores the prior, over-broad grant):
+--   grant execute on function public.recalc_creator_balance(uuid, text) to authenticated;
+-- ============================================================================
+
+revoke execute on function public.recalc_creator_balance(uuid, text)
+  from public, anon, authenticated;
