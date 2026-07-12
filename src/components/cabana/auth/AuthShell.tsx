@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import { useState, type ReactNode } from "react";
-import cabanaLogo from "@/assets/cabana-logo.png";
 
 /**
  * Shared scaffold for the signup / forgot-password / reset-password surfaces.
@@ -23,32 +22,27 @@ export function AuthShell({
 }) {
   return (
     <main
-      className="flex min-h-screen items-center justify-center px-4 py-16"
-      style={{
-        backgroundImage: "url('/td-studios-black-marble.jpg')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
-      }}
+      id="main-content"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-16"
     >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_15%,oklch(0.75_0.055_75/0.16),transparent_32%),linear-gradient(135deg,oklch(0.07_0.004_75),oklch(0.115_0.009_75))]" />
+      <div className="absolute inset-y-0 left-0 hidden w-[38%] border-r border-white/[0.07] bg-[url('/cabana-og.webp')] bg-cover bg-center opacity-25 grayscale lg:block" />
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        className="relative w-full max-w-md"
+        className="relative w-full max-w-md lg:ml-[34%]"
       >
-        <div className="absolute inset-0 -z-10 rounded-[32px] bg-black/40 blur-3xl" />
-        <div className="relative overflow-hidden rounded-[32px] border-2 border-white/20 bg-black/30 px-8 py-10 shadow-[0_0_45px_rgba(0,0,0,0.65)] backdrop-blur-lg">
-          <div className="pointer-events-none absolute inset-0 rounded-[32px] border border-white/10" />
-          <div className="pointer-events-none absolute inset-x-10 top-0 h-40 rounded-b-full bg-white/15 opacity-60 blur-3xl" />
+        <div className="relative overflow-hidden border border-white/[0.1] bg-black/35 px-7 py-9 shadow-[0_40px_100px_-45px_black] backdrop-blur-2xl sm:px-10 sm:py-11">
+          <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/45 to-transparent" />
           <div className="relative">
             <img
-              src={cabanaLogo}
+              src="/cabana-logo.png"
               alt="CABANA"
-              className="mx-auto mb-6 h-24 w-24 object-contain drop-shadow-[0_0_24px_rgba(165,180,252,0.35)]"
+              className="mx-auto mb-7 h-20 w-20 object-contain"
             />
             <div className="text-[10px] uppercase tracking-[0.3em] text-white/60">{eyebrow}</div>
-            <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-iridescent">
+            <h1 className="mt-3 font-display text-4xl font-medium tracking-[-0.045em] text-foreground">
               {title}
             </h1>
             <p className="mt-2 text-sm text-white/70">{subtitle}</p>

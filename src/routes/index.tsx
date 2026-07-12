@@ -1,13 +1,12 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { LoginCard } from "@/components/cabana/auth/LoginCard";
-import { supabase } from "@/integrations/supabase/client";
+import { createFileRoute } from "@tanstack/react-router";
+import { LandingPage } from "@/components/cabana/marketing/LandingPage";
 
 export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
       { title: "CABANA" },
-      { name: "description", content: "Sign in to your CABANA Studio." },
+      { name: "description", content: "The luxury operating system for modern creators." },
       { property: "og:title", content: "CABANA" },
       {
         property: "og:description",
@@ -15,13 +14,8 @@ export const Route = createFileRoute("/")({
       },
     ],
   }),
-  beforeLoad: async () => {
-    if (typeof window === "undefined") return;
-    const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/dashboard" });
-  },
 });
 
 function Index() {
-  return <LoginCard />;
+  return <LandingPage />;
 }

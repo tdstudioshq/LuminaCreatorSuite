@@ -128,6 +128,12 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        <a
+          href="#main-content"
+          className="fixed left-4 top-4 z-[100] -translate-y-24 rounded-md bg-foreground px-4 py-3 text-sm font-medium text-background transition-transform focus:translate-y-0"
+        >
+          Skip to content
+        </a>
         {children}
         <Scripts />
       </body>

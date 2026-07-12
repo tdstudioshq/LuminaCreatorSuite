@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { cabanaAuth, useAuthSession } from "@/lib/cabana-auth";
 import { sanitizeRedirect } from "@/lib/cabana-redirect";
 import { LiquidMetalButton } from "@/components/ui/liquid-metal-button";
-import cabanaLogo from "@/assets/cabana-logo.png";
 
 /**
  * The CABANA sign-in card (marble backdrop, glass card, chrome ENTER button —
@@ -79,32 +78,27 @@ export function LoginCard() {
 
   return (
     <main
-      className="flex min-h-screen items-center justify-center px-6 py-12"
-      style={{
-        backgroundImage: "url('/td-studios-black-marble.jpg')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
-      }}
+      id="main-content"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-12"
     >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,oklch(0.75_0.055_75/0.13),transparent_28%),linear-gradient(145deg,oklch(0.065_0.004_75),oklch(0.12_0.009_75))]" />
+      <div className="absolute inset-y-0 right-0 hidden w-[42%] border-l border-white/[0.07] bg-[url('/cabana-og.webp')] bg-cover bg-center opacity-25 grayscale lg:block" />
       <h1 className="sr-only">CABANA</h1>
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="relative w-full max-w-md"
+        className="relative w-full max-w-md lg:mr-[36%]"
       >
-        <div className="absolute inset-0 -z-10 rounded-[32px] bg-black/40 blur-3xl" />
-        <div className="relative overflow-hidden rounded-[32px] border-2 border-white/20 bg-black/30 px-10 py-12 shadow-[0_0_45px_rgba(0,0,0,0.65)] backdrop-blur-lg">
-          <div className="pointer-events-none absolute inset-0 rounded-[32px] border border-white/10" />
-          <div className="pointer-events-none absolute inset-x-10 top-0 h-48 rounded-b-full bg-white/15 opacity-60 blur-3xl" />
+        <div className="relative overflow-hidden border border-white/[0.1] bg-black/35 px-7 py-9 shadow-[0_40px_100px_-45px_black] backdrop-blur-2xl sm:px-10 sm:py-11">
+          <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/45 to-transparent" />
           <div className="relative flex flex-col items-center gap-6 text-center text-white">
             <img
-              src={cabanaLogo}
+              src="/cabana-logo.png"
               alt="Cabana"
               width={120}
               height={120}
-              className="h-28 w-28 object-contain"
+              className="h-24 w-24 object-contain"
             />
             <div className="flex w-full items-center gap-3">
               <div className="h-[2px] flex-1 bg-gradient-to-r from-transparent to-white/50" />

@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
-      { title: "CABANA" },
+      { title: "Create account · CABANA" },
       { name: "description", content: "Build your creator empire on CABANA." },
     ],
   }),

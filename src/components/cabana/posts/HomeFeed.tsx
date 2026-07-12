@@ -52,7 +52,7 @@ export function HomeFeed() {
 
   return (
     <SocialShell>
-      <div className="mx-auto min-h-screen max-w-[720px] border-x border-white/[0.07] bg-[oklch(0.115_0.012_280/0.42)]">
+      <div className="mx-auto min-h-screen max-w-[720px] border-x border-white/[0.07] bg-[oklch(0.105_0.007_75/0.52)]">
         <header className="sticky top-0 z-30 flex min-h-[76px] items-center justify-between gap-4 border-b border-white/[0.07] bg-background/82 px-5 py-3 backdrop-blur-2xl sm:px-7">
           <div className="min-w-0">
             <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-primary">

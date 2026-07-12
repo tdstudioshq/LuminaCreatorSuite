@@ -16,14 +16,14 @@ export function MessagesShell({ activeId, children }: { activeId?: string; child
   const hasActive = !!activeId;
   return (
     <SocialShell rightRail={null} wide>
-      <div className="flex h-[calc(100dvh-5rem)] overflow-hidden border-r border-white/[0.07] bg-[oklch(0.115_0.012_280/0.54)] lg:h-screen">
+      <div className="flex h-[calc(100dvh-5rem)] overflow-hidden border-r border-white/[0.07] bg-[oklch(0.105_0.007_75/0.58)] lg:h-screen">
         <div
           className={`${hasActive ? "hidden md:flex" : "flex"} w-full flex-col border-r border-white/[0.07] md:w-[370px] md:shrink-0`}
         >
           <ConversationListPane activeId={activeId} />
         </div>
         <section
-          className={`${hasActive ? "flex" : "hidden md:flex"} relative min-w-0 flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_50%_0%,oklch(0.65_0.18_280/0.08),transparent_42%)]`}
+          className={`${hasActive ? "flex" : "hidden md:flex"} relative min-w-0 flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_50%_0%,oklch(0.72_0.055_75/0.08),transparent_42%)]`}
         >
           {children}
         </section>
