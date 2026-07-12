@@ -267,6 +267,42 @@ idempotency (no duplicate on re-fire), self-notification suppression, recipient 
 back from the recipient-scoped personal-center query — no leak), outbox admin-only, and anonymous
 denial. Runs in `db:validate` and CI.
 
+### Cloudflare Stream migration (video Checkpoint 2, DB contract only)
+
+`supabase/migrations/20260536000000_stream_videos.sql` adds the ownership + lifecycle model for
+Cloudflare Stream video. **No Cloudflare API calls, app code, or seed data** — the database contract
+only. Existing post/image/feed/entitlement behavior is unchanged (the 20260533 `post_media` policy is
+untouched; feed RPCs aggregate video rows through the existing ID-free media JSON automatically).
+
+- **Enum** — `stream_video_status` (`pending_upload` / `processing` / `ready` / `error`).
+- **`stream_videos`** — the upload ledger. A row exists from ticket issuance (before any bytes move) so
+  orphaned Cloudflare assets stay discoverable. `uid` unique; `unique (id, owner_user_id)` as the
+  composite FK target; numeric CHECKs `>= 0` (the pure layer maps Cloudflare's `-1` sentinels to NULL —
+  `>= 0` can never stall a webhook ready-flip); `ready_at` only on ready rows (one-directional).
+  Indexes match real queries: `(owner_user_id, status)` (active-upload quota), `(owner_user_id,
+  created_at desc)` (rolling-24h quota), partial `(upload_expires_at) where status='pending_upload'`
+  (stale-ticket sweep), `(creator_profile_id)` (FK cascades).
+- **RLS** — owners SELECT/DELETE their own rows; INSERT requires `owner_user_id = auth.uid()` AND
+  `is_current_user_creator(creator_profile_id)` (members can never pass). **No client UPDATE path** —
+  no policy and no grant; status/metadata are system writes.
+- **Grants** — explicit (from-zero rebuilds have no platform ACLs): `authenticated` select/insert/delete;
+  `anon` nothing; `service_role` select/update/delete on `stream_videos` plus a **column-scoped**
+  `update (processing_status, width, height)` on `post_media` for the future lifecycle writer.
+- **`post_media` linkage** — nullable `stream_video_id`; composite FK `(stream_video_id, owner_user_id)
+  → stream_videos (id, owner_user_id)` ON DELETE CASCADE (render metadata only — a dangling pointer
+  would just render a broken player; post deletion still cascades media via `post_id` while the
+  `stream_videos` row survives as a sweepable orphan); coherence CHECK `(storage_bucket =
+  'cloudflare-stream') = (stream_video_id is not null)`; partial unique index — one live attachment per
+  stream video at a time. Stream rows use `storage_path '<owner_user_id>/stream/<cf_uid>'`, satisfying the
+  20260533 path check by construction; combined with `owner_user_id = auth.uid()` and the composite FK,
+  attaching another creator's stream video (or any video to another creator's post, or one video twice)
+  is impossible at the database layer.
+
+**Validation:** `supabase/tests/stream_videos.sql` (22 numbered proofs: anon/member denial, owner
+CRUD scoping, no-client-UPDATE, service-role lifecycle writes, the full cross-creator attack matrix,
+coherence/unique violations, image-row regression, both delete-cascade directions, grant and policy-set
+assertions). Runs in `db:validate` and CI.
+
 ## 2. Target Production Schema
 
 New tables grouped by dependency. Group letters match the build roadmap (`CABANA_BUILD_ROADMAP.md` §5).
