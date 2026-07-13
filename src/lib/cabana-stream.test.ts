@@ -2,6 +2,8 @@ import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   type OrphanCandidateRow,
+  type StreamPlaybackBatchRepo,
+  type StreamVideoSnapshot,
   type StreamVideoStatus,
   CLOUDFLARE_VIDEO_STATES,
   DEFAULT_ORPHAN_GRACE,
@@ -41,11 +43,17 @@ import {
   isValidStreamUid,
   isValidTusChunkSize,
   isWebhookTimestampFresh,
+  mapWithConcurrency,
+  normalizeStreamPostIdBatch,
   parseStreamStoragePath,
   parseStreamTokenResponse,
   parseStreamVideoPayload,
   parseTusCreationHeaders,
   parseWebhookSignatureHeader,
+  createStreamTokenCache,
+  processingStatusForStream,
+  resolveStatusRefresh,
+  resolveStreamPlaybackBatch,
   selectOrphanCandidates,
   streamStoragePathBelongsTo,
   unwrapCloudflareEnvelope,
@@ -1112,5 +1120,253 @@ describe("selectOrphanCandidates", () => {
     expect(selectOrphanCandidates([failed], NOW_MS, grace)).toEqual([
       { row: failed, reason: "failed" },
     ]);
+  });
+});
+
+// ───────────────── Server-action orchestration (Checkpoint 3) ───────────────
+
+describe("processingStatusForStream", () => {
+  it.each([
+    ["pending_upload", "processing"],
+    ["processing", "processing"],
+    ["ready", "ready"],
+    ["error", "error"],
+  ] as const)("%s → %s", (status, expected) => {
+    expect(processingStatusForStream(status)).toBe(expected);
+  });
+});
+
+describe("resolveStatusRefresh", () => {
+  function snapshot(status: StreamVideoStatus): StreamVideoSnapshot {
+    return {
+      uid: UID,
+      status,
+      readyToStream: status === "ready",
+      durationSeconds: 5.5,
+      sizeBytes: 1000,
+      width: 1280,
+      height: 720,
+      errorCode: null,
+      errorMessage: null,
+      pctComplete: null,
+    };
+  }
+
+  it("never touches a terminal stored row, whatever Cloudflare says", () => {
+    for (const current of ["ready", "error"] as const) {
+      for (const next of STREAM_VIDEO_STATUSES) {
+        expect(resolveStatusRefresh(current, snapshot(next))).toEqual({
+          apply: false,
+          status: current,
+        });
+      }
+    }
+  });
+
+  it("applies forward and same-state transitions with the snapshot attached", () => {
+    const result = resolveStatusRefresh("pending_upload", snapshot("processing"));
+    expect(result.apply).toBe(true);
+    if (result.apply) {
+      expect(result.status).toBe("processing");
+      expect(result.snapshot.width).toBe(1280);
+    }
+    expect(resolveStatusRefresh("processing", snapshot("processing")).apply).toBe(true);
+    expect(resolveStatusRefresh("processing", snapshot("ready")).apply).toBe(true);
+    expect(resolveStatusRefresh("pending_upload", snapshot("error")).apply).toBe(true);
+  });
+
+  it("ignores illegal transitions instead of guessing", () => {
+    expect(resolveStatusRefresh("processing", snapshot("pending_upload"))).toEqual({
+      apply: false,
+      status: "processing",
+    });
+  });
+});
+
+describe("normalizeStreamPostIdBatch", () => {
+  it("validates, lowercases, dedupes, and preserves order", () => {
+    expect(normalizeStreamPostIdBatch([OWNER.toUpperCase(), OWNER, OTHER_OWNER])).toEqual([
+      OWNER,
+      OTHER_OWNER,
+    ]);
+  });
+
+  it.each([["nope"], [null], [42], [["not-a-uuid"]], [[42]]])(
+    "throws on invalid input %p",
+    (raw) => {
+      expect(() => normalizeStreamPostIdBatch(raw)).toThrow(/post id/);
+    },
+  );
+
+  it("accepts an empty list and enforces the cap inclusively", () => {
+    expect(normalizeStreamPostIdBatch([])).toEqual([]);
+    const many = Array.from(
+      { length: 51 },
+      (_, i) => `${i.toString(16).padStart(8, "0")}-0000-4000-8000-000000000000`,
+    );
+    expect(normalizeStreamPostIdBatch(many.slice(0, 50)).length).toBe(50);
+    expect(() => normalizeStreamPostIdBatch(many)).toThrow(/max 50/);
+    expect(() => normalizeStreamPostIdBatch(many.slice(0, 3), 2)).toThrow(/max 2/);
+  });
+});
+
+describe("mapWithConcurrency", () => {
+  it("preserves order and respects the concurrency bound", async () => {
+    let inFlight = 0;
+    let peak = 0;
+    const result = await mapWithConcurrency([5, 1, 4, 2, 3], 2, async (n) => {
+      inFlight += 1;
+      peak = Math.max(peak, inFlight);
+      await new Promise((r) => setTimeout(r, n));
+      inFlight -= 1;
+      return n * 10;
+    });
+    expect(result).toEqual([50, 10, 40, 20, 30]);
+    expect(peak).toBeLessThanOrEqual(2);
+  });
+
+  it("handles empty input, limit 1, and limits above length", async () => {
+    expect(await mapWithConcurrency([], 3, async (x) => x)).toEqual([]);
+    expect(await mapWithConcurrency([1, 2], 1, async (x) => x + 1)).toEqual([2, 3]);
+    expect(await mapWithConcurrency([1], 99, async (x) => x)).toEqual([1]);
+  });
+});
+
+describe("resolveStreamPlaybackBatch", () => {
+  type Row = { postId: string; uid: string; position: number };
+  const P1 = OWNER;
+  const P2 = OTHER_OWNER;
+
+  function repo(
+    overrides: Partial<StreamPlaybackBatchRepo<Row, { position: number; uid: string }>> = {},
+  ) {
+    return {
+      canView: async () => true,
+      fetchReadyMedia: async (ids: string[]) =>
+        ids.flatMap((postId) => [
+          { postId, uid: `${postId.slice(0, 8)}aa`, position: 1 },
+          { postId, uid: `${postId.slice(0, 8)}bb`, position: 0 },
+        ]),
+      postIdOf: (r: Row) => r.postId,
+      resolve: async (r: Row) => ({ position: r.position, uid: r.uid }),
+      positionOf: (v: { position: number }) => v.position,
+      ...overrides,
+    };
+  }
+
+  it("returns an entry for every requested id, sorted by position", async () => {
+    const out = await resolveStreamPlaybackBatch([P1, P2], repo());
+    expect(Object.keys(out).sort()).toEqual([P1, P2].sort());
+    expect(out[P1].map((v) => v.position)).toEqual([0, 1]);
+  });
+
+  it("returns empty arrays for unauthorized posts and never fetches them", async () => {
+    const fetched: string[][] = [];
+    const out = await resolveStreamPlaybackBatch(
+      [P1, P2],
+      repo({
+        canView: async (id) => id === P1,
+        fetchReadyMedia: async (ids) => {
+          fetched.push(ids);
+          return ids.map((postId) => ({ postId, uid: "x", position: 0 }));
+        },
+      }),
+    );
+    expect(out[P2]).toEqual([]);
+    expect(out[P1].length).toBe(1);
+    expect(fetched).toEqual([[P1]]);
+  });
+
+  it("returns all-empty without any fetch when nothing is authorized", async () => {
+    let fetchCalled = false;
+    const out = await resolveStreamPlaybackBatch(
+      [P1],
+      repo({
+        canView: async () => false,
+        fetchReadyMedia: async () => {
+          fetchCalled = true;
+          return [];
+        },
+      }),
+    );
+    expect(out).toEqual({ [P1]: [] });
+    expect(fetchCalled).toBe(false);
+  });
+
+  it("drops rows the repository over-returned for unauthorized posts", async () => {
+    const out = await resolveStreamPlaybackBatch(
+      [P1, P2],
+      repo({
+        canView: async (id) => id === P1,
+        fetchReadyMedia: async () => [
+          { postId: P1, uid: "ok", position: 0 },
+          { postId: P2, uid: "leak", position: 0 }, // over-returned
+        ],
+      }),
+    );
+    expect(out[P2]).toEqual([]);
+    expect(out[P1].length).toBe(1);
+  });
+
+  it("isolates a single resolve failure to its own row", async () => {
+    const out = await resolveStreamPlaybackBatch(
+      [P1],
+      repo({
+        resolve: async (r: Row) => {
+          if (r.position === 1) throw new Error("cloudflare down");
+          return { position: r.position, uid: r.uid };
+        },
+      }),
+    );
+    expect(out[P1].map((v) => v.position)).toEqual([0]);
+  });
+
+  it("treats a null resolution as an excluded row", async () => {
+    const out = await resolveStreamPlaybackBatch([P1], repo({ resolve: async () => null }));
+    expect(out[P1]).toEqual([]);
+  });
+
+  it("handles empty input", async () => {
+    expect(await resolveStreamPlaybackBatch([], repo())).toEqual({});
+  });
+});
+
+describe("createStreamTokenCache", () => {
+  function cache(nowRef: { t: number }, options: Partial<{ maxEntries: number }> = {}) {
+    return createStreamTokenCache({
+      ttlSeconds: 3600,
+      marginSeconds: 300,
+      maxEntries: options.maxEntries ?? 1000,
+      nowMs: () => nowRef.t,
+    });
+  }
+
+  it("returns cached tokens until the margin-adjusted expiry, per uid", () => {
+    const now = { t: NOW_MS };
+    const c = cache(now);
+    expect(c.get("uid-a")).toBeNull();
+    c.set("uid-a", "token-a");
+    c.set("uid-b", "token-b");
+    expect(c.get("uid-a")).toBe("token-a");
+    expect(c.get("uid-b")).toBe("token-b");
+    now.t = NOW_MS + (3600 - 300) * 1000 - 1;
+    expect(c.get("uid-a")).toBe("token-a");
+    now.t = NOW_MS + (3600 - 300) * 1000;
+    expect(c.get("uid-a")).toBeNull(); // expired at the margin boundary
+  });
+
+  it("bounds its size by evicting the oldest entry", () => {
+    const now = { t: NOW_MS };
+    const c = cache(now, { maxEntries: 2 });
+    c.set("first", "1");
+    c.set("second", "2");
+    c.set("third", "3"); // evicts "first"
+    expect(c.size()).toBe(2);
+    expect(c.get("first")).toBeNull();
+    expect(c.get("second")).toBe("2");
+    expect(c.get("third")).toBe("3");
+    c.set("second", "2b"); // overwrite does not evict
+    expect(c.size()).toBe(2);
+    expect(c.get("second")).toBe("2b");
   });
 });

@@ -867,3 +867,180 @@ export function selectOrphanCandidates(
   }
   return candidates;
 }
+
+// ───────────────── Server-action orchestration (pure, injected I/O) ─────────
+// Checkpoint 3 additions: the decision/orchestration logic behind
+// `stream-actions.ts`, kept here (with all I/O injected) so every rule tests
+// without a network or a DB — the same model as `resolveBatchPostMedia`.
+
+export const STREAM_PLAYBACK_TOKEN_TTL_SECONDS = 3600;
+export const STREAM_UPLOAD_TICKET_TTL_MINUTES = 60;
+export const STREAM_PLAYBACK_BATCH_MAX = 50;
+export const STREAM_TOKEN_CONCURRENCY = 5;
+
+/** post_media.processing_status value for a stream video in `status`. */
+export function processingStatusForStream(status: StreamVideoStatus): string {
+  if (status === "ready") return "ready";
+  if (status === "error") return "error";
+  return "processing";
+}
+
+export type StreamStatusRefresh =
+  | { apply: false; status: StreamVideoStatus }
+  | { apply: true; status: StreamVideoStatus; snapshot: StreamVideoSnapshot };
+
+/**
+ * Decide what a fresh Cloudflare snapshot does to a stored row. Terminal
+ * stored states never change (ready/error cannot regress — a replayed or
+ * out-of-order poll is a no-op), and a snapshot that would be an illegal
+ * transition is ignored rather than guessed at.
+ */
+export function resolveStatusRefresh(
+  current: StreamVideoStatus,
+  snapshot: StreamVideoSnapshot,
+): StreamStatusRefresh {
+  if (isTerminalStreamStatus(current)) return { apply: false, status: current };
+  if (!canTransitionStreamStatus(current, snapshot.status)) {
+    return { apply: false, status: current };
+  }
+  return { apply: true, status: snapshot.status, snapshot };
+}
+
+/** Validate + lowercase + dedupe a playback batch, capped at `max`. Throws. */
+export function normalizeStreamPostIdBatch(
+  raw: unknown,
+  max: number = STREAM_PLAYBACK_BATCH_MAX,
+): string[] {
+  if (!Array.isArray(raw)) throw new Error("A list of post ids is required.");
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (typeof item !== "string" || !UUID_PATTERN.test(item)) {
+      throw new Error("A valid post id is required.");
+    }
+    seen.add(item.toLowerCase());
+  }
+  const ids = [...seen];
+  if (ids.length > max) throw new Error(`Too many post ids (max ${max}).`);
+  return ids;
+}
+
+/** Order-preserving async map with at most `limit` tasks in flight. */
+export async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const bound = Math.max(1, Math.trunc(limit));
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  async function worker(): Promise<void> {
+    while (next < items.length) {
+      const index = next++;
+      out[index] = await fn(items[index], index);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(bound, items.length) }, worker));
+  return out;
+}
+
+export type StreamPlaybackBatchRepo<TRow, TResolved> = {
+  /** Existing `can_view_post` gate, evaluated under the CALLER's context. */
+  canView: (postId: string) => Promise<boolean>;
+  /** READY stream media for authorized posts only (service-role read). */
+  fetchReadyMedia: (authorizedPostIds: string[]) => Promise<TRow[]>;
+  postIdOf: (row: TRow) => string;
+  /**
+   * Token + URL resolution for one row (remote Cloudflare call). Returning
+   * null (or throwing) drops ONLY that row — one Cloudflare failure never
+   * hides or exposes anything else.
+   */
+  resolve: (row: TRow) => Promise<TResolved | null>;
+  positionOf: (resolved: TResolved) => number;
+  concurrency?: number;
+};
+
+/**
+ * Batched playback orchestration: authorize each post first, read only
+ * authorized rows, resolve tokens with bounded concurrency and per-row
+ * failure isolation. Every requested id gets an entry (empty when the caller
+ * may not view it, nothing is ready, or Cloudflare failed for its rows) —
+ * deny-by-default in every branch.
+ */
+export async function resolveStreamPlaybackBatch<TRow, TResolved>(
+  postIds: string[],
+  repo: StreamPlaybackBatchRepo<TRow, TResolved>,
+): Promise<Record<string, TResolved[]>> {
+  const out: Record<string, TResolved[]> = {};
+  for (const id of postIds) out[id] = [];
+  if (postIds.length === 0) return out;
+
+  const concurrency = repo.concurrency ?? STREAM_TOKEN_CONCURRENCY;
+  const authz = await mapWithConcurrency(postIds, concurrency, async (id) =>
+    (await repo.canView(id)) ? id : null,
+  );
+  const authorized = authz.filter((id): id is string => id !== null);
+  if (authorized.length === 0) return out;
+  const authorizedSet = new Set(authorized);
+
+  const rows = await repo.fetchReadyMedia(authorized);
+  const resolved = await mapWithConcurrency(rows, concurrency, async (row) => {
+    // Defense in depth: never surface media for a post the caller wasn't
+    // authorized to view, even if the repository over-returned rows.
+    if (!authorizedSet.has(repo.postIdOf(row))) return null;
+    try {
+      return { postId: repo.postIdOf(row), value: await repo.resolve(row) };
+    } catch {
+      return null; // isolate a single Cloudflare failure to its own row
+    }
+  });
+  for (const entry of resolved) {
+    if (entry && entry.value != null) out[entry.postId].push(entry.value);
+  }
+  for (const id of authorized) out[id].sort((a, b) => repo.positionOf(a) - repo.positionOf(b));
+  return out;
+}
+
+/**
+ * TTL-aware playback-token cache (pure factory; clock injected). Tokens carry
+ * no viewer identity (authorization happens per-request via can_view_post
+ * BEFORE any cache read), so sharing one token per uid across viewers is
+ * safe — and collapses the per-request Cloudflare /token amplification.
+ * Instance-local by design; entries expire `marginSeconds` before the real
+ * token expiry and the size is bounded (oldest-first eviction).
+ */
+export function createStreamTokenCache(options: {
+  ttlSeconds: number;
+  marginSeconds?: number;
+  maxEntries?: number;
+  nowMs: () => number;
+}): {
+  get: (uid: string) => string | null;
+  set: (uid: string, token: string) => void;
+  size: () => number;
+} {
+  const margin = options.marginSeconds ?? 300;
+  const maxEntries = options.maxEntries ?? 1000;
+  const usableMs = Math.max(0, (options.ttlSeconds - margin) * 1000);
+  const entries = new Map<string, { token: string; expiresAtMs: number }>();
+
+  return {
+    get(uid) {
+      const entry = entries.get(uid);
+      if (!entry) return null;
+      if (options.nowMs() >= entry.expiresAtMs) {
+        entries.delete(uid);
+        return null;
+      }
+      return entry.token;
+    },
+    set(uid, token) {
+      if (entries.size >= maxEntries && !entries.has(uid)) {
+        // Maps iterate in insertion order — evict the oldest entry.
+        const oldest = entries.keys().next().value;
+        if (oldest !== undefined) entries.delete(oldest);
+      }
+      entries.set(uid, { token, expiresAtMs: options.nowMs() + usableMs });
+    },
+    size: () => entries.size,
+  };
+}

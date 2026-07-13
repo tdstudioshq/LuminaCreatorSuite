@@ -1058,6 +1058,7 @@ export type Database = {
           processing_status: string;
           storage_bucket: string;
           storage_path: string;
+          stream_video_id: string | null;
           width: number | null;
         };
         Insert: {
@@ -1072,6 +1073,7 @@ export type Database = {
           processing_status?: string;
           storage_bucket?: string;
           storage_path: string;
+          stream_video_id?: string | null;
           width?: number | null;
         };
         Update: {
@@ -1086,6 +1088,7 @@ export type Database = {
           processing_status?: string;
           storage_bucket?: string;
           storage_path?: string;
+          stream_video_id?: string | null;
           width?: number | null;
         };
         Relationships: [
@@ -1102,6 +1105,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "posts";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "post_media_stream_video_owner_fk";
+            columns: ["stream_video_id", "owner_user_id"];
+            isOneToOne: false;
+            referencedRelation: "stream_videos";
+            referencedColumns: ["id", "owner_user_id"];
           },
         ];
       };
@@ -1395,6 +1405,72 @@ export type Database = {
           handle?: string;
         };
         Relationships: [];
+      };
+      stream_videos: {
+        Row: {
+          created_at: string;
+          creator_profile_id: string;
+          duration_seconds: number | null;
+          error_code: string | null;
+          error_message: string | null;
+          height: number | null;
+          id: string;
+          owner_user_id: string;
+          ready_at: string | null;
+          size_bytes: number | null;
+          status: Database["public"]["Enums"]["stream_video_status"];
+          uid: string;
+          upload_expires_at: string | null;
+          width: number | null;
+        };
+        Insert: {
+          created_at?: string;
+          creator_profile_id: string;
+          duration_seconds?: number | null;
+          error_code?: string | null;
+          error_message?: string | null;
+          height?: number | null;
+          id?: string;
+          owner_user_id: string;
+          ready_at?: string | null;
+          size_bytes?: number | null;
+          status?: Database["public"]["Enums"]["stream_video_status"];
+          uid: string;
+          upload_expires_at?: string | null;
+          width?: number | null;
+        };
+        Update: {
+          created_at?: string;
+          creator_profile_id?: string;
+          duration_seconds?: number | null;
+          error_code?: string | null;
+          error_message?: string | null;
+          height?: number | null;
+          id?: string;
+          owner_user_id?: string;
+          ready_at?: string | null;
+          size_bytes?: number | null;
+          status?: Database["public"]["Enums"]["stream_video_status"];
+          uid?: string;
+          upload_expires_at?: string | null;
+          width?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "stream_videos_creator_profile_id_fkey";
+            columns: ["creator_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "creator_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stream_videos_owner_user_id_fkey";
+            columns: ["owner_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       subscriptions: {
         Row: {
@@ -1698,6 +1774,10 @@ export type Database = {
         Args: { _amount_cents: number; _message?: string; _username: string };
         Returns: undefined;
       };
+      creator_audience_insights: {
+        Args: { _supporter_limit?: number; _window_days?: number };
+        Returns: Json;
+      };
       creator_balance: {
         Args: never;
         Returns: {
@@ -1897,7 +1977,11 @@ export type Database = {
         }[];
       };
       process_notification_outbox: {
-        Args: { _batch_size?: number; _max_attempts?: number; _result?: string };
+        Args: {
+          _batch_size?: number;
+          _max_attempts?: number;
+          _result?: string;
+        };
         Returns: Json;
       };
       recalc_creator_balance: {
@@ -1984,6 +2068,7 @@ export type Database = {
         | "sexual_content";
       report_status: "open" | "reviewing" | "resolved" | "dismissed";
       report_subject_type: "user" | "creator" | "post" | "comment" | "message";
+      stream_video_status: "pending_upload" | "processing" | "ready" | "error";
       transaction_status: "pending" | "succeeded" | "failed" | "refunded" | "disputed";
       transaction_type:
         | "creator_subscription"
@@ -2170,6 +2255,7 @@ export const Constants = {
       ],
       report_status: ["open", "reviewing", "resolved", "dismissed"],
       report_subject_type: ["user", "creator", "post", "comment", "message"],
+      stream_video_status: ["pending_upload", "processing", "ready", "error"],
       transaction_status: ["pending", "succeeded", "failed", "refunded", "disputed"],
       transaction_type: [
         "creator_subscription",

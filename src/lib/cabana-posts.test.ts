@@ -266,6 +266,7 @@ describe("mapPost / mapPostMedia", () => {
         height: 200,
         position: 2,
         processing_status: "ready",
+        stream_video_id: null,
         created_at: "2026-06-01T00:00:00Z",
       }),
     ).toEqual({
