@@ -1,6 +1,6 @@
 # CABANA — Claude Agent Session Handoff
 
-> Prepared June 25, 2026 · Last updated July 10, 2026
+> Prepared June 25, 2026 · Last updated July 13, 2026
 >
 > Workspace: `/Users/tdstudiosny/LuminaCreatorSuite`
 
@@ -15,6 +15,48 @@ Use these documents as the source of truth:
 1. [`CABANA_ARCHITECTURE.md`](../CABANA_ARCHITECTURE.md)
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
+
+## Session update — July 13, 2026 (Stream Checkpoints 3 finalized + 4 shipped: webhook + lifecycle sync)
+
+Cloudflare Stream program state (Tyler-directed, checkpoint-gated):
+
+- **Checkpoint 3 (server actions) finalized and closed.** The feature commit `0328e06` (six
+  `createServerFn` actions in `stream-actions.ts`; the "five actions" in the earlier report was the
+  `getStreamPlayback(+Batch)` shorthand — the true count is **six**) was verified end-to-end: types.ts diff
+  scoped to `stream_videos`/`post_media.stream_video_id`/enum/FK only; client bundle free of all secret
+  markers (the whole Stream tree is tree-shaken out of BOTH bundles until a consumer imports it); CI green.
+  `884e191` (docs) reconciled CLAUDE.md's coverage-set list with `vitest.config.ts` (adds `cabana-redirect`,
+  `cabana-stream`).
+- **Checkpoint 4 (webhook + lifecycle sync) shipped as `6352542`** — pushed, CI green (Verify + prod-deps
+  Node 22.20.0 + Docker DB baseline incl. `stream_videos.sql`). `POST /api/webhooks/stream`
+  (`src/routes/api.webhooks.stream.ts`, the repo's **first server route** — `server.handlers` convention,
+  POST-only, no component, handler dynamically imports the server module; client bundle verified
+  marker-free) → `src/lib/stream-webhook.server.ts` (the ONLY reader of `CLOUDFLARE_STREAM_WEBHOOK_SECRET`;
+  HMAC-SHA256 over `<literal time>.<raw body>` via the pure `verifyStreamWebhook`, constant-time, 300 s
+  window; strict parsing rejects live-input states → 400; unsigned/invalid → 401 BEFORE any DB access;
+  unknown UID → 200 no-op; DB failure → 500 for idempotent Cloudflare redelivery). Lifecycle applies by
+  REUSING `executeStatusRefreshFlow` with the webhook body as the snapshot — one shared compare-and-set,
+  terminal ready/error never regress, `post_media` syncs `processing_status`/`width`/`height` only. 40 new
+  tests (21 files / **651** tests total, was 611); live-verified against a dev server with an openssl-signed
+  request. `smoke:prod` gained a `STREAM-WEBHOOK` check (401 expected; SKIPs while undeployed/unconfigured).
+  **NO migration was needed** (20260536 grants already cover every webhook write).
+- **Deliberately NOT done (approval-gated next steps):** Cloudflare webhook registration
+  (`PUT .../stream/webhook`) + putting the secret on Vercel; React hooks; composer/player UI; tus-js-client;
+  any real video; any deploy. The webhook route is **dormant in production** until registration; owner
+  polling (`getStreamVideoStatus`) drives the lifecycle. Also noted in `CABANA_TECH_DEBT.md`: no scheduled
+  orphan sweeper yet (pure `selectOrphanCandidates` exists) and idempotency is CAS-based (no
+  `webhook_events` dedupe table — fine while events are state-refresh-only).
+- One local side effect during the session: `bun run format` prettier-normalized five untouched docs; that
+  churn was committed as `e94ce56` then **dropped via `git reset --hard` at Tyler's direction** (never
+  pushed) so Checkpoint 4 is exactly one commit. Those docs will re-format on anyone's next full
+  `bun run format` — harmless, cosmetic.
+
+**State at session end:** `HEAD == origin/main == 6352542` (0 ahead/0 behind), tree clean (untracked
+`.claude/` only), CI green. Gates: lint 0 errors (6 expected shadcn warnings) · tsc clean · test **651/651**
+(21 files) · coverage thresholds pass · build green · from-zero `db:validate` green through `20260536`.
+Cloud DB current through **`20260536`** (applied July 12; no cloud SQL this session). Next recommended:
+Checkpoint 5 per Tyler's direction (likely hooks/UI/tus or webhook registration — **wait for explicit
+scope approval before starting**).
 
 ## Session update — July 11, 2026 PM (Release B: three DB security fixes committed, pushed, CI-green, and applied to cloud)
 
@@ -99,7 +141,7 @@ junk balance-row writes). Neither is fixed yet — Release B, gated on approval 
   influence the **Vercel build image** — the next auto-deploy will build on node 22 (already the CI-tested
   major); verify the live function runtime per item 14 before pinning `vercel.functions.runtime`.
 - **Items 19 + 20 (decision docs):** Product Boundary Decision Record scaffold in `CABANA_PRODUCT_SPEC.md`
-  + new `docs/CABANA_M8_READINESS.md`, each listing the open decisions awaiting Tyler's ruling.
+  - new `docs/CABANA_M8_READINESS.md`, each listing the open decisions awaiting Tyler's ruling.
 
 **Gates (Release A):** `bun run lint`, `bunx tsc --noEmit`, `bun run test` all green on the working tree
 (`bun run build` per CI). Next: commit Release A, then Release B (cross-post-injection fix first) on approval.
