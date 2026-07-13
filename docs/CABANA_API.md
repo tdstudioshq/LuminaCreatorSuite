@@ -344,3 +344,13 @@ Provider (Stripe/payout/media)  ──signed event──▶  /api/webhooks/$prov
 **Rules:** verify every signature; dedupe by provider event id (unique index); keep the webhook handler fast (ack then process via outbox); reconcile provider balances/transactions/refunds/disputes/payouts on a schedule; never log full signed URLs or card data (use provider-hosted card collection — CABANA never stores raw card data).
 
 **Demo phase:** there is no provider. "Webhooks" are simulated by deterministic client/server actions that create `mock_`-prefixed records and follow the same immutability rules (a succeeded mock transaction is never edited in place). The outbox/idempotency structure should still be modeled so the real provider drops in without reshaping the ledger.
+
+### 6b. Implemented: Cloudflare Stream webhook (`POST /api/webhooks/stream`)
+
+The first real webhook — **media lifecycle only, no money.** Route file `src/routes/api.webhooks.stream.ts` (server handlers, POST registered); all logic in `src/lib/stream-webhook.server.ts` (server-only; reads `CLOUDFLARE_STREAM_WEBHOOK_SECRET` — the only path that requires it).
+
+- **Verification first:** HMAC-SHA256 over `<literal header time string>.<raw body>` via the pure `verifyStreamWebhook` (constant-time compare, 300 s freshness window, multi-`sigN` support). 401 on missing/malformed/stale/mismatched signatures — before any parsing or DB access.
+- **Strict parsing:** `parseStreamVideoPayload` rejects malformed payloads and live-input states (400). CABANA has no livestreaming.
+- **Idempotent lifecycle write:** reuses `executeStatusRefreshFlow` (the owner-poll flow) with the webhook body injected as the snapshot — one shared compare-and-set (`status = guard` inside the UPDATE), terminal `ready`/`error` never regress, webhook/poller races are no-ops. Linked `post_media` syncs `processing_status`/`width`/`height` only (the exact `service_role` column grant).
+- **Unknown UID → 200** (no row created, logged server-side) so a deleted video or another environment cannot cause retry amplification. Transient DB failure → 500 (Cloudflare retries; redelivery is idempotent). Response bodies never carry secrets, internals, or raw DB errors.
+- **Not yet registered with Cloudflare** — registration (PUT `.../stream/webhook`) is a separate approval-gated step; until then the owner-poll path (`getStreamVideoStatus`) is the sole lifecycle driver, and the webhook is dormant. `smoke:prod` probes the route unsigned and expects 401 once deployed+configured.

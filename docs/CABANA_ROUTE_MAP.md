@@ -67,22 +67,22 @@
 
 ### Creator Studio (`/dashboard/*`, client auth gate)
 
-| Route                      | File                                         | State                                                                                               |
-| -------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `/dashboard`               | dashboard.tsx (layout) + dashboard.index.tsx | ✅ creator business home — WelcomeLive banner + KPIs, revenue/subscriber summaries (Batch 2 IA fix) |
-| `/dashboard/home`          | dashboard.home.tsx                           | ✅ redirect → `/dashboard` (legacy deep links preserved; Batch 2)                                   |
-| `/dashboard/link-in-bio`   | dashboard.link-in-bio.tsx                    | ✅ "My Page" — link-in-bio overview (`DashHome`: traffic stats, 14-day chart, quick links; Batch 2) |
-| `/dashboard/profile`       | dashboard.profile.tsx                        | ✅                                                                                                  |
-| `/dashboard/links`         | dashboard.links.tsx                          | ✅                                                                                                  |
-| `/dashboard/storefront`    | dashboard.storefront.tsx                     | ✅                                                                                                  |
-| `/dashboard/analytics`     | dashboard.analytics.tsx                      | ✅ legacy link-in-bio page-view/click analytics                                                     |
-| `/dashboard/performance`   | dashboard.performance.tsx                    | ✅ creator analytics — revenue over time, subscriber growth, top content (Phase 11B, demo money)    |
-| `/dashboard/media-kit`     | dashboard.media-kit.tsx                      | 🟡 sample-data demo, honestly labeled (Batch 1); hero bound to the real profile                     |
-| `/dashboard/settings`      | dashboard.settings.tsx                       | 🟡 sample-data demo, honestly labeled (Batch 1); integrations rest as "coming soon", no fake states |
-| `/dashboard/posts`         | dashboard.posts.tsx                          | ✅ real composer + post manager (Phase 3)                                                           |
-| `/dashboard/subscribers`   | dashboard.subscribers.tsx                    | ✅ real tier manager + subscriber roster (Phase 4/11A, demo)                                        |
-| `/dashboard/messages`      | dashboard.messages.tsx                       | ✅ redirect → `/messages` (real inbox; sidebar item repointed + unread badge; Batch 2)              |
-| `/dashboard/earnings`      | dashboard.earnings.tsx                       | ✅ real earnings dashboard — balance, ledger, tips, sales, payouts (Phase 6, demo)                  |
+| Route                      | File                                         | State                                                                                                                |
+| -------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `/dashboard`               | dashboard.tsx (layout) + dashboard.index.tsx | ✅ creator business home — WelcomeLive banner + KPIs, revenue/subscriber summaries (Batch 2 IA fix)                  |
+| `/dashboard/home`          | dashboard.home.tsx                           | ✅ redirect → `/dashboard` (legacy deep links preserved; Batch 2)                                                    |
+| `/dashboard/link-in-bio`   | dashboard.link-in-bio.tsx                    | ✅ "My Page" — link-in-bio overview (`DashHome`: traffic stats, 14-day chart, quick links; Batch 2)                  |
+| `/dashboard/profile`       | dashboard.profile.tsx                        | ✅                                                                                                                   |
+| `/dashboard/links`         | dashboard.links.tsx                          | ✅                                                                                                                   |
+| `/dashboard/storefront`    | dashboard.storefront.tsx                     | ✅                                                                                                                   |
+| `/dashboard/analytics`     | dashboard.analytics.tsx                      | ✅ legacy link-in-bio page-view/click analytics                                                                      |
+| `/dashboard/performance`   | dashboard.performance.tsx                    | ✅ creator analytics — revenue over time, subscriber growth, top content (Phase 11B, demo money)                     |
+| `/dashboard/media-kit`     | dashboard.media-kit.tsx                      | 🟡 sample-data demo, honestly labeled (Batch 1); hero bound to the real profile                                      |
+| `/dashboard/settings`      | dashboard.settings.tsx                       | 🟡 sample-data demo, honestly labeled (Batch 1); integrations rest as "coming soon", no fake states                  |
+| `/dashboard/posts`         | dashboard.posts.tsx                          | ✅ real composer + post manager (Phase 3)                                                                            |
+| `/dashboard/subscribers`   | dashboard.subscribers.tsx                    | ✅ real tier manager + subscriber roster (Phase 4/11A, demo)                                                         |
+| `/dashboard/messages`      | dashboard.messages.tsx                       | ✅ redirect → `/messages` (real inbox; sidebar item repointed + unread badge; Batch 2)                               |
+| `/dashboard/earnings`      | dashboard.earnings.tsx                       | ✅ real earnings dashboard — balance, ledger, tips, sales, payouts (Phase 6, demo)                                   |
 | `/dashboard/notifications` | dashboard.notifications.tsx                  | ✅ real notifications center — unread/type filters, click-through mark-read, mark all, activity, settings (Phase 9B) |
 
 ### Member / social surfaces
@@ -109,6 +109,12 @@
 ### System
 
 - 404 / error → handled in `__root.tsx` (`notFoundComponent`, `errorComponent`).
+- `/api/webhooks/stream` (`api.webhooks.stream.ts`) — **server route, POST only**: the Cloudflare
+  Stream lifecycle webhook. No component; the handler (dynamically imported
+  `stream-webhook.server.ts`) verifies the `Webhook-Signature` HMAC before touching anything,
+  then applies a compare-and-set lifecycle update to `stream_videos` + linked `post_media`.
+  Unsigned/invalid → 401; malformed payload → 400; unknown UID → 200 no-op. Not yet registered
+  with Cloudflare (registration is a separate, approval-gated step).
 
 ## 3. Planned Routes
 

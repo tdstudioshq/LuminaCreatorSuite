@@ -1256,6 +1256,48 @@ async function checkAdminFinance(ctx: Ctx): Promise<CheckResult> {
   };
 }
 
+async function checkStreamWebhookUnsigned(ctx: Ctx): Promise<CheckResult> {
+  const name = "STREAM-WEBHOOK";
+  // Deliberately unsigned: proves the route rejects unauthenticated posts
+  // before any code that could write. No signed request is ever sent (the
+  // webhook is not yet registered with Cloudflare), so no DB write can occur.
+  const res = await fetch(`${ctx.baseUrl}/api/webhooks/stream`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ probe: runId }),
+  });
+  const body = await res.text();
+  if (res.status === 404 || body.includes(NOT_FOUND_SENTINEL)) {
+    return {
+      name,
+      status: "SKIP",
+      detail: "webhook route not in the deployed build yet (expected until the next deploy)",
+    };
+  }
+  if (res.status === 500) {
+    // Unsigned requests touch no DB code — a 500 here can only be the secret
+    // loader (CLOUDFLARE_STREAM_WEBHOOK_SECRET not yet set on Vercel).
+    return {
+      name,
+      status: "SKIP",
+      detail:
+        "route is deployed but returned 500 — CLOUDFLARE_STREAM_WEBHOOK_SECRET is not " +
+        "configured in the deployed environment yet (expected until webhook registration)",
+    };
+  }
+  assert(res.status === 401, `unsigned webhook POST expected 401, got ${res.status}: ${body}`);
+  assert(
+    !/secret|bearer|supabase|postgres/i.test(body),
+    `webhook 401 body leaks internals: ${body}`,
+  );
+  log(name, "unsigned POST rejected with 401 and a safe body");
+  return {
+    name,
+    status: "PASS",
+    detail: "unsigned webhook POST returns 401 with a safe body; no write path is reachable",
+  };
+}
+
 // ─────────────────────────────── Main ───────────────────────────────────────
 
 async function main() {
@@ -1380,6 +1422,7 @@ async function main() {
     ["REALTIME-MESSAGING", checkRealtimeMessaging],
     ["DB-STATE", checkDbState],
     ["ADMIN-FINANCE", checkAdminFinance],
+    ["STREAM-WEBHOOK", checkStreamWebhookUnsigned],
   ];
   const results: CheckResult[] = [];
   for (const [checkName, fn] of checks) {

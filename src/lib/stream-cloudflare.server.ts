@@ -14,7 +14,7 @@
 //
 // STREAM_SIGNING_KEY_ID is intentionally never read (reserved; v1 uses the
 // server-side /token endpoint). CLOUDFLARE_STREAM_WEBHOOK_SECRET is not
-// required here (webhook route is a later checkpoint).
+// required here — only the webhook path reads it (stream-webhook.server.ts).
 // ============================================================================
 import {
   type StreamVideoSnapshot,

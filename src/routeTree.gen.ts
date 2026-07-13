@@ -54,6 +54,7 @@ import { Route as AdminPayoutsRouteImport } from './routes/admin.payouts'
 import { Route as AdminLedgerRouteImport } from './routes/admin.ledger'
 import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
 import { Route as AdminAuditRouteImport } from './routes/admin.audit'
+import { Route as ApiWebhooksStreamRouteImport } from './routes/api.webhooks.stream'
 import { Route as AdminLedgerTransactionIdRouteImport } from './routes/admin.ledger.$transactionId'
 
 const ThetejedaRoute = ThetejedaRouteImport.update({
@@ -281,6 +282,11 @@ const AdminAuditRoute = AdminAuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiWebhooksStreamRoute = ApiWebhooksStreamRouteImport.update({
+  id: '/api/webhooks/stream',
+  path: '/api/webhooks/stream',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminLedgerTransactionIdRoute =
   AdminLedgerTransactionIdRouteImport.update({
     id: '/$transactionId',
@@ -335,6 +341,7 @@ export interface FileRoutesByFullPath {
   '/post/$postId': typeof PostPostIdRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/admin/ledger/$transactionId': typeof AdminLedgerTransactionIdRoute
+  '/api/webhooks/stream': typeof ApiWebhooksStreamRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -382,6 +389,7 @@ export interface FileRoutesByTo {
   '/post/$postId': typeof PostPostIdRoute
   '/dashboard': typeof DashboardIndexRoute
   '/admin/ledger/$transactionId': typeof AdminLedgerTransactionIdRoute
+  '/api/webhooks/stream': typeof ApiWebhooksStreamRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -431,6 +439,7 @@ export interface FileRoutesById {
   '/post/$postId': typeof PostPostIdRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/admin/ledger/$transactionId': typeof AdminLedgerTransactionIdRoute
+  '/api/webhooks/stream': typeof ApiWebhooksStreamRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -481,6 +490,7 @@ export interface FileRouteTypes {
     | '/post/$postId'
     | '/dashboard/'
     | '/admin/ledger/$transactionId'
+    | '/api/webhooks/stream'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -528,6 +538,7 @@ export interface FileRouteTypes {
     | '/post/$postId'
     | '/dashboard'
     | '/admin/ledger/$transactionId'
+    | '/api/webhooks/stream'
   id:
     | '__root__'
     | '/'
@@ -576,6 +587,7 @@ export interface FileRouteTypes {
     | '/post/$postId'
     | '/dashboard/'
     | '/admin/ledger/$transactionId'
+    | '/api/webhooks/stream'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -603,6 +615,7 @@ export interface RootRouteChildren {
   DocsDataModelRoute: typeof DocsDataModelRoute
   DocsSystemRoute: typeof DocsSystemRoute
   PostPostIdRoute: typeof PostPostIdRoute
+  ApiWebhooksStreamRoute: typeof ApiWebhooksStreamRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -922,6 +935,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAuditRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/api/webhooks/stream': {
+      id: '/api/webhooks/stream'
+      path: '/api/webhooks/stream'
+      fullPath: '/api/webhooks/stream'
+      preLoaderRoute: typeof ApiWebhooksStreamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/ledger/$transactionId': {
       id: '/admin/ledger/$transactionId'
       path: '/$transactionId'
@@ -1039,6 +1059,7 @@ const rootRouteChildren: RootRouteChildren = {
   DocsDataModelRoute: DocsDataModelRoute,
   DocsSystemRoute: DocsSystemRoute,
   PostPostIdRoute: PostPostIdRoute,
+  ApiWebhooksStreamRoute: ApiWebhooksStreamRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
