@@ -1,11 +1,28 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Crown, Globe, ImagePlus, Loader2, Lock, Users, X } from "lucide-react";
+import { Crown, Globe, ImagePlus, Loader2, Lock, Users, Video, X } from "lucide-react";
 import { toast } from "sonner";
+import { VideoUploadCard } from "@/components/cabana/posts/VideoUploadCard";
+import {
+  type UnloadGuardTarget,
+  VIDEO_ACCEPT_ATTRIBUTE,
+  bindBeforeUnloadGuard,
+  canAddImages,
+  canSelectVideo,
+  composerHasContent,
+  evaluateComposerDraft,
+  evaluateComposerPublish,
+  shouldWarnBeforeUnload,
+} from "@/lib/cabana-composer-media";
 import type { PostVisibility } from "@/lib/cabana-posts";
 import { CAPTION_MAX, IMAGE_MIME_ALLOWLIST, MEDIA_PER_POST_MAX } from "@/lib/cabana-posts";
 import { dollarsToCents } from "@/lib/cabana-money";
-import { useCreatePost, usePublishPost, useUploadPostMedia } from "@/lib/use-posts";
+import {
+  type UploadPreflightRejectionReason,
+  preflightUploadFile,
+} from "@/lib/cabana-stream-upload";
+import { useStreamUpload } from "@/lib/use-stream-upload";
+import { useCreatePost, usePublishPost, useUpdatePost, useUploadPostMedia } from "@/lib/use-posts";
 import { useMyTiers } from "@/lib/use-subscriptions";
 
 const VISIBILITY_OPTIONS: { value: PostVisibility; label: string; icon: typeof Globe }[] = [
@@ -22,17 +39,30 @@ export function PostComposer() {
   const [files, setFiles] = useState<File[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
 
+  // ── Video (Checkpoint 5A.3) ────────────────────────────────────────────────
+  // A video needs a post row BEFORE its upload ticket, so the composer creates
+  // the post as a DRAFT on first video selection and reuses that same row for
+  // every later save/publish — never a parallel record.
+  const [videoMode, setVideoMode] = useState(false);
+  const [draftPostId, setDraftPostId] = useState<string | null>(null);
+  const [rejection, setRejection] = useState<{ reason: UploadPreflightRejectionReason } | null>(
+    null,
+  );
+  const videoInput = useRef<HTMLInputElement>(null);
+  const upload = useStreamUpload();
+
   const createPost = useCreatePost();
+  const updatePost = useUpdatePost();
   const uploadMedia = useUploadPostMedia();
   const publishPost = usePublishPost();
-  const busy = createPost.isPending || uploadMedia.isPending || publishPost.isPending;
+  const busy =
+    createPost.isPending || updatePost.isPending || uploadMedia.isPending || publishPost.isPending;
 
   const isPurchase = visibility === "purchase";
   const parsedPrice = Number.parseFloat(price);
   const priceCents =
     isPurchase && Number.isFinite(parsedPrice) ? dollarsToCents(parsedPrice) : null;
   const priceValid = !isPurchase || (priceCents !== null && priceCents > 0);
-  const canSubmit = (caption.trim().length > 0 || files.length > 0) && priceValid && !busy;
 
   // Subscribers-only posts are unlockable only through an active tier; without
   // one the content would be permanently inaccessible to everyone but the
@@ -40,7 +70,39 @@ export function PostComposer() {
   const myTiers = useMyTiers();
   const hasActiveTier = (myTiers.data ?? []).some((t) => t.isActive);
   const subscribersUnsellable = visibility === "subscribers" && myTiers.isSuccess && !hasActiveTier;
-  const canPublish = canSubmit && !subscribersUnsellable;
+
+  const mediaState = { imageCount: files.length, session: upload.session };
+  const imageDecision = canAddImages(mediaState);
+  const videoDecision = canSelectVideo(mediaState);
+
+  const gateInput = {
+    captionLength: caption.trim().length,
+    imageCount: files.length,
+    session: upload.session,
+    priceValid,
+    subscribersUnsellable,
+    busy,
+  };
+  const draftGate = evaluateComposerDraft(gateInput);
+  const publishGate = evaluateComposerPublish(gateInput);
+  const hasContent = composerHasContent(gateInput);
+
+  // The upload dies with the tab and a partial Cloudflare asset would be
+  // stranded, so warn while bytes or cleanup debt are outstanding. Bound once;
+  // the predicate reads the live session through a ref. (Processing is NOT
+  // warned — encoding continues server-side and the webhook records it.)
+  const sessionRef = useRef(upload.session);
+  sessionRef.current = upload.session;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const target: UnloadGuardTarget = {
+      addEventListener: (type, listener) =>
+        window.addEventListener(type, listener as EventListener),
+      removeEventListener: (type, listener) =>
+        window.removeEventListener(type, listener as EventListener),
+    };
+    return bindBeforeUnloadGuard(target, () => shouldWarnBeforeUnload(sessionRef.current));
+  }, []);
 
   function addFiles(list: FileList | null) {
     if (!list) return;
@@ -51,25 +113,84 @@ export function PostComposer() {
     setFiles((prev) => [...prev, ...incoming].slice(0, MEDIA_PER_POST_MAX));
   }
 
+  /** The post row a video attaches to — created once, then reused. */
+  async function ensureDraftPost(): Promise<string> {
+    if (draftPostId !== null) return draftPostId;
+    const post = await createPost.mutateAsync({
+      caption: caption.trim(),
+      visibility,
+      priceCents: isPurchase ? priceCents : null,
+    });
+    setDraftPostId(post.id);
+    return post.id;
+  }
+
+  async function onVideoPicked(file: File | undefined) {
+    if (!file) return;
+    setRejection(null);
+    // Preflight BEFORE the draft post exists, so a rejected file never leaves an
+    // orphan row behind. `beginUpload` re-checks with the same pure rules.
+    const preflight = preflightUploadFile({
+      fileName: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+    });
+    if (!preflight.ok) {
+      setRejection({ reason: preflight.reason });
+      return;
+    }
+    try {
+      const postId = await ensureDraftPost();
+      const result = upload.beginUpload(file, postId);
+      if (!result.ok && result.reason !== "not_idle") {
+        setRejection({ reason: result.reason });
+      }
+    } catch {
+      // Never surface a raw server-action message on the video path.
+      toast.error("Couldn’t start the video upload. Try again.");
+    }
+  }
+
   function reset() {
     setCaption("");
     setVisibility("public");
     setPrice("");
     setFiles([]);
+    setVideoMode(false);
+    setDraftPostId(null);
+    setRejection(null);
+    upload.reset();
   }
 
   async function submit(publish: boolean) {
     try {
-      const post = await createPost.mutateAsync({
-        caption: caption.trim(),
-        visibility,
-        priceCents: isPurchase ? priceCents : null,
-      });
-      for (let i = 0; i < files.length; i++) {
-        await uploadMedia.mutateAsync({ postId: post.id, file: files[i], position: i });
+      // Reuse the draft the video created; otherwise create the post now.
+      let postId = draftPostId;
+      if (postId === null) {
+        const post = await createPost.mutateAsync({
+          caption: caption.trim(),
+          visibility,
+          priceCents: isPurchase ? priceCents : null,
+        });
+        postId = post.id;
+        setDraftPostId(post.id);
+      } else {
+        await updatePost.mutateAsync({
+          postId,
+          caption: caption.trim(),
+          visibility,
+          priceCents: isPurchase ? priceCents : null,
+        });
       }
-      if (publish) await publishPost.mutateAsync(post.id);
-      reset();
+      for (let i = 0; i < files.length; i++) {
+        await uploadMedia.mutateAsync({ postId, file: files[i], position: i });
+      }
+      if (publish) await publishPost.mutateAsync(postId);
+
+      // A draft saved mid-upload must KEEP the composer (and its draft id) —
+      // clearing it would orphan the in-flight upload's target post.
+      const settled = upload.session.phase === "idle" || upload.session.phase === "ready";
+      if (settled) reset();
       toast.success(publish ? "Post published." : "Draft saved.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Couldn’t save the post.");
@@ -104,6 +225,27 @@ export function PostComposer() {
         </div>
       )}
 
+      {(videoMode || upload.session.phase !== "idle") && (
+        <VideoUploadCard
+          session={upload.session}
+          rejection={rejection ?? upload.preflightRejection}
+          onChooseFile={() => videoInput.current?.click()}
+          onPause={() => upload.pause()}
+          onResume={() => upload.resume()}
+          onRetry={() => upload.retry()}
+          onCancel={() => upload.cancel()}
+          onRemove={() => {
+            upload.reset();
+            setVideoMode(false);
+            setRejection(null);
+          }}
+          onDismiss={() => {
+            setVideoMode(false);
+            setRejection(null);
+          }}
+        />
+      )}
+
       <div className="flex flex-wrap items-center gap-2">
         <input
           ref={fileInput}
@@ -116,12 +258,34 @@ export function PostComposer() {
             e.target.value = "";
           }}
         />
+        <input
+          ref={videoInput}
+          type="file"
+          accept={VIDEO_ACCEPT_ATTRIBUTE}
+          hidden
+          onChange={(e) => {
+            void onVideoPicked(e.target.files?.[0]);
+            e.target.value = "";
+          }}
+        />
         <button
           onClick={() => fileInput.current?.click()}
-          disabled={files.length >= MEDIA_PER_POST_MAX}
-          className="btn-ghost !px-3 !py-2 text-xs disabled:opacity-60"
+          disabled={!imageDecision.allowed}
+          title={imageDecision.allowed ? undefined : imageDecision.reason}
+          className="btn-ghost min-h-11 !px-3 !py-2 text-xs disabled:opacity-60"
         >
           <ImagePlus className="h-4 w-4" /> Image
+        </button>
+        <button
+          onClick={() => {
+            setVideoMode(true);
+            videoInput.current?.click();
+          }}
+          disabled={!videoDecision.allowed}
+          title={videoDecision.allowed ? undefined : videoDecision.reason}
+          className="btn-ghost min-h-11 !px-3 !py-2 text-xs disabled:opacity-60"
+        >
+          <Video className="h-4 w-4" /> Video
         </button>
 
         <div className="ml-auto flex flex-wrap items-center gap-1 rounded-2xl bg-white/5 p-1 sm:rounded-full">
@@ -132,7 +296,7 @@ export function PostComposer() {
               <button
                 key={opt.value}
                 onClick={() => setVisibility(opt.value)}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors ${
+                className={`inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors ${
                   active ? "bg-white/10 text-foreground" : "text-muted-foreground"
                 }`}
               >
@@ -178,18 +342,26 @@ export function PostComposer() {
         </div>
       )}
 
+      {!publishGate.allowed && hasContent && !subscribersUnsellable && (
+        <p className="text-right text-[11px] text-muted-foreground" data-testid="publish-blocked">
+          {publishGate.reason}
+        </p>
+      )}
+
       <div className="flex items-center justify-end gap-2">
         <button
           onClick={() => void submit(false)}
-          disabled={!canSubmit}
-          className="btn-ghost !px-4 !py-2.5 text-xs disabled:opacity-60"
+          disabled={!draftGate.allowed}
+          title={draftGate.allowed ? undefined : draftGate.reason}
+          className="btn-ghost min-h-11 !px-4 !py-2.5 text-xs disabled:opacity-60"
         >
           Save draft
         </button>
         <button
           onClick={() => void submit(true)}
-          disabled={!canPublish}
-          className="btn-luxury !px-5 !py-2.5 text-xs disabled:opacity-60"
+          disabled={!publishGate.allowed}
+          title={publishGate.allowed ? undefined : publishGate.reason}
+          className="btn-luxury min-h-11 !px-5 !py-2.5 text-xs disabled:opacity-60"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Publish

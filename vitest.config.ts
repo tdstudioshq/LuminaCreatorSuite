@@ -38,6 +38,7 @@ export default defineConfig({
         "src/lib/cabana-redirect.ts",
         "src/lib/cabana-stream.ts",
         "src/lib/cabana-stream-upload.ts",
+        "src/lib/cabana-composer-media.ts",
       ],
       thresholds: {
         lines: 95,
