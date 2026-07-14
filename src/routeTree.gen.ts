@@ -53,6 +53,7 @@ import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminPayoutsRouteImport } from './routes/admin.payouts'
 import { Route as AdminLedgerRouteImport } from './routes/admin.ledger'
 import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
+import { Route as AdminCreatorsRouteImport } from './routes/admin.creators'
 import { Route as AdminAuditRouteImport } from './routes/admin.audit'
 import { Route as ApiWebhooksStreamRouteImport } from './routes/api.webhooks.stream'
 import { Route as AdminLedgerTransactionIdRouteImport } from './routes/admin.ledger.$transactionId'
@@ -277,6 +278,11 @@ const AdminFinanceRoute = AdminFinanceRouteImport.update({
   path: '/finance',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCreatorsRoute = AdminCreatorsRouteImport.update({
+  id: '/creators',
+  path: '/creators',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAuditRoute = AdminAuditRouteImport.update({
   id: '/audit',
   path: '/audit',
@@ -316,6 +322,7 @@ export interface FileRoutesByFullPath {
   '/td': typeof TdRoute
   '/thetejeda': typeof ThetejedaRoute
   '/admin/audit': typeof AdminAuditRoute
+  '/admin/creators': typeof AdminCreatorsRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
@@ -364,6 +371,7 @@ export interface FileRoutesByTo {
   '/td': typeof TdRoute
   '/thetejeda': typeof ThetejedaRoute
   '/admin/audit': typeof AdminAuditRoute
+  '/admin/creators': typeof AdminCreatorsRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
@@ -414,6 +422,7 @@ export interface FileRoutesById {
   '/td': typeof TdRoute
   '/thetejeda': typeof ThetejedaRoute
   '/admin/audit': typeof AdminAuditRoute
+  '/admin/creators': typeof AdminCreatorsRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
@@ -465,6 +474,7 @@ export interface FileRouteTypes {
     | '/td'
     | '/thetejeda'
     | '/admin/audit'
+    | '/admin/creators'
     | '/admin/finance'
     | '/admin/ledger'
     | '/admin/payouts'
@@ -513,6 +523,7 @@ export interface FileRouteTypes {
     | '/td'
     | '/thetejeda'
     | '/admin/audit'
+    | '/admin/creators'
     | '/admin/finance'
     | '/admin/ledger'
     | '/admin/payouts'
@@ -562,6 +573,7 @@ export interface FileRouteTypes {
     | '/td'
     | '/thetejeda'
     | '/admin/audit'
+    | '/admin/creators'
     | '/admin/finance'
     | '/admin/ledger'
     | '/admin/payouts'
@@ -928,6 +940,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFinanceRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/creators': {
+      id: '/admin/creators'
+      path: '/creators'
+      fullPath: '/admin/creators'
+      preLoaderRoute: typeof AdminCreatorsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/audit': {
       id: '/admin/audit'
       path: '/audit'
@@ -966,6 +985,7 @@ const AdminLedgerRouteWithChildren = AdminLedgerRoute._addFileChildren(
 
 interface AdminRouteChildren {
   AdminAuditRoute: typeof AdminAuditRoute
+  AdminCreatorsRoute: typeof AdminCreatorsRoute
   AdminFinanceRoute: typeof AdminFinanceRoute
   AdminLedgerRoute: typeof AdminLedgerRouteWithChildren
   AdminPayoutsRoute: typeof AdminPayoutsRoute
@@ -974,6 +994,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAuditRoute: AdminAuditRoute,
+  AdminCreatorsRoute: AdminCreatorsRoute,
   AdminFinanceRoute: AdminFinanceRoute,
   AdminLedgerRoute: AdminLedgerRouteWithChildren,
   AdminPayoutsRoute: AdminPayoutsRoute,

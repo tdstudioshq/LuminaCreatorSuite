@@ -12,7 +12,6 @@ import {
   Star,
   TrendingUp,
   Banknote,
-  Filter,
   MoreHorizontal,
   ArrowUpRight,
   ArrowDownRight,
@@ -37,7 +36,15 @@ export const Route = createFileRoute("/admin")({
   }),
 });
 
-type Tab = "overview" | "users" | "verify" | "subs" | "payouts" | "flags" | "featured" | "growth";
+type Tab =
+  | "overview"
+  | "creators"
+  | "verify"
+  | "subs"
+  | "payouts"
+  | "flags"
+  | "featured"
+  | "growth";
 
 function AdminGate() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -83,7 +90,7 @@ function Admin() {
           </p>
           <MobileTabs tab={tab} setTab={setTab} />
           {tab === "overview" && <Overview />}
-          {tab === "users" && <UsersPanel />}
+          {tab === "creators" && <CreatorsPanel />}
           {tab === "verify" && <Verification />}
           {tab === "subs" && <Subscriptions />}
           {tab === "payouts" && <Payouts />}
@@ -111,7 +118,7 @@ function Orbs() {
 /* ------------------------------ NAV ------------------------------ */
 const NAV: { id: Tab; label: string; Icon: typeof Users }[] = [
   { id: "overview", label: "Overview", Icon: LayoutDashboard },
-  { id: "users", label: "Users", Icon: Users },
+  { id: "creators", label: "Creators", Icon: Users },
   { id: "verify", label: "Verification", Icon: ShieldCheck },
   { id: "subs", label: "Subscriptions", Icon: CreditCard },
   { id: "payouts", label: "Payouts", Icon: DollarSign },
@@ -504,114 +511,50 @@ function Chart() {
   );
 }
 
-/* ------------------------------ USERS ------------------------------ */
-const USERS = [
-  {
-    name: "Aurora Vale",
-    email: "aurora@vale.studio",
-    plan: "Maison",
-    status: "Active",
-    joined: "Jan 12",
-  },
-  {
-    name: "Mira Solène",
-    email: "mira@solene.fr",
-    plan: "Studio",
-    status: "Active",
-    joined: "Feb 03",
-  },
-  {
-    name: "Kasper Knox",
-    email: "kasper@knoxlab.com",
-    plan: "Empire",
-    status: "Active",
-    joined: "Mar 18",
-  },
-  {
-    name: "Lin Hayashi",
-    email: "lin@hayashi.jp",
-    plan: "Studio",
-    status: "Pending",
-    joined: "Apr 02",
-  },
-  {
-    name: "Theo Marchand",
-    email: "theo@marchand.co",
-    plan: "Atelier",
-    status: "Suspended",
-    joined: "Apr 22",
-  },
-  {
-    name: "Noor Rahimi",
-    email: "noor@rahimi.world",
-    plan: "Maison",
-    status: "Active",
-    joined: "May 06",
-  },
-];
-
-function StatusPill({ s }: { s: string }) {
-  const map: Record<string, string> = {
-    Active: "bg-emerald-400/15 text-emerald-300",
-    Pending: "bg-amber-400/15 text-amber-300",
-    Suspended: "bg-rose-400/15 text-rose-300",
-  };
-  return <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${map[s]}`}>{s}</span>;
-}
-
-function UsersPanel() {
+/* ------------------------------ CREATORS ------------------------------ */
+/**
+ * The former "Users" tab rendered a fabricated table of six invented creators
+ * with disabled row menus — a management surface that did not exist. It is gone.
+ * This is its honest replacement: a real entry point into `/admin/creators`,
+ * which reads live `creator_profiles` under the caller's own admin authorization.
+ */
+function CreatorsPanel() {
   return (
     <div>
-      <PanelTitle
-        title="User management"
-        sub="Demo preview — sample accounts, not live users."
-        right={
-          <button
-            {...demoDisabled}
-            className="btn-ghost !py-2 text-xs opacity-50 cursor-not-allowed"
-          >
-            <Filter className="w-3.5 h-3.5" /> Filters
-          </button>
-        }
-      />
-      <div className="glass rounded-3xl overflow-hidden">
-        <div className="hidden md:grid grid-cols-[1.6fr_1.6fr_1fr_1fr_1fr_40px] px-6 py-4 border-b border-border/50 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          <div>Creator</div>
-          <div>Email</div>
-          <div>Plan</div>
-          <div>Status</div>
-          <div>Joined</div>
-          <div></div>
-        </div>
-        {USERS.map((u, i) => (
-          <motion.div
-            key={u.email}
-            initial={{ opacity: 0, y: 6 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.04 }}
-            className="grid grid-cols-2 md:grid-cols-[1.6fr_1.6fr_1fr_1fr_1fr_40px] gap-y-2 items-center px-6 py-4 border-b border-border/30 last:border-0 hover:bg-foreground/[0.03]"
-          >
-            <div className="flex items-center gap-3 col-span-2 md:col-span-1">
-              <div className="w-9 h-9 rounded-xl bg-iridescent text-background flex items-center justify-center font-display font-semibold text-sm">
-                {u.name[0]}
-              </div>
-              <div className="font-medium text-sm">{u.name}</div>
+      <div className="mb-6 grid gap-3 sm:grid-cols-2">
+        <Link
+          to="/admin/creators"
+          className="group glass rounded-2xl p-5 flex items-center justify-between gap-3 hover:border-foreground/20 border border-transparent transition"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-iridescent flex items-center justify-center shadow-glow-sm">
+              <Users className="w-4 h-4 text-background" />
             </div>
-            <div className="text-sm text-muted-foreground truncate">{u.email}</div>
-            <div className="text-sm">{u.plan}</div>
             <div>
-              <StatusPill s={u.status} />
+              <div className="font-semibold">Creator directory</div>
+              <div className="text-xs text-muted-foreground">
+                Live creator_profiles · paginated · read-only
+              </div>
             </div>
-            <div className="text-sm text-muted-foreground">{u.joined}</div>
-            <button
-              {...demoDisabled}
-              className="w-8 h-8 rounded-lg glass flex items-center justify-center justify-self-end opacity-50 cursor-not-allowed"
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
-          </motion.div>
-        ))}
+          </div>
+          <ArrowUpRight className="w-4 h-4 text-muted-foreground transition group-hover:translate-x-0.5" />
+        </Link>
+      </div>
+      <PanelTitle
+        title="Creator management"
+        sub="Account management (suspend, plan changes, verification) has no backend yet — nothing here pretends otherwise."
+      />
+      <div className="glass rounded-3xl p-6 text-sm leading-relaxed text-muted-foreground">
+        <p>
+          The creator directory above is real: it lists every profile, whether each page is claimed
+          by an account, and links straight to the public page.
+        </p>
+        <p className="mt-3">
+          Editing a creator&rsquo;s page, inviting a creator, and draft/publish controls are not
+          built yet — the database has no admin write policy for creator profiles or links, so there
+          is nothing honest to wire a button to. Account emails are not shown anywhere because they
+          live in a table only the account owner can read.
+        </p>
       </div>
     </div>
   );
