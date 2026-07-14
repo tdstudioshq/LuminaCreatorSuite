@@ -84,6 +84,7 @@ export default defineConfig({
         "tailwind-merge",
         "class-variance-authority",
         "zod",
+        "tus-js-client",
         "react-hook-form",
         "@hookform/resolvers",
         "input-otp",
