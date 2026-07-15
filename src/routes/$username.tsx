@@ -12,6 +12,7 @@ import {
   Package,
   RefreshCw,
   ImageOff,
+  Share2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -152,6 +153,20 @@ export function CreatorProfile({ username }: { username: string }) {
       toast.error(error instanceof Error ? error.message : "Couldn’t start a conversation.");
     }
   };
+  const handleShare = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: profile.name || `@${handle}`, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Profile link copied");
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      toast.error("Couldn’t share this profile.");
+    }
+  };
   const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, currentTab: ProfileTab) => {
     const currentIndex = PROFILE_TABS.findIndex(({ id }) => id === currentTab);
     const lastIndex = PROFILE_TABS.length - 1;
@@ -187,7 +202,7 @@ export function CreatorProfile({ username }: { username: string }) {
           />
         }
       >
-        <div className="mx-auto min-h-screen max-w-[720px] border-x border-white/[0.07] bg-[oklch(0.115_0.012_280/0.46)]">
+        <div className="mx-auto min-h-screen max-w-[720px] border-x border-white/[0.07] bg-[oklch(0.105_0.007_75/0.56)]">
           <header className="sticky top-0 z-30 flex h-[68px] items-center border-b border-white/[0.07] bg-background/82 px-5 backdrop-blur-2xl sm:px-7">
             <div className="min-w-0">
               <p className="truncate font-display text-[17px] font-semibold tracking-[-0.015em]">
@@ -235,6 +250,15 @@ export function CreatorProfile({ username }: { username: string }) {
                 </span>
 
                 <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleShare()}
+                    className="btn-ghost flex h-10 w-10 items-center justify-center !rounded-full !p-0"
+                    aria-label="Share creator profile"
+                    title="Share profile"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </button>
                   {isSelf ? (
                     <Link
                       to="/dashboard/profile"

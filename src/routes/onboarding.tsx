@@ -48,14 +48,7 @@ export const Route = createFileRoute("/onboarding")({
 
 // ─────────────────────────── Link platforms ───────────────────────────
 type PlatformKey =
-  | "instagram"
-  | "tiktok"
-  | "youtube"
-  | "x"
-  | "website"
-  | "store"
-  | "email"
-  | "phone";
+  "instagram" | "tiktok" | "youtube" | "x" | "website" | "store" | "email" | "phone";
 
 const clean = (v: string) => v.trim().replace(/^@/, "");
 const isUrl = (v: string) => /^(https?:\/\/|mailto:|tel:)/i.test(v.trim());

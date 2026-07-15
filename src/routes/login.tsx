@@ -4,7 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
-    meta: [{ title: "CABANA" }, { name: "description", content: "Sign in to your CABANA Studio." }],
+    meta: [
+      { title: "Sign in · CABANA" },
+      { name: "description", content: "Sign in to your CABANA Studio." },
+    ],
   }),
   beforeLoad: async () => {
     if (typeof window === "undefined") return;

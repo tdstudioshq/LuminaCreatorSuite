@@ -47,7 +47,7 @@ function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen relative">
+    <div className="dashboard-shell min-h-screen relative">
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -left-40 w-[480px] h-[480px] rounded-full bg-iridescent opacity-20 blur-[120px] animate-float" />
         <div
@@ -56,7 +56,7 @@ function DashboardLayout() {
         />
       </div>
       <DashSidebar />
-      <main className="lg:ml-72 px-4 lg:px-8 py-6 lg:py-8 max-w-[1400px]">
+      <main id="main-content" className="lg:ml-72 px-4 lg:px-10 py-6 lg:py-10 max-w-[1480px]">
         <MobileTabs />
         <div className="mt-4 lg:mt-0">
           <Outlet />

@@ -20,7 +20,7 @@ export function ConversationListPane({ activeId }: { activeId?: string }) {
   );
 
   return (
-    <div className="flex h-full flex-col bg-[oklch(0.12_0.014_280/0.78)] backdrop-blur-xl">
+    <div className="flex h-full flex-col bg-[oklch(0.105_0.007_75/0.82)] backdrop-blur-xl">
       <header className="border-b border-white/[0.07] px-5 pb-4 pt-5">
         <div className="flex items-center justify-between">
           <div>

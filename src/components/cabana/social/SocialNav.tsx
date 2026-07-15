@@ -68,21 +68,22 @@ function DesktopNav({
   profile: CabanaProfile | null;
 }) {
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[280px] flex-col border-r border-white/[0.07] bg-[oklch(0.105_0.012_280/0.94)] px-5 py-6 backdrop-blur-3xl lg:flex">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[280px] flex-col border-r border-white/[0.07] bg-[oklch(0.09_0.005_75/0.94)] px-5 py-6 backdrop-blur-3xl lg:flex">
       <div className="absolute inset-x-0 top-0 h-px bg-iridescent opacity-70" />
       <div className="mb-8 flex items-center justify-between px-2">
         <Link
           to="/feed"
           className="group flex items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-iridescent shadow-glow-sm transition-transform duration-300 group-hover:rotate-3 group-hover:scale-105">
-            <Sparkles className="h-5 w-5 text-background" />
-            <span className="absolute inset-[1px] rounded-md border border-white/30" />
-          </div>
+          <img
+            src="/cabana-logo.png"
+            alt=""
+            className="h-11 w-11 object-contain transition-transform duration-500 group-hover:scale-105"
+          />
           <div>
             <div className="font-display text-lg font-semibold tracking-[0.08em]">CABANA</div>
             <div className="text-[9px] uppercase tracking-[0.28em] text-muted-foreground">
-              Private social
+              Creator network
             </div>
           </div>
         </Link>
@@ -216,7 +217,7 @@ function ProfileCard({
 function MobileNav({ items }: { items: NavItem[] }) {
   const mobileItems = items.filter((item) => item.to !== "/dashboard").slice(0, 5);
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-white/[0.08] bg-[oklch(0.11_0.012_280/0.94)] px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-18px_50px_-30px_oklch(0_0_0/0.9)] backdrop-blur-3xl lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-white/[0.08] bg-[oklch(0.085_0.005_75/0.94)] px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-18px_50px_-30px_oklch(0_0_0/0.9)] backdrop-blur-3xl lg:hidden">
       {mobileItems.map((item) => (
         <MobileTab key={item.label} item={item} />
       ))}

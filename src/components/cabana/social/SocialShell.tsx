@@ -39,7 +39,9 @@ export function SocialShell({
             wide ? "max-w-[1440px]" : "max-w-[1120px]"
           }`}
         >
-          <main className="min-w-0 flex-1">{children}</main>
+          <main id="main-content" className="min-w-0 flex-1">
+            {children}
+          </main>
           {showRail && (
             <aside className="hidden w-[360px] shrink-0 border-l border-white/[0.07] xl:block">
               <div className="sticky top-0 max-h-screen overflow-y-auto px-7 py-6">

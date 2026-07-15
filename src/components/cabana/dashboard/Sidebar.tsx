@@ -14,7 +14,6 @@ import {
   MessagesSquare,
   Newspaper,
   Settings as SettingsIcon,
-  Sparkles,
   Store,
   User,
   UsersRound,
@@ -80,11 +79,9 @@ export function DashSidebar() {
   const { profile } = useCabana();
   const plan = profile?.plan?.trim() || "Free";
   return (
-    <aside className="fixed left-4 top-4 bottom-4 w-64 z-30 hidden lg:flex flex-col glass-strong rounded-3xl p-5 shadow-luxury">
+    <aside className="fixed bottom-3 left-3 top-3 z-30 hidden w-64 flex-col border border-white/[0.08] bg-[oklch(0.095_0.005_75/0.94)] p-5 shadow-luxury backdrop-blur-3xl lg:flex">
       <Link to="/" className="flex items-center gap-2 px-2 mb-8">
-        <div className="w-9 h-9 rounded-xl bg-iridescent flex items-center justify-center shadow-glow">
-          <Sparkles className="w-5 h-5 text-background" />
-        </div>
+        <img src="/cabana-logo.png" alt="" className="h-10 w-10 object-contain" />
         <div>
           <div className="font-display font-semibold tracking-tight">CABANA</div>
           <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Studio</div>
