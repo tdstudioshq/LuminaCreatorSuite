@@ -38,15 +38,17 @@ App shell (__root.tsx)
 
 ### Layout & shell
 
-| Component         | File                                    | Role                                                                                                                                                  |
-| ----------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Root shell        | `routes/__root.tsx`                     | HTML/head/scripts, Query provider, toaster, 404 + error UI                                                                                            |
-| `SocialShell`     | `cabana/social/SocialShell.tsx`         | Three-column social scaffold (`SocialNav` · content · `SocialRightRail`); nav → bottom tabs below `lg`, rail hides below `xl`                         |
-| Dashboard layout  | `routes/dashboard.tsx`                  | Client auth gate → `DashSidebar` + `MobileTabs` + `<Outlet/>`                                                                                         |
-| Admin demo hub    | `routes/admin.tsx`                      | Role-gated, **labeled demo shell** (amber "Demo preview — sample data" pill on every tab, dead controls disabled, Batch 1); links to the 5 real tools |
-| `ModerationShell` | `cabana/moderation/ModerationShell.tsx` | Staff shell for `/admin/reports` + `/admin/audit`, behind `StaffGate`                                                                                 |
-| `FinanceShell`    | `cabana/admin-finance/FinanceShell.tsx` | Admin shell for `/admin/finance`, `/admin/ledger(/$transactionId)`, `/admin/payouts`, behind `AdminGate`                                              |
-| `MessagesShell`   | `cabana/messaging/MessagesShell.tsx`    | Two-pane DM layout inside SocialShell for `/messages(/$conversationId)`                                                                               |
+| Component             | File                                                                  | Role                                                                                                                                                                                        |
+| --------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Root shell            | `routes/__root.tsx`                                                   | HTML/head/scripts, Query provider, toaster, 404 + error UI                                                                                                                                  |
+| `SocialShell`         | `cabana/social/SocialShell.tsx`                                       | Three-column social scaffold (`SocialNav` · content · `SocialRightRail`); nav → bottom tabs below `lg`, rail hides below `xl`                                                               |
+| Dashboard layout      | `routes/dashboard.tsx`                                                | Client auth gate → `DashSidebar` + `MobileTabs` + `<Outlet/>`                                                                                                                               |
+| Admin demo hub        | `routes/admin.tsx`                                                    | Role-gated, **labeled demo shell** (amber "Demo preview — sample data" pill on every tab, dead controls disabled, Batch 1); links to the 5 real tools                                       |
+| `ModerationShell`     | `cabana/moderation/ModerationShell.tsx`                               | Staff shell for `/admin/reports` + `/admin/audit`, behind `StaffGate`                                                                                                                       |
+| `FinanceShell`        | `cabana/admin-finance/FinanceShell.tsx`                               | Admin shell for `/admin/finance`, `/admin/ledger(/$transactionId)`, `/admin/payouts`, behind `AdminGate`                                                                                    |
+| `MessagesShell`       | `cabana/messaging/MessagesShell.tsx`                                  | Two-pane DM layout inside SocialShell for `/messages(/$conversationId)`                                                                                                                     |
+| `CreatorsShell`       | `cabana/admin-creators/CreatorsShell.tsx`                             | Admin shell for `/admin/creators(/new, /$creatorProfileId)`, behind `AdminGate` — directory + create form + editor (identity/appearance/links/lifecycle/ownership/preview/audit) (Phase 2A) |
+| Creator-page renderer | `cabana/creator-page/CreatorPageSurface.tsx` + `CreatorPageLinks.tsx` | Shared public creator-page renderer used by `$username` (honors `page_status`); pure view model in `lib/cabana-creator-page-view.ts` (Phase 2A)                                             |
 
 ### Auth (`cabana/auth/`)
 

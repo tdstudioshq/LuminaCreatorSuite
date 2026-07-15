@@ -205,6 +205,26 @@ jobs:
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
             -v ON_ERROR_STOP=1 -f supabase/tests/stream_videos.sql
 
+      - name: Behavioral checks (creator-page visibility — draft/published/archived + link inheritance)
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 -f supabase/tests/creator_page_visibility.sql
+
+      - name: Behavioral checks (admin creator-page management — RPC authz + audit + regression)
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 -f supabase/tests/admin_creator_page_management.sql
+
+      - name: Behavioral checks (audit visibility + role management — RLS + RPC authz + audit)
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 -f supabase/tests/audit_log_visibility.sql
+
+      - name: Behavioral checks (creator-page integrity — ownership + lifecycle + immutable links)
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 -f supabase/tests/creator_page_integrity.sql
+
       - name: Stop Supabase
         if: always()
         run: supabase stop || true

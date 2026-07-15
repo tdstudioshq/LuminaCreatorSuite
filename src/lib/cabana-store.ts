@@ -25,56 +25,30 @@ import {
   Twitter,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  mapCreatorLink,
+  mapCreatorProfile,
+  orderedVisibleCreatorLinks,
+  type CabanaLink,
+  type CabanaProfile,
+  type CreatorLinkViewRow,
+  type CreatorProfileViewRow,
+  type LinkIconKey,
+} from "@/lib/cabana-creator-page-view";
 
 // ───────────────────────────── Types ─────────────────────────────
-export type LinkIconKey =
-  | "crown"
-  | "instagram"
-  | "youtube"
-  | "music"
-  | "shop"
-  | "send"
-  | "heart"
-  | "calendar"
-  | "globe"
-  | "star"
-  | "play"
-  | "sparkles"
-  | "mail"
-  | "phone"
-  | "x";
-
-export type CabanaTheme = "iridescent" | "midnight" | "rose" | "chrome";
-export type ButtonStyle = "rounded" | "pill" | "square";
-
-export type CabanaProfile = {
-  id: string;
-  name: string;
-  handle: string;
-  bio: string;
-  avatar: string;
-  banner: string;
-  theme: CabanaTheme;
-  plan: string;
-  /** Short title/tagline under the display name. "" when unset (older profiles). */
-  headline: string;
-  /** Optional brand accent hex ('#rrggbb'); "" = fall back to the theme default. */
-  accentColor: string;
-  /** Link/button shape. Defaults to "rounded". */
-  buttonStyle: ButtonStyle;
-};
-
-export type CabanaLink = {
-  id: string;
-  title: string;
-  url: string;
-  icon: LinkIconKey;
-  clicks: number;
-  ctr: string;
-  scheduled?: string;
-  featured?: boolean;
-  position: number;
-};
+export { ICON_OPTIONS } from "@/lib/cabana-creator-page-view";
+export type {
+  ButtonStyle,
+  CabanaLink,
+  CabanaProfile,
+  CabanaTheme,
+  CreatorPageBackgroundStyle,
+  CreatorPageFontFamily,
+  CreatorPageLinkKind,
+  CreatorPageStatus,
+  LinkIconKey,
+} from "@/lib/cabana-creator-page-view";
 
 export type CabanaProduct = {
   id: string;
@@ -110,51 +84,8 @@ export const LINK_ICONS: Record<LinkIconKey, typeof Crown> = {
   phone: Phone,
   x: Twitter,
 };
-export const ICON_OPTIONS: LinkIconKey[] = [
-  "crown",
-  "instagram",
-  "youtube",
-  "music",
-  "shop",
-  "send",
-  "heart",
-  "calendar",
-  "globe",
-  "star",
-  "play",
-  "sparkles",
-  "mail",
-  "phone",
-  "x",
-];
 
 // ─────────────────────── Row mappers ───────────────────────
-type CreatorRow = {
-  id: string;
-  handle: string;
-  name: string;
-  bio: string;
-  avatar_url: string | null;
-  banner_url: string | null;
-  theme: string;
-  plan: string;
-  // Added in 20260528000000_profile_customization; nullable-guarded for rows
-  // read before a client refresh / any projection that omits them.
-  headline?: string | null;
-  accent_color?: string | null;
-  button_style?: string | null;
-};
-type LinkRow = {
-  id: string;
-  profile_id: string;
-  title: string;
-  url: string;
-  icon: string;
-  featured: boolean;
-  scheduled: string | null;
-  position: number;
-  clicks: number;
-};
 type ProductRow = {
   id: string;
   profile_id: string;
@@ -166,47 +97,6 @@ type ProductRow = {
   position: number;
 };
 
-function mapProfile(row: CreatorRow): CabanaProfile {
-  const theme = (["iridescent", "midnight", "rose", "chrome"] as const).includes(
-    row.theme as CabanaTheme,
-  )
-    ? (row.theme as CabanaTheme)
-    : "iridescent";
-  const buttonStyle = (["rounded", "pill", "square"] as const).includes(
-    row.button_style as ButtonStyle,
-  )
-    ? (row.button_style as ButtonStyle)
-    : "rounded";
-  return {
-    id: row.id,
-    name: row.name,
-    handle: row.handle,
-    bio: row.bio,
-    avatar: row.avatar_url || "",
-    banner: row.banner_url || "",
-    theme,
-    plan: row.plan,
-    headline: row.headline ?? "",
-    accentColor: row.accent_color ?? "",
-    buttonStyle,
-  };
-}
-function mapLink(row: LinkRow, totalClicks: number): CabanaLink {
-  const icon = (ICON_OPTIONS as readonly string[]).includes(row.icon)
-    ? (row.icon as LinkIconKey)
-    : "globe";
-  return {
-    id: row.id,
-    title: row.title,
-    url: row.url,
-    icon,
-    clicks: row.clicks,
-    ctr: totalClicks > 0 ? `${((row.clicks / totalClicks) * 100).toFixed(1)}%` : "0%",
-    scheduled: row.scheduled ?? undefined,
-    featured: row.featured,
-    position: row.position,
-  };
-}
 function mapProduct(row: ProductRow): CabanaProduct {
   return {
     id: row.id,
@@ -219,27 +109,82 @@ function mapProduct(row: ProductRow): CabanaProduct {
   };
 }
 
-async function fetchCreatorBundle(profile: CreatorRow): Promise<CabanaState> {
-  const [linksRes, productsRes] = await Promise.all([
-    supabase
+// Migration 37 is intentionally not represented in the generated cloud-schema
+// types yet. Widening only these two column names preserves the typed table and
+// response everywhere else while allowing the local migration fields to be
+// used until types are regenerated after a controlled cloud apply.
+const MIGRATION_37_PAGE_STATUS_COLUMN: string = "page_status";
+const MIGRATION_37_LINK_VISIBILITY_COLUMN: string = "is_visible";
+const PUBLIC_CREATOR_PROFILE_COLUMNS: string =
+  "id, handle, name, bio, avatar_url, banner_url, theme, plan, headline, accent_color, button_style, page_status, font_family, background_style";
+const PUBLIC_CREATOR_LINK_COLUMNS: string =
+  "id, profile_id, title, url, icon, featured, scheduled, position, clicks, kind, is_visible";
+const LEGACY_PUBLIC_CREATOR_PROFILE_COLUMNS =
+  "id, handle, name, bio, avatar_url, banner_url, theme, plan, headline, accent_color, button_style";
+const LEGACY_PUBLIC_CREATOR_LINK_COLUMNS =
+  "id, profile_id, title, url, icon, featured, scheduled, position, clicks";
+
+type QueryErrorLike = { code?: string | null; message?: string | null } | null;
+
+/**
+ * Preview compatibility while migration 37 is deliberately awaiting approval.
+ * Once the column exists, no application error can enter this narrow fallback.
+ * Pre-37 rows have no lifecycle/visibility fields and preserve the legacy
+ * published/visible behavior; the primary query remains authoritative after apply.
+ */
+function isMigration37Unavailable(error: QueryErrorLike): boolean {
+  if (!error || !["42703", "PGRST204"].includes(error.code ?? "")) return false;
+  const message = error.message?.toLowerCase() ?? "";
+  return ["page_status", "font_family", "background_style", "kind", "is_visible"].some((column) =>
+    message.includes(column),
+  );
+}
+
+async function fetchCreatorBundle(
+  profile: CreatorProfileViewRow,
+  { visibleLinksOnly = false }: { visibleLinksOnly?: boolean } = {},
+): Promise<CabanaState> {
+  let linksQuery = supabase
+    .from("links")
+    .select(visibleLinksOnly ? PUBLIC_CREATOR_LINK_COLUMNS : "*")
+    .eq("profile_id", profile.id);
+  if (visibleLinksOnly) {
+    linksQuery = linksQuery.eq(MIGRATION_37_LINK_VISIBILITY_COLUMN, true);
+  }
+
+  const productsPromise = supabase
+    .from("products")
+    .select("*")
+    .eq("profile_id", profile.id)
+    .order("position", { ascending: true })
+    .order("id", { ascending: true });
+  let linksRes = (await linksQuery
+    .order("position", { ascending: true })
+    .order("id", { ascending: true })) as unknown as {
+    data: CreatorLinkViewRow[] | null;
+    error: QueryErrorLike;
+  };
+  if (visibleLinksOnly && isMigration37Unavailable(linksRes.error)) {
+    linksRes = (await supabase
       .from("links")
-      .select("*")
+      .select(LEGACY_PUBLIC_CREATOR_LINK_COLUMNS)
       .eq("profile_id", profile.id)
-      .order("position", { ascending: true }),
-    supabase
-      .from("products")
-      .select("*")
-      .eq("profile_id", profile.id)
-      .order("position", { ascending: true }),
-  ]);
+      .order("position", { ascending: true })
+      .order("id", { ascending: true })) as unknown as {
+      data: CreatorLinkViewRow[] | null;
+      error: QueryErrorLike;
+    };
+  }
+  const productsRes = await productsPromise;
   if (linksRes.error) throw linksRes.error;
   if (productsRes.error) throw productsRes.error;
-  const linkRows = (linksRes.data ?? []) as LinkRow[];
+  const linkRows = linksRes.data ?? [];
   const productRows = (productsRes.data ?? []) as ProductRow[];
   const totalClicks = linkRows.reduce((s, l) => s + (l.clicks ?? 0), 0);
+  const mappedLinks = linkRows.map((link) => mapCreatorLink(link, totalClicks));
   return {
-    profile: mapProfile(profile),
-    links: linkRows.map((l) => mapLink(l, totalClicks)),
+    profile: mapCreatorProfile(profile),
+    links: visibleLinksOnly ? orderedVisibleCreatorLinks(mappedLinks) : mappedLinks,
     products: productRows.map(mapProduct),
   };
 }
@@ -252,16 +197,30 @@ export function useCreatorByHandle(handle: string | undefined) {
     queryFn: async () => {
       // Public read: never select * — an explicit column list keeps the
       // account's auth user_id (and any future private columns) off the wire.
-      const { data, error } = await supabase
+      let profileResult = (await supabase
         .from("creator_profiles")
-        .select(
-          "id, handle, name, bio, avatar_url, banner_url, theme, plan, headline, accent_color, button_style",
-        )
+        .select(PUBLIC_CREATOR_PROFILE_COLUMNS)
         .ilike("handle", handle!)
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) return null;
-      return fetchCreatorBundle(data as CreatorRow);
+        .eq(MIGRATION_37_PAGE_STATUS_COLUMN, "published")
+        .maybeSingle()) as unknown as {
+        data: CreatorProfileViewRow | null;
+        error: QueryErrorLike;
+      };
+      if (isMigration37Unavailable(profileResult.error)) {
+        profileResult = (await supabase
+          .from("creator_profiles")
+          .select(LEGACY_PUBLIC_CREATOR_PROFILE_COLUMNS)
+          .ilike("handle", handle!)
+          .maybeSingle()) as unknown as {
+          data: CreatorProfileViewRow | null;
+          error: QueryErrorLike;
+        };
+      }
+      if (profileResult.error) throw profileResult.error;
+      if (!profileResult.data) return null;
+      return fetchCreatorBundle(profileResult.data, {
+        visibleLinksOnly: true,
+      });
     },
   });
 }
@@ -300,7 +259,7 @@ export function useCabana() {
         .maybeSingle();
       if (error) throw error;
       if (!data) return null;
-      return fetchCreatorBundle(data as CreatorRow);
+      return fetchCreatorBundle(data as unknown as CreatorProfileViewRow);
     },
   });
   return {

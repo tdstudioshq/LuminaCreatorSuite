@@ -38,6 +38,12 @@ export default defineConfig({
         "src/lib/cabana-redirect.ts",
         "src/lib/cabana-stream.ts",
         "src/lib/cabana-stream-upload.ts",
+        "src/lib/cabana-admin-creators.ts",
+        "src/lib/cabana-creator-pages.ts",
+        "src/lib/cabana-admin-roles.ts",
+        "src/lib/cabana-creator-page-view.ts",
+        "src/lib/cabana-admin-creator-page-detail.ts",
+        "src/lib/cabana-admin-creator-editor.ts",
         "src/lib/cabana-composer-media.ts",
       ],
       thresholds: {

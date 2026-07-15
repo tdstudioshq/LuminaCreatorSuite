@@ -552,12 +552,19 @@ begin
   ) then
     raise exception 'MISSING GRANT: authenticated SELECT on user_roles';
   end if;
-  if not exists (
-    select 1 from information_schema.role_table_grants
+  -- authenticated table-wide INSERT/UPDATE on creator_profiles was REVOKED by
+  -- 20260540 (creator-page integrity): signup provisioning runs in the SECURITY
+  -- DEFINER auth trigger and admin-created pages use the audited RPC, so there is
+  -- no direct table-wide write path. Owners retain COLUMN-SCOPED UPDATE (lifecycle
+  -- `page_status` + ownership `user_id` excluded) — so check role_column_grants,
+  -- mirroring the analytics_events column-grant check below (20260535).
+  if (
+    select count(*) from information_schema.role_column_grants
     where table_schema = 'public' and table_name = 'creator_profiles'
-      and grantee = 'authenticated' and privilege_type = 'INSERT'
-  ) then
-    raise exception 'MISSING GRANT: authenticated INSERT on creator_profiles';
+      and grantee = 'authenticated' and privilege_type = 'UPDATE'
+      and column_name in ('handle', 'name', 'bio', 'theme')
+  ) <> 4 then
+    raise exception 'MISSING GRANT: authenticated column-scoped UPDATE on creator_profiles';
   end if;
   if not exists (
     select 1 from information_schema.role_table_grants

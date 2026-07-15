@@ -1,6 +1,11 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5";
+  };
   graphql_public: {
     Tables: {
       [_ in never]: never;
@@ -360,14 +365,17 @@ export type Database = {
         Row: {
           accent_color: string;
           avatar_url: string | null;
+          background_style: string;
           banner_url: string | null;
           bio: string;
           button_style: string;
           created_at: string;
+          font_family: string;
           handle: string;
           headline: string;
           id: string;
           name: string;
+          page_status: Database["public"]["Enums"]["creator_page_status"];
           plan: string;
           theme: string;
           updated_at: string;
@@ -376,14 +384,17 @@ export type Database = {
         Insert: {
           accent_color?: string;
           avatar_url?: string | null;
+          background_style?: string;
           banner_url?: string | null;
           bio?: string;
           button_style?: string;
           created_at?: string;
+          font_family?: string;
           handle: string;
           headline?: string;
           id?: string;
           name?: string;
+          page_status?: Database["public"]["Enums"]["creator_page_status"];
           plan?: string;
           theme?: string;
           updated_at?: string;
@@ -392,14 +403,17 @@ export type Database = {
         Update: {
           accent_color?: string;
           avatar_url?: string | null;
+          background_style?: string;
           banner_url?: string | null;
           bio?: string;
           button_style?: string;
           created_at?: string;
+          font_family?: string;
           handle?: string;
           headline?: string;
           id?: string;
           name?: string;
+          page_status?: Database["public"]["Enums"]["creator_page_status"];
           plan?: string;
           theme?: string;
           updated_at?: string;
@@ -564,6 +578,8 @@ export type Database = {
           featured: boolean;
           icon: string;
           id: string;
+          is_visible: boolean;
+          kind: string;
           position: number;
           profile_id: string;
           scheduled: string | null;
@@ -576,6 +592,8 @@ export type Database = {
           featured?: boolean;
           icon?: string;
           id?: string;
+          is_visible?: boolean;
+          kind?: string;
           position?: number;
           profile_id: string;
           scheduled?: string | null;
@@ -588,6 +606,8 @@ export type Database = {
           featured?: boolean;
           icon?: string;
           id?: string;
+          is_visible?: boolean;
+          kind?: string;
           position?: number;
           profile_id?: string;
           scheduled?: string | null;
@@ -1732,9 +1752,110 @@ export type Database = {
       };
     };
     Functions: {
+      admin_create_creator_page: {
+        Args: {
+          _bio?: string;
+          _display_name: string;
+          _handle: string;
+          _headline?: string;
+        };
+        Returns: string;
+      };
+      admin_delete_creator_link: {
+        Args: { _link_id: string };
+        Returns: undefined;
+      };
+      admin_get_creator_page_audit_history: {
+        Args: { _creator_profile_id: string; _limit?: number };
+        Returns: {
+          action: string;
+          actor_role: Database["public"]["Enums"]["audit_actor_role"];
+          actor_user_id: string | null;
+          after: Json | null;
+          before: Json | null;
+          created_at: string;
+          id: string;
+          ip_address: string | null;
+          reason: string | null;
+          request_id: string | null;
+          target_id: string | null;
+          target_type: string;
+          user_agent: string | null;
+        }[];
+        SetofOptions: {
+          from: "*";
+          to: "audit_logs";
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      admin_grant_user_role: {
+        Args: {
+          _reason: string;
+          _role: Database["public"]["Enums"]["app_role"];
+          _target_user_id: string;
+        };
+        Returns: undefined;
+      };
+      admin_remove_user_role: {
+        Args: {
+          _reason: string;
+          _role: Database["public"]["Enums"]["app_role"];
+          _target_user_id: string;
+        };
+        Returns: undefined;
+      };
+      admin_reorder_creator_links: {
+        Args: { _creator_profile_id: string; _ordered_ids: string[] };
+        Returns: undefined;
+      };
       admin_review_payout: {
         Args: { _action: string; _note?: string; _payout_request_id: string };
         Returns: undefined;
+      };
+      admin_set_creator_link_visibility: {
+        Args: { _is_visible: boolean; _link_id: string };
+        Returns: undefined;
+      };
+      admin_set_creator_page_status: {
+        Args: { _action: string; _creator_profile_id: string };
+        Returns: undefined;
+      };
+      admin_transfer_creator_page: {
+        Args: { _creator_profile_id: string; _to_user_id?: string };
+        Returns: undefined;
+      };
+      admin_update_creator_page: {
+        Args: {
+          _accent_color?: string;
+          _avatar_url?: string;
+          _background_style?: string;
+          _banner_url?: string;
+          _bio?: string;
+          _button_style?: string;
+          _creator_profile_id: string;
+          _font_family?: string;
+          _handle?: string;
+          _headline?: string;
+          _name?: string;
+          _theme?: string;
+        };
+        Returns: undefined;
+      };
+      admin_upsert_creator_link: {
+        Args: {
+          _creator_profile_id: string;
+          _featured?: boolean;
+          _icon?: string;
+          _id?: string;
+          _is_visible?: boolean;
+          _kind?: string;
+          _position?: number;
+          _scheduled?: string;
+          _title: string;
+          _url: string;
+        };
+        Returns: string;
       };
       can_view_post: { Args: { _post_id: string }; Returns: boolean };
       cancel_creator_subscription: {
@@ -1903,6 +2024,7 @@ export type Database = {
         Args: { _creator_profile_id: string };
         Returns: boolean;
       };
+      is_current_user_moderator: { Args: never; Returns: boolean };
       is_current_user_post_owner: {
         Args: { _post_id: string };
         Returns: boolean;
@@ -2020,6 +2142,16 @@ export type Database = {
         Returns: undefined;
       };
       unread_message_count: { Args: never; Returns: number };
+      write_creator_audit: {
+        Args: {
+          _action: string;
+          _after: Json;
+          _before: Json;
+          _target_id: string;
+          _target_type: string;
+        };
+        Returns: undefined;
+      };
     };
     Enums: {
       account_type: "creator" | "member";
@@ -2037,6 +2169,7 @@ export type Database = {
       app_role: "admin" | "moderator" | "user";
       audit_actor_role: "creator" | "moderator" | "admin" | "system";
       comment_status: "visible" | "hidden" | "deleted";
+      creator_page_status: "draft" | "published" | "archived";
       creator_subscription_status: "trialing" | "active" | "past_due" | "canceled" | "expired";
       message_type: "text" | "system" | "image" | "video" | "paid" | "tip";
       notification_channel: "in_app" | "email" | "push";
@@ -2222,6 +2355,7 @@ export const Constants = {
       app_role: ["admin", "moderator", "user"],
       audit_actor_role: ["creator", "moderator", "admin", "system"],
       comment_status: ["visible", "hidden", "deleted"],
+      creator_page_status: ["draft", "published", "archived"],
       creator_subscription_status: ["trialing", "active", "past_due", "canceled", "expired"],
       message_type: ["text", "system", "image", "video", "paid", "tip"],
       notification_channel: ["in_app", "email", "push"],

@@ -4,8 +4,6 @@ import { useEffect, useState, type KeyboardEvent } from "react";
 import {
   AlertCircle,
   ShoppingBag,
-  ArrowUpRight,
-  Link2,
   Sparkles,
   Mail,
   Crown,
@@ -18,17 +16,10 @@ import {
 import { toast } from "sonner";
 import {
   useCreatorByHandle,
-  LINK_ICONS,
+  type ButtonStyle,
   type CabanaLink,
   type CabanaProduct,
-  type ButtonStyle,
 } from "@/lib/cabana-store";
-
-const BUTTON_RADIUS: Record<ButtonStyle, string> = {
-  rounded: "rounded-2xl",
-  pill: "rounded-full",
-  square: "rounded-md",
-};
 import { trackPageView, trackLinkClick, trackProductClick } from "@/lib/cabana-analytics";
 import { comingSoon } from "@/lib/coming-soon";
 import { useFollow } from "@/lib/use-relationships";
@@ -43,6 +34,11 @@ import { useCreatorTiers } from "@/lib/use-subscriptions";
 import { useStartConversationWithUsername } from "@/lib/use-messaging";
 import { SocialShell } from "@/components/cabana/social/SocialShell";
 import { SocialRightRail } from "@/components/cabana/social/SocialRightRail";
+import {
+  CreatorPageLinks,
+  CreatorPagePrimaryLink,
+} from "@/components/cabana/creator-page/CreatorPageLinks";
+import { CreatorPageSurface } from "@/components/cabana/creator-page/CreatorPageSurface";
 
 export const Route = createFileRoute("/$username")({
   component: CreatorProfileRoute,
@@ -55,17 +51,6 @@ export const Route = createFileRoute("/$username")({
     ],
   }),
 });
-
-const LINK_ACCENTS = [
-  "oklch(0.85 0.14 60)",
-  "oklch(0.78 0.15 230)",
-  "oklch(0.75 0.2 330)",
-  "oklch(0.78 0.18 20)",
-  "oklch(0.85 0.12 195)",
-  "oklch(0.78 0.15 280)",
-  "oklch(0.7 0.22 25)",
-  "oklch(0.82 0.18 145)",
-];
 
 type ProfileTab = "posts" | "media" | "products";
 
@@ -83,10 +68,14 @@ function CreatorProfileRoute() {
 
 export function CreatorProfile({ username }: { username: string }) {
   const navigate = useNavigate();
-  const relationship = useFollow(username);
-  const startConversation = useStartConversationWithUsername();
-  const { data: subscriptionTiers } = useCreatorTiers(username);
   const { data, isLoading, isError, refetch } = useCreatorByHandle(username);
+  // Do not issue secondary handle-based reads until the authoritative public
+  // profile query has confirmed this page is published. This prevents draft or
+  // archived handles from leaking through relationship/subscription requests.
+  const publishedUsername = data?.profile.pageStatus === "published" ? username : "";
+  const relationship = useFollow(publishedUsername);
+  const startConversation = useStartConversationWithUsername();
+  const { data: subscriptionTiers } = useCreatorTiers(publishedUsername);
   const profileId = data?.profile.id;
   const [tab, setTab] = useState<ProfileTab>("posts");
 
@@ -185,7 +174,7 @@ export function CreatorProfile({ username }: { username: string }) {
   };
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden" data-cabana-theme={profile.theme}>
+    <CreatorPageSurface profile={profile}>
       <SocialShell
         rightRail={
           <ProfileRightRail
@@ -352,26 +341,17 @@ export function CreatorProfile({ username }: { username: string }) {
                     {profile.bio}
                   </p>
                 ) : null}
-                {links[0] ? (
-                  <a
-                    href={
-                      links[0].url.startsWith("http") ? links[0].url : `https://${links[0].url}`
+                <CreatorPagePrimaryLink
+                  links={links}
+                  onLinkClick={(link) => {
+                    if (profileId) {
+                      trackLinkClick(profileId, link.id, {
+                        url: link.url,
+                        title: link.title,
+                      });
                     }
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() =>
-                      profileId &&
-                      trackLinkClick(profileId, links[0].id, {
-                        url: links[0].url,
-                        title: links[0].title,
-                      })
-                    }
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg text-sm font-medium text-primary outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <Link2 className="h-3.5 w-3.5" />
-                    {compactLinkLabel(links[0].url)}
-                  </a>
-                ) : null}
+                  }}
+                />
               </div>
             </div>
           </motion.section>
@@ -435,7 +415,7 @@ export function CreatorProfile({ username }: { username: string }) {
           </section>
         </div>
       </SocialShell>
-    </div>
+    </CreatorPageSurface>
   );
 }
 
@@ -705,74 +685,19 @@ function ProfileRightRail({
       searchPlaceholder={`Search ${creatorName || creatorHandle} posts`}
       contextContent={
         links.length > 0 ? (
-          <LinksCard
+          <CreatorPageLinks
             links={links}
-            profileId={profileId}
             accentColor={accentColor}
             buttonStyle={buttonStyle}
+            onLinkClick={(link) => {
+              if (profileId) {
+                trackLinkClick(profileId, link.id, { url: link.url, title: link.title });
+              }
+            }}
           />
         ) : undefined
       }
     />
-  );
-}
-
-function LinksCard({
-  links,
-  profileId,
-  accentColor,
-  buttonStyle,
-}: {
-  links: CabanaLink[];
-  profileId: string | undefined;
-  accentColor: string;
-  buttonStyle: ButtonStyle;
-}) {
-  const rowRadius = BUTTON_RADIUS[buttonStyle] ?? "rounded-2xl";
-  return (
-    <section className="overflow-hidden rounded-xl border border-white/[0.09] bg-[linear-gradient(150deg,oklch(0.19_0.02_280/0.68),oklch(0.14_0.015_280/0.58))] p-5 shadow-[0_24px_70px_-50px_oklch(0_0_0/0.95),inset_0_1px_0_oklch(1_0_0/0.08)]">
-      <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-primary">
-        Creator links
-      </p>
-      <h2 className="mb-3 mt-1 font-display text-base font-semibold">Around the web</h2>
-      <div className="space-y-2">
-        {links.map((l, i) => {
-          const Icon = LINK_ICONS[l.icon] ?? LINK_ICONS.globe;
-          // A creator-set accent overrides the rotating palette; older profiles
-          // (accentColor === "") keep the varied per-link palette.
-          const accent = accentColor || LINK_ACCENTS[i % LINK_ACCENTS.length];
-          return (
-            <a
-              key={l.id}
-              href={l.url.startsWith("http") ? l.url : `https://${l.url}`}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() =>
-                profileId && trackLinkClick(profileId, l.id, { url: l.url, title: l.title })
-              }
-              className={`group flex items-center gap-3 ${rowRadius} p-2.5 outline-none transition-colors hover:bg-foreground/5 focus-visible:ring-2 focus-visible:ring-ring`}
-            >
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl glass-strong"
-                style={{ boxShadow: `0 0 20px -8px ${accent}` }}
-              >
-                <Icon className="h-4 w-4" style={{ color: accent }} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-1.5 text-sm font-medium">
-                  {l.title}
-                  {l.featured && <Crown className="h-3 w-3" style={{ color: accent }} />}
-                </span>
-                <span className="block truncate text-[11px] text-muted-foreground">
-                  {l.scheduled ?? l.url}
-                </span>
-              </span>
-              <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:rotate-45 group-hover:text-foreground" />
-            </a>
-          );
-        })}
-      </div>
-    </section>
   );
 }
 
@@ -868,8 +793,4 @@ function ProfileStatus({
       </div>
     </SocialShell>
   );
-}
-
-function compactLinkLabel(url: string): string {
-  return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
 }
