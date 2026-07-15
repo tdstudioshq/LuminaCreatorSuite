@@ -391,10 +391,16 @@ begin
      or has_table_privilege('anon', 'public.stream_videos', 'delete') then
     raise exception 'FAIL: (21) anon holds a privilege on stream_videos';
   end if;
+  -- INSERT is COLUMN-scoped as of 20260541 (the ticket-flow columns only), so
+  -- has_table_privilege(...,'insert') is intentionally FALSE — check the column
+  -- grant instead. Full precision lives in stream_publish_integrity.sql (16).
   if not (has_table_privilege('authenticated', 'public.stream_videos', 'select')
-      and has_table_privilege('authenticated', 'public.stream_videos', 'insert')
+      and has_column_privilege('authenticated', 'public.stream_videos', 'uid', 'insert')
       and has_table_privilege('authenticated', 'public.stream_videos', 'delete')) then
-    raise exception 'FAIL: (21b) authenticated is missing select/insert/delete on stream_videos';
+    raise exception 'FAIL: (21b) authenticated is missing select / column-insert / delete on stream_videos';
+  end if;
+  if has_table_privilege('authenticated', 'public.stream_videos', 'insert') then
+    raise exception 'FAIL: (21b2) authenticated retains a table-wide INSERT (should be column-scoped)';
   end if;
   if has_table_privilege('authenticated', 'public.stream_videos', 'update') then
     raise exception 'FAIL: (21c) authenticated can UPDATE stream_videos (system-only writes)';
