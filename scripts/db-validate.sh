@@ -89,6 +89,8 @@ if command -v psql >/dev/null 2>&1; then
   psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/admin_creator_page_management.sql
   echo "▸ Running Phase 2A.3 audit visibility + role-management checks (RLS + RPC authz + audit)…"
   psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/audit_log_visibility.sql
+  echo "▸ Running Phase 2A.4 creator-page integrity checks (ownership + lifecycle + immutable links)…"
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/creator_page_integrity.sql
   echo "✓ db:validate passed — fresh rebuild + smoke + behavioral checks succeeded."
 else
   echo "⚠ psql not found — 'supabase db reset' succeeded (migration + seed applied cleanly),"
