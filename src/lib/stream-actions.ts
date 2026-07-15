@@ -327,6 +327,8 @@ export type AttachFlowDeps = {
   /** Kinds AFTER insert, for the compensating mix re-check. */
   recheckKinds: (postId: string) => Promise<string[]>;
   deleteMedia: (mediaId: string) => Promise<void>;
+  /** Correct a media row whose status was stamped from a stale read. */
+  syncMediaStatus: (mediaId: string, processingStatus: string) => Promise<void>;
 };
 
 /**
@@ -367,6 +369,24 @@ export async function executeAttachFlow(
     }
     throw new Error("This post's media changed while attaching. Try again.");
   }
+
+  // The status we stamped above was read BEFORE the row existed. If the video
+  // went terminal in that window, the lifecycle writer's sync found no media row
+  // to update, so re-read and correct it here. Best-effort: the status-refresh
+  // flow re-asserts terminal media state too, so a failure here self-heals on
+  // the next poll rather than stranding the row.
+  try {
+    const fresh = await deps.getOwnVideo(input.streamVideoId);
+    if (fresh && fresh.status !== video.status) {
+      await deps.syncMediaStatus(
+        media.mediaId,
+        processingStatusForStream(fresh.status as StreamVideoStatus),
+      );
+    }
+  } catch {
+    // Ignore — attachment itself succeeded; convergence is guaranteed elsewhere.
+  }
+
   return media;
 }
 
@@ -431,6 +451,13 @@ export const attachStreamVideoToPost = createServerFn({ method: "POST" })
         recheckKinds: fetchKinds,
         deleteMedia: async (mediaId) => {
           await supabase.from("post_media").delete().eq("id", mediaId);
+        },
+        syncMediaStatus: async (mediaId, processingStatus) => {
+          const { error } = await supabase
+            .from("post_media")
+            .update({ processing_status: processingStatus })
+            .eq("id", mediaId);
+          if (error) throw new Error(error.message);
         },
       },
       { ...data, ownerUserId: userId },
@@ -511,6 +538,13 @@ export async function executeStatusRefreshFlow(
   });
 
   // Terminal rows never change — skip the Cloudflare round-trip entirely.
+  //
+  // Deliberately does NOT re-sync the media row: `post_media.processing_status`
+  // has no functional reader (the publish gate and playback both judge a video by
+  // `stream_videos.status`, precisely because this column can lag), so repairing
+  // cosmetic skew here would buy nothing and cost a write on every duplicate
+  // webhook and poll. The skew is prevented at its source instead — see the
+  // post-insert correction in `executeAttachFlow`.
   if (isTerminalStreamStatus(video.status)) return fromRow(false);
 
   let snapshot: StreamVideoSnapshot | null;

@@ -39,6 +39,11 @@ import {
   resolveBatchPostMedia,
   resolvePublishPatch,
 } from "@/lib/cabana-posts";
+import {
+  STREAM_STORAGE_BUCKET,
+  type StreamVideoStatus,
+  assertPublishableMediaRows,
+} from "@/lib/cabana-stream";
 
 type Db = SupabaseClient<Database>;
 
@@ -190,6 +195,9 @@ export const publishPost = createServerFn({ method: "POST" })
     const { supabase } = context;
     const current = await fetchOwnPostStatus(supabase, data.postId);
     const patch = resolvePublishPatch(current, new Date().toISOString());
+    // Readiness is asserted from the DB, never from anything the caller sent,
+    // and BEFORE the update — a rejected publish must leave the post untouched.
+    await assertOwnPostMediaPublishable(supabase, data.postId);
     const { data: row, error } = await supabase
       .from("posts")
       .update(patch)
@@ -226,21 +234,94 @@ export const deletePost = createServerFn({ method: "POST" })
   }))
   .handler(async ({ context, data }): Promise<{ postId: string; deleted: true }> => {
     const { supabase, userId } = context;
-    // Best-effort storage cleanup before the row (and cascaded media rows) go.
+    // Read the media inventory BEFORE the delete — the rows cascade away with
+    // the post, and afterwards there is nothing left to tell us what to clean up.
     const { data: media } = await supabase
       .from("post_media")
-      .select("storage_path")
+      .select("storage_path, storage_bucket, stream_video_id, stream_videos(uid)")
       .eq("post_id", data.postId);
+
     const { error } = await supabase.from("posts").delete().eq("id", data.postId);
     if (error) throw new Error(error.message);
-    const paths = (media ?? [])
+
+    // Everything below is best-effort cleanup AFTER the authoritative delete
+    // succeeded. Order matters: if remote cleanup ran first and the row delete
+    // then failed, a live post would be left pointing at destroyed media.
+    const rows = media ?? [];
+
+    // Supabase-storage objects. Filtering on storage_bucket is load-bearing: a
+    // Stream row's path is `<owner>/stream/<uid>`, which passes the owner-prefix
+    // check by construction, so without this it was handed to the wrong bucket
+    // and silently no-op'd.
+    const paths = rows
+      .filter((m) => m.storage_bucket === POST_MEDIA_BUCKET)
       .map((m) => m.storage_path)
       .filter((p) => p.startsWith(`${userId}/`));
     if (paths.length > 0) {
       await supabaseAdmin.storage.from(POST_MEDIA_BUCKET).remove(paths);
     }
+
+    // Cloudflare assets. The post's media rows are already cascaded, so these
+    // videos are now unattached and reclaimable. Deleting the post used to leave
+    // the remote asset alive forever; the sweep is only a backstop for when this
+    // fails, so doing it here is what keeps deliberate deletes prompt.
+    //
+    // Dynamically imported: this file is a client-importable RPC bridge, and the
+    // reclaim module reaches the Cloudflare API secrets. Same convention the
+    // Stream webhook route uses.
+    const videos = rows
+      .filter((m) => m.storage_bucket === STREAM_STORAGE_BUCKET && m.stream_video_id !== null)
+      .map((m) => ({
+        id: m.stream_video_id as string,
+        uid: (m.stream_videos as { uid: string } | null)?.uid ?? "",
+      }))
+      .filter((v) => v.uid !== "");
+    if (videos.length > 0) {
+      try {
+        const { reclaimStreamVideos } = await import("@/lib/stream-reclaim.server");
+        await reclaimStreamVideos(supabase, videos);
+      } catch {
+        // Never fail a completed post delete on cleanup. The `stream_videos`
+        // rows survive unattached, which is exactly what the orphan sweep looks
+        // for — so the asset stays reclaimable rather than becoming invisible.
+      }
+    }
+
     return { postId: data.postId, deleted: true };
   });
+
+/**
+ * Publish gate (Stream 5A.4): reject publishing a post whose media is not
+ * playback-ready. Reads the caller's OWN rows under their RLS and judges each
+ * one by the authoritative source — `stream_videos.status` for Stream rows,
+ * `processing_status` otherwise (see `resolveMediaProcessingStatus`).
+ *
+ * This is the server-side twin of the composer's `evaluateComposerPublish` UI
+ * gate. It is the boundary that actually holds: the UI gate is advisory (a stale
+ * tab, a reload that resets the session to `idle`, or a direct server-fn call all
+ * skip it), and no client-supplied readiness flag is trusted here.
+ *
+ * A creator can still bypass this via raw PostgREST (`posts` carries a table-wide
+ * UPDATE grant under an ownership-only policy), but only against their OWN post,
+ * and playback fails closed on non-ready media — so the result self-heals rather
+ * than exposing anything. Making the invariant hard needs a trigger + a
+ * `stream_videos` INSERT-grant narrowing; that is a separate, gated slice.
+ */
+async function assertOwnPostMediaPublishable(supabase: Db, postId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("post_media")
+    .select("storage_bucket, processing_status, stream_videos(status)")
+    .eq("post_id", postId);
+  if (error) throw new Error(error.message);
+  assertPublishableMediaRows(
+    (data ?? []).map((row) => ({
+      storageBucket: row.storage_bucket,
+      processingStatus: row.processing_status,
+      // PostgREST nests an embedded to-one as an object (or null when absent).
+      streamStatus: (row.stream_videos as { status: StreamVideoStatus } | null)?.status ?? null,
+    })),
+  );
+}
 
 async function fetchOwnPostStatus(
   supabase: Db,
@@ -415,6 +496,13 @@ export const getPostMediaUrls = createServerFn({ method: "GET" })
     const { data: media, error: mediaError } = await supabaseAdmin
       .from("post_media")
       .select("id, kind, storage_path, width, height, position")
+      // Supabase-storage rows ONLY. A Stream row's storage_path addresses a
+      // Cloudflare asset, not an object in this bucket, so signing it here would
+      // silently return not-found and drop the row. Video is served by
+      // `getStreamPlayback(+Batch)` instead. Filtering on storage_bucket (not
+      // `kind`) is deliberate: the 20260536 coherence CHECK makes the bucket the
+      // authoritative discriminator, tying it to stream_video_id.
+      .eq("storage_bucket", POST_MEDIA_BUCKET)
       .eq("post_id", data.postId)
       .order("position", { ascending: true });
     if (mediaError) throw new Error(mediaError.message);
@@ -469,6 +557,9 @@ export const getPostMediaUrlsBatch = createServerFn({ method: "GET" })
         const { data: media, error } = await supabaseAdmin
           .from("post_media")
           .select("id, post_id, kind, storage_path, width, height, position")
+          // Supabase-storage rows ONLY — see the singular fn for why. Video
+          // rides `getStreamPlaybackBatch`, which signs Cloudflare tokens.
+          .eq("storage_bucket", POST_MEDIA_BUCKET)
           .in("post_id", authorizedIds)
           .order("position", { ascending: true });
         if (error) throw new Error(error.message);

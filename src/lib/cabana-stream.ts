@@ -362,6 +362,42 @@ export function assertPublishableMedia(processingStatuses: readonly string[]): v
   throw new Error("This post's video is still processing. Publish once it is ready.");
 }
 
+/** A `post_media` row joined to its `stream_videos` lifecycle row, if any. */
+export type PublishMediaRow = {
+  storageBucket: string;
+  processingStatus: string;
+  /** `stream_videos.status`, or null when the join found no lifecycle row. */
+  streamStatus: StreamVideoStatus | null;
+};
+
+/**
+ * The status the publish gate must judge a media row by.
+ *
+ * For a Stream row the AUTHORITY is `stream_videos.status`, never the row's own
+ * `processing_status`: the lifecycle writer syncs `processing_status` on a
+ * best-effort basis, so a row whose webhook landed before the media row existed
+ * can sit at "processing" forever while the video is genuinely ready. Judging
+ * the video by the video's own status makes that skew unpublishable-blocking
+ * instead of permanent, and costs nothing when the two agree.
+ *
+ * A Stream-bucket row with NO lifecycle row is unpublishable by design: the
+ * composite FK makes it unreachable, so seeing one means the invariant broke and
+ * we must fail closed rather than guess.
+ *
+ * Non-Stream rows (images) keep their own `processing_status`, which the schema
+ * defaults to "ready" — so image-only posts are unaffected.
+ */
+export function resolveMediaProcessingStatus(row: PublishMediaRow): string {
+  if (row.storageBucket !== STREAM_STORAGE_BUCKET) return row.processingStatus;
+  if (row.streamStatus === null) return "error";
+  return processingStatusForStream(row.streamStatus);
+}
+
+/** Convenience: judge a joined media set straight from rows. */
+export function assertPublishableMediaRows(rows: readonly PublishMediaRow[]): void {
+  assertPublishableMedia(rows.map(resolveMediaProcessingStatus));
+}
+
 // ───────────────── Cloudflare wire contracts: playback URLs ─────────────────
 // Signed playback substitutes the TOKEN for the video UID in the same URL
 // templates (verified: /iframe, /manifest/video.m3u8, /manifest/video.mpd,

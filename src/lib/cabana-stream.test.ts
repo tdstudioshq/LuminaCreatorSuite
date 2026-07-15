@@ -26,6 +26,8 @@ import {
   WEBHOOK_SIGNATURE_HEADER,
   assertMediaMixAllowsAdding,
   assertPublishableMedia,
+  assertPublishableMediaRows,
+  resolveMediaProcessingStatus,
   assertStreamStatusTransition,
   buildStreamPlaybackUrls,
   buildStreamStoragePath,
@@ -442,6 +444,60 @@ describe("publishable media", () => {
     expect(() => assertPublishableMedia(["error"])).toThrow(/failed processing/);
     // Failed media takes precedence in the message when both exist.
     expect(() => assertPublishableMedia(["processing", "error"])).toThrow(/failed processing/);
+  });
+});
+
+describe("resolveMediaProcessingStatus", () => {
+  const streamRow = (streamStatus: StreamVideoStatus | null, processingStatus = "processing") => ({
+    storageBucket: STREAM_STORAGE_BUCKET,
+    processingStatus,
+    streamStatus,
+  });
+
+  it("judges a Stream row by the video's status, not the media row's", () => {
+    // The skew that matters: media stranded at "processing" by the attach race
+    // while the video is genuinely ready. The video wins.
+    expect(resolveMediaProcessingStatus(streamRow("ready", "processing"))).toBe("ready");
+    // ...and the reverse: a stale "ready" media row cannot publish a dead video.
+    expect(resolveMediaProcessingStatus(streamRow("error", "ready"))).toBe("error");
+  });
+
+  it("maps every non-ready lifecycle status to a publish-blocking value", () => {
+    expect(resolveMediaProcessingStatus(streamRow("pending_upload"))).toBe("processing");
+    expect(resolveMediaProcessingStatus(streamRow("processing"))).toBe("processing");
+    expect(resolveMediaProcessingStatus(streamRow("error"))).toBe("error");
+    for (const status of ["pending_upload", "processing", "error"] as const) {
+      expect(() => assertPublishableMediaRows([streamRow(status)])).toThrow();
+    }
+  });
+
+  it("fails closed when a Stream row has no lifecycle record", () => {
+    // The composite FK makes this unreachable; seeing it means the invariant
+    // broke, so it must block rather than be guessed at.
+    expect(resolveMediaProcessingStatus(streamRow(null, "ready"))).toBe("error");
+    expect(() => assertPublishableMediaRows([streamRow(null, "ready")])).toThrow(/failed/);
+  });
+
+  it("leaves non-Stream (image) rows on their own processing_status", () => {
+    const image = { storageBucket: "post-media", processingStatus: "ready", streamStatus: null };
+    expect(resolveMediaProcessingStatus(image)).toBe("ready");
+    expect(() => assertPublishableMediaRows([image, image])).not.toThrow();
+    // An image never consults streamStatus, so a stray value cannot block it.
+    expect(
+      resolveMediaProcessingStatus({ ...image, streamStatus: "error" as StreamVideoStatus }),
+    ).toBe("ready");
+  });
+
+  it("publishes a ready video alongside ready images, and blocks a mixed set", () => {
+    const image = { storageBucket: "post-media", processingStatus: "ready", streamStatus: null };
+    expect(() => assertPublishableMediaRows([image, streamRow("ready")])).not.toThrow();
+    expect(() => assertPublishableMediaRows([image, streamRow("processing")])).toThrow(
+      /still processing/,
+    );
+  });
+
+  it("treats an empty media set as publishable (caption-only posts)", () => {
+    expect(() => assertPublishableMediaRows([])).not.toThrow();
   });
 });
 
