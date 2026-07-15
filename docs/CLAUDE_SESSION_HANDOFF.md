@@ -16,6 +16,24 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
+## Session update — July 15, 2026 (Stream PR #24 recovered and completed as a full vertical slice — UNMERGED, awaiting approval)
+
+**The Cloudflare Stream workstream is now feature-complete on `stream/5a3-composer-ui`.** PR #24 stays **OPEN and DRAFT**; nothing merged, nothing deployed, no production SQL, no migration added. `origin/main` is untouched at `fa903dc`.
+
+- **Branch integration:** merged `origin/main` into the branch (**no force-push, no history rewrite** — feature PRs are squash-merged here, so branch-internal history collapses anyway and a rebase would buy nothing). Exactly ONE conflict: `vitest.config.ts`, resolved as a **UNION**. This was the session's biggest silent hazard — the branch predates the six admin modules `15cb8ad` added, so taking the branch side would have **un-gated six coverage-gated modules with no check failing**. Result: 26 entries.
+- **Four verified server defects fixed** (all found by tracing, all confirmed by reading source):
+  1. `publishPost` had **zero** stream awareness — `assertPublishableMedia` was written but never called; the only gate was the composer's UI gate, which a reload defeats (session resets to `idle`).
+  2. `getPostMediaUrls(+Batch)` were **bucket-blind** — signed `cloudflare-stream` rows against the Supabase bucket, discarded the error, and the row silently vanished while the post still counted it.
+  3. **Attach race** stranded `processing_status` at "processing" **forever** (webhook landed before the media row existed → matched 0 rows; video went terminal → status-refresh short-circuits → nothing ever repaired it).
+  4. `deletePost` **orphaned the Cloudflare asset permanently** and no-op'd its storage remove (a stream path matches the owner prefix by construction → wrong bucket).
+- **Publish readiness:** `resolveMediaProcessingStatus` judges a Stream row by `stream_videos.status`, **never** `post_media.processing_status` (best-effort, can lag). **Known, accepted gap:** raw-PostgREST bypass remains (table-wide UPDATE grant + ownership-only policy) — owner-self-harm only, and playback fails closed so it self-heals. Tyler chose **server gate now, migration deferred**.
+- **Playback (5B):** `useStreamPlayback` + `StreamVideoPlayer` (poster-first, click-to-mount iframe — no hls.js, no new dep) + `PostMediaGallery` fork. `PostCard` being the single shared renderer means feed / `$username` / discovery / post detail all got it at once.
+- **Detach (5A.4):** `detachStreamVideoFromPost` + controller `removeAttached` — pays the `detachRequired` debt that was previously **unpayable** (it permanently blocked the machine's reset).
+- **Orphan sweep:** `stream-reconcile-actions.ts` + `/admin/stream`. `selectOrphanCandidates` had been written, tested, and gated for three checkpoints **with zero callers**, while three call sites named it as their backstop. Grace `readyUnattachedMs` **24h → 7 days** (Tyler's call — a day strands a Friday upload composed on Monday).
+- **Gates:** lint 0 errors (6 known shadcn warnings) · tsc clean · **1155 tests / 43 files** · coverage 98.8–99.8% (95% gate) · build green · **`db:validate` from zero PASSED** (all suites incl. creator-page 2A.1–2A.4) · **client bundle verified free of every Cloudflare/service-role marker**.
+
+**⚠️ The one thing NOT verified — do not skip this before merge:** **no real video has ever flowed through this system.** There is only ONE Cloudflare Stream account and it backs the LIVE production webhook, so a real upload→encode→playback→delete lifecycle cannot be exercised without touching production infrastructure. A read-only API probe confirmed credentials/reachability; the create/delete lifecycle test was **refused, not faked**. Prerequisite: a non-production Stream account, or explicit approval to create+delete one throwaway asset in the production account. CLAUDE.md's invariant still stands: **no production deploy until a real video is verified end-to-end.**
+
 ## Session update — July 15, 2026 (Phase 2A SHIPPED — production release: cloud migrations + merge + deploy)
 
 **Admin creator-page management is LIVE in production.** PR #25 was completed end-to-end this session (recovery → gate → cloud apply → merge → deploy → verify), Tyler-approved at each gate. Everything below is on `main`.
