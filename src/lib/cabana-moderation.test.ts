@@ -214,6 +214,8 @@ describe("labels", () => {
     expect(auditActionLabel("report.resolved")).toBe("Report resolved");
     expect(auditActionLabel("report.assigned")).toBe("Report assigned");
     expect(auditActionLabel("report.open")).toBe("Report reopened");
+    expect(auditActionLabel("user_role.granted")).toBe("Staff role granted");
+    expect(auditActionLabel("user_role.removed")).toBe("Staff role removed");
     expect(auditActionLabel("member.restricted")).toBe("Member Restricted");
     expect(auditActionLabel("solo")).toBe("Solo");
   });
