@@ -1,6 +1,8 @@
 # CABANA Admin Roadmap
 
 > Based on the 2026-07-14 audit of `admin/creator-pages` at `7e72825` against the 918-item CABANA Admin Master Checklist. This is sequencing guidance, not authorization to implement, apply SQL, select vendors, or deploy.
+>
+> **Update 2026-07-15:** Phase 1A (the hardened base creator-page/editor slice) is SHIPPED — PR #25 squash-merged to `main` (`15cb8ad`), migrations `20260537`–`20260540` applied to cloud (now `20260540`) and verified. Creator lifecycle/ownership hardening (checkpoints 7–9, P0 blocker 8) is complete: `20260540` adds one-page-per-owner uniqueness and blocks owner `page_status`/`user_id` writes; `20260539` restricts finance/ownership audit visibility to admins. **Phase 1B (invite/claim, checkpoint 10) and staff MFA/session hardening remain unshipped.** Roadmap items below that predate this merge are marked inline where load-bearing.
 
 ## Roadmap principles
 
@@ -19,7 +21,7 @@
 5. **Trust-and-safety enforcement:** case/evidence model, priorities/SLAs, warnings/strikes/removals/restrictions/suspensions/bans/payout holds, appeals, severe-action review and safe media access.
 6. **Adult/child-safety readiness:** counsel-approved policy, creator and performer identity/age, content-specific consent, restricted records, CSAM escalation/preservation/CyberTipline procedure and trained authorized staff. Adult uploads remain disabled.
 7. **Stream completion:** server-side publish-readiness enforcement, feed/profile/detail playback, attached-media detach/delete, executable orphan cleanup/provider reconciliation and narrowly audited moderator access.
-8. **Creator-page release safety, if included in launch scope:** fix the owner/admin lifecycle boundary and transfer uniqueness, restrict sensitive audit rows, then locally validate the full editor slice before an approved `20260537000000_creator_page_visibility.sql` / `20260538000000_admin_creator_page_management.sql` production sequence. Otherwise explicitly exclude the branch and routes from launch.
+8. **Creator-page release safety, if included in launch scope:** fix the owner/admin lifecycle boundary and transfer uniqueness, restrict sensitive audit rows, then locally validate the full editor slice before an approved `20260537000000_creator_page_visibility.sql` / `20260538000000_admin_creator_page_management.sql` production sequence. Otherwise explicitly exclude the branch and routes from launch. **(SHIPPED July 15 2026, PR #25 → `main` `15cb8ad`, cloud `20260540`: lifecycle boundary + transfer uniqueness fixed in `20260540`, sensitive audit rows restricted in `20260539`, editor slice live; invite/claim still pending.)**
 9. **Real-money safety:** payment/payout providers, tokenized checkout, verified webhooks/idempotency, true accounting/reconciliation, KYC/sanctions/tax, refunds/disputes/reserves, dual approval and provider-confirmed payout settlement. Real money remains disabled.
 10. **Operational release safety:** monitoring/alerting, backups/PITR/restore drill, incident/DR runbooks, E2E/accessibility/security/load testing, production approval and rollback verification.
 
@@ -86,11 +88,11 @@ flowchart TD
 
 **Acceptance:** a moderator cannot receive finance/ownership payloads, a non-admin gets a stable 403-equivalent from admin actions, every role change is attributable and immutable, and staff cannot reach admin without required MFA.
 
-### Phase 1 — Close the current creator-page branch safely
+### Phase 1 — Close the current creator-page branch safely — 1A SHIPPED (PR #25 → `main` `15cb8ad`, cloud `20260540`); 1B (invite/claim) remaining
 
 **Goal:** finish the already-started slice without widening scope.
 
-Treat this as two releases: **1A** is the hardened base creator-page/editor slice; **1B** is invitation/claim. Release 1B may follow 1A, but if claim is part of the launch scope, launch acceptance waits for both.
+Treat this as two releases: **1A** is the hardened base creator-page/editor slice; **1B** is invitation/claim. Release 1B may follow 1A, but if claim is part of the launch scope, launch acceptance waits for both. **1A shipped July 15 2026; 1B not started.**
 
 - First decide which state is creator-controlled editorial lifecycle and which state, if any, is admin-controlled moderation/enforcement. Amend the unapplied creator migrations so raw owner PostgREST writes cannot change an admin-controlled state; add concurrency-safe one-page-per-owner enforcement and intentional nullable-field clearing.
 - Review URL validation and validate existing rows before converting a `NOT VALID` constraint.
@@ -202,10 +204,10 @@ Treat this as two releases: **1A** is the hardened base creator-page/editor slic
 4. Configure/test mandatory staff MFA, recovery, session inventory/revocation and step-up.
 5. Add admin/login/report/upload/action rate limits and abuse telemetry.
 6. Add approved provider/ingress upload MIME/size/signature validation and a quarantine/scan contract compatible with direct tus uploads.
-7. Check shared migration ledgers, then harden the unapplied creator lifecycle/ownership/concurrency invariants in `20260537000000_creator_page_visibility.sql` and `20260538000000_admin_creator_page_management.sql` only if rewrite-safe.
-8. Run the full local rebuild and SQL suites, regenerate/commit types and remove the shim before production.
-9. Build the creator new/detail editor with real public-render previews and browser E2E; if this slice is in scope, only then run approved production migrations, compatible application deploy and production verification.
-10. Build hashed invitation/claim with expiry, revocation, replay defense and audit.
+7. Check shared migration ledgers, then harden the unapplied creator lifecycle/ownership/concurrency invariants in `20260537000000_creator_page_visibility.sql` and `20260538000000_admin_creator_page_management.sql` only if rewrite-safe. **— DONE (hardening shipped in `20260539`/`20260540`, PR #25 → `main` `15cb8ad`).**
+8. Run the full local rebuild and SQL suites, regenerate/commit types and remove the shim before production. **— DONE (`types.ts` regenerated, cast shim removed; PR #25 → `main` `15cb8ad`).**
+9. Build the creator new/detail editor with real public-render previews and browser E2E; if this slice is in scope, only then run approved production migrations, compatible application deploy and production verification. **— DONE (editor live; migrations applied to cloud `20260540`; PR #25 → `main` `15cb8ad`).**
+10. Build hashed invitation/claim with expiry, revocation, replay defense and audit. **— NOT STARTED (invite/claim remains the open Phase 1B slice).**
 11. Enforce Stream readiness in the authoritative publish path.
 12. Add Stream playback to feed/profile/detail with entitlement and expiry tests.
 13. Add detach/delete, orphan sweeper and Cloudflare inventory reconciliation.
@@ -256,7 +258,7 @@ Checkpoints 1–10, 11–13, 14–17 and 25 can proceed in separate dependency-o
 
 ### Work requiring production migrations
 
-- Creator visibility and management: review shared migration ledgers; locally validate `20260537000000_creator_page_visibility.sql`, then `20260538000000_admin_creator_page_management.sql`, plus a separately created audit-visibility migration; regenerate types before production; then apply migrations and the compatible application in an approved sequence.
+- Creator visibility and management: review shared migration ledgers; locally validate `20260537000000_creator_page_visibility.sql`, then `20260538000000_admin_creator_page_management.sql`, plus a separately created audit-visibility migration; regenerate types before production; then apply migrations and the compatible application in an approved sequence. **(SHIPPED July 15 2026: `20260537`–`20260540` applied to cloud `20260540`, types regenerated, deployed via PR #25 → `main` `15cb8ad`.)**
 - Role/capability and role-change audit model.
 - Account states/sessions/admin notes/actions.
 - Cases, evidence, appeals, strikes/enforcement and holds.

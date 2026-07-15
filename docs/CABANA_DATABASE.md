@@ -3,9 +3,12 @@
 > Target production schema for the full creator-subscription platform, plus the documented current state.
 >
 > **This document is partially stale (flagged July 11, 2026).** Its §1 write-up stops around Phase 7,
-> but the implemented schema now spans **22 migrations (`20260511`→`20260532`)** — posts, engagement,
+> but the implemented schema now spans **30 migrations (`20260511`→`20260540`)** (range updated July 15, 2026) — posts, engagement,
 > creator subscriptions, messaging, the monetization ledger, notifications, moderation, admin payouts,
-> the notification engine, creator analytics, and audience insights are all live against real tables +
+> the notification engine, creator analytics, audience insights, Cloudflare Stream video (`20260536`), and
+> **admin creator-page management (Phase 2A, `20260537`–`20260540`, cloud + prod July 15, 2026)** — draft/published/archived
+> page visibility, 8 audited admin SECURITY DEFINER RPCs, restricted moderator audit visibility + revoked direct
+> `user_roles` DML, and one-page-per-owner + protected lifecycle/ownership columns — are all live against real tables +
 > RLS (money remains demo-only). Treat CLAUDE.md's migration chain + `supabase/migrations/` as the
 > source of truth for what exists; the full §1 back-fill is a tracked docs follow-up. New schema still
 > requires explicit approval + an RLS/test plan before it is written.
@@ -17,22 +20,22 @@
 ## 1. Current Implemented Schema
 
 Source: checked-in migrations plus `src/integrations/supabase/types.ts`. **Note (July 11, 2026): the
-table/enum counts below describe only the early phases and are stale — the live schema spans all 22
-migrations (see the header note).** Phase 2B onward type additions are hand-maintained in `types.ts`.
+table/enum counts below describe only the early phases and are stale — the live schema spans all 30
+migrations (`20260511`→`20260540`; see the header note).** Phase 2B onward type additions are hand-maintained in `types.ts`.
 
-| Table              | Columns (current)                                                                                                                   | Notes                                                                                   |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `profiles`         | `id` (=auth.users.id), `email`, `name`, `account_type`, `created_at`, `updated_at`                                                  | Shared identity row; `account_type` defaults to `creator`                               |
+| Table              | Columns (current)                                                                                                                                                                            | Notes                                                                                                                                                                                                                             |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `profiles`         | `id` (=auth.users.id), `email`, `name`, `account_type`, `created_at`, `updated_at`                                                                                                           | Shared identity row; `account_type` defaults to `creator`                                                                                                                                                                         |
 | `creator_profiles` | `id`, `user_id` (nullable!), `handle`, `name`, `bio`, `avatar_url`, `banner_url`, `theme`, `plan`, `created_at`, `updated_at` (+ `headline`, `accent_color`, `button_style` from `20260528`) | Public creator surface. `user_id` nullable allows the ownerless `aurora` demo seed. **anon SELECT is column-scoped** (`20260532`) to the public columns — `user_id` is not anon-readable; `authenticated` keeps full-table SELECT |
-| `member_profiles`  | `id`, `user_id`, `username`, `display_name`, `bio`, `avatar_url`, timestamps                                                        | Full row owner-only; safe public subset is exposed through `public_member_profiles`     |
-| `follows`          | `id`, `follower_id` → profiles, `following_creator_id` → creator_profiles, `created_at`                                             | Unique account→creator relationship; authenticated-only base table                      |
-| `blocks`           | `id`, `blocker_id` → profiles, `blocked_user_id` → profiles, `reason`, `created_at`                                                 | Unique private account→account relationship; authenticated-only base table              |
-| `links`            | `id`, `profile_id` → creator_profiles, `title`, `url`, `icon`, `featured`, `scheduled` (text!), `position`, `clicks`, `created_at`  | `scheduled` is a label, not a timestamp                                                 |
-| `products`         | `id`, `profile_id` → creator_profiles, `title`, `price` (text!), `type` (text), `image_url`, `sales`, `position`, `created_at`      | `price` is a display string; no checkout linkage                                        |
-| `analytics_events` | `id`, `profile_id` (nullable) → creator_profiles, `event_type`, `target_id` (nullable), `metadata` (json), `created_at`             | Anonymous inserts allowed for any real profile                                          |
-| `subscriptions`    | `id`, `user_id`, `plan`, `status`, `stripe_customer_id`, `stripe_subscription_id`, `current_period_end`, `created_at`, `updated_at` | **CABANA SaaS plan, NOT fan subscription.** Rename target: `platform_subscriptions`     |
-| `user_roles`       | `id`, `user_id`, `role` (enum `app_role`), `created_at`                                                                             | Authorization                                                                           |
-| `reserved_handles` | `handle` (PK)                                                                                                                       | Blocked usernames                                                                       |
+| `member_profiles`  | `id`, `user_id`, `username`, `display_name`, `bio`, `avatar_url`, timestamps                                                                                                                 | Full row owner-only; safe public subset is exposed through `public_member_profiles`                                                                                                                                               |
+| `follows`          | `id`, `follower_id` → profiles, `following_creator_id` → creator_profiles, `created_at`                                                                                                      | Unique account→creator relationship; authenticated-only base table                                                                                                                                                                |
+| `blocks`           | `id`, `blocker_id` → profiles, `blocked_user_id` → profiles, `reason`, `created_at`                                                                                                          | Unique private account→account relationship; authenticated-only base table                                                                                                                                                        |
+| `links`            | `id`, `profile_id` → creator_profiles, `title`, `url`, `icon`, `featured`, `scheduled` (text!), `position`, `clicks`, `created_at`                                                           | `scheduled` is a label, not a timestamp                                                                                                                                                                                           |
+| `products`         | `id`, `profile_id` → creator_profiles, `title`, `price` (text!), `type` (text), `image_url`, `sales`, `position`, `created_at`                                                               | `price` is a display string; no checkout linkage                                                                                                                                                                                  |
+| `analytics_events` | `id`, `profile_id` (nullable) → creator_profiles, `event_type`, `target_id` (nullable), `metadata` (json), `created_at`                                                                      | Anonymous inserts allowed for any real profile                                                                                                                                                                                    |
+| `subscriptions`    | `id`, `user_id`, `plan`, `status`, `stripe_customer_id`, `stripe_subscription_id`, `current_period_end`, `created_at`, `updated_at`                                                          | **CABANA SaaS plan, NOT fan subscription.** Rename target: `platform_subscriptions`                                                                                                                                               |
+| `user_roles`       | `id`, `user_id`, `role` (enum `app_role`), `created_at`                                                                                                                                      | Authorization                                                                                                                                                                                                                     |
+| `reserved_handles` | `handle` (PK)                                                                                                                                                                                | Blocked usernames                                                                                                                                                                                                                 |
 
 **Enums:** `app_role` (`admin` | `moderator` | `user`) and `account_type` (`creator` |
 `member`). **Public views:** `public_creator_profiles`, `public_member_profiles`. Relationship RPCs
@@ -280,7 +283,7 @@ untouched; feed RPCs aggregate video rows through the existing ID-free media JSO
   composite FK target; numeric CHECKs `>= 0` (the pure layer maps Cloudflare's `-1` sentinels to NULL —
   `>= 0` can never stall a webhook ready-flip); `ready_at` only on ready rows (one-directional).
   Indexes match real queries: `(owner_user_id, status)` (active-upload quota), `(owner_user_id,
-  created_at desc)` (rolling-24h quota), partial `(upload_expires_at) where status='pending_upload'`
+created_at desc)` (rolling-24h quota), partial `(upload_expires_at) where status='pending_upload'`
   (stale-ticket sweep), `(creator_profile_id)` (FK cascades).
 - **RLS** — owners SELECT/DELETE their own rows; INSERT requires `owner_user_id = auth.uid()` AND
   `is_current_user_creator(creator_profile_id)` (members can never pass). **No client UPDATE path** —
@@ -289,10 +292,10 @@ untouched; feed RPCs aggregate video rows through the existing ID-free media JSO
   `anon` nothing; `service_role` select/update/delete on `stream_videos` plus a **column-scoped**
   `update (processing_status, width, height)` on `post_media` for the future lifecycle writer.
 - **`post_media` linkage** — nullable `stream_video_id`; composite FK `(stream_video_id, owner_user_id)
-  → stream_videos (id, owner_user_id)` ON DELETE CASCADE (render metadata only — a dangling pointer
+→ stream_videos (id, owner_user_id)` ON DELETE CASCADE (render metadata only — a dangling pointer
   would just render a broken player; post deletion still cascades media via `post_id` while the
   `stream_videos` row survives as a sweepable orphan); coherence CHECK `(storage_bucket =
-  'cloudflare-stream') = (stream_video_id is not null)`; partial unique index — one live attachment per
+'cloudflare-stream') = (stream_video_id is not null)`; partial unique index — one live attachment per
   stream video at a time. Stream rows use `storage_path '<owner_user_id>/stream/<cf_uid>'`, satisfying the
   20260533 path check by construction; combined with `owner_user_id = auth.uid()` and the composite FK,
   attaching another creator's stream video (or any video to another creator's post, or one video twice)

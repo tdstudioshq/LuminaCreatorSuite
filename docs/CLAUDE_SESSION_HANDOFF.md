@@ -1,6 +1,6 @@
 # CABANA — Claude Agent Session Handoff
 
-> Prepared June 25, 2026 · Last updated July 14, 2026
+> Prepared June 25, 2026 · Last updated July 15, 2026
 >
 > Workspace: `/Users/tdstudiosny/LuminaCreatorSuite`
 
@@ -15,6 +15,26 @@ Use these documents as the source of truth:
 1. [`CABANA_ARCHITECTURE.md`](../CABANA_ARCHITECTURE.md)
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
+
+## Session update — July 15, 2026 (Phase 2A SHIPPED — production release: cloud migrations + merge + deploy)
+
+**Admin creator-page management is LIVE in production.** PR #25 was completed end-to-end this session (recovery → gate → cloud apply → merge → deploy → verify), Tyler-approved at each gate. Everything below is on `main`.
+
+- **PR #25 merged (squash — the established feature-PR strategy):** title `feat(admin): complete creator-page management and editor`; **final merge commit `15cb8ad`** on `main`. Branch `admin/creator-pages` retained (repo `delete_branch_on_merge=false`).
+- **Production deployment:** the merge to `main` triggered **exactly one** production Vercel deploy (`dpl_4npa2EW7SJy1t9586HW5RVT6NS4s`, target `production`, state `READY`, commit `15cb8ad`) — cabanagrp.com serves it; branch deploys were previews only; no unrelated deploy.
+- **Cloud schema now `20260540`.** Migrations `20260537` (visibility) → `20260538` (admin RPCs + audit) → `20260539` (audit visibility + role mgmt) → `20260540` (ownership/lifecycle integrity) were applied to cloud `rpzaeqoqcaxxavltgvpe` via the **Management API SQL endpoint** (exact committed bytes, `begin;…commit;`, in order; reconcile-era ledger untouched — no `db push`), verified object-by-object; the `smoke.sql` grant assertion was aligned to `20260540` (`f2220fe`).
+- **Regenerated `types.ts`** from cloud (purely additive: `creator_page_status` enum + 5 columns + 13 functions; no unrelated generated churn) and **removed the types-lag cast shims** (`a4e6a1f`).
+- **Shipped surface:** admin creator **directory** (`/admin/creators`), **new/detail editor** (`/admin/creators/new`, `/admin/creators/$creatorProfileId` — identity/appearance/links/lifecycle/ownership/preview/audit), and the shared **public creator-page renderer** (`components/cabana/creator-page/`, `$username` gates on `pageStatus==='published'`).
+- **RBAC + audit hardening (live):** admin write is 8 SECURITY DEFINER RPCs (internal `is_current_user_admin()`, one audit row each); **moderator audit visibility restricted** to operational report rows (finance/ownership/role/creator-page audit is admin-only); **direct `user_roles` DML revoked** (role changes only via `admin_grant/remove_user_role`).
+- **Integrity (live):** **one creator page per non-null owner** (partial unique index); **lifecycle + ownership protected** — owner column-UPDATE excludes `page_status` and `user_id` (no self-publish/transfer) and `links.profile_id` (no reparenting, plus an immutable-parent trigger).
+- **Production verification (non-destructive, no residue):** `smoke:prod` 8✓/0✗/1skip/1flaky (incl. STREAM-WEBHOOK 401 — **Stream no regression**); live-state re-assertions + a **rolled-back** anon probe confirmed draft/archived hidden, published visible, links ordered/hidden-omitted; 0 residue (no permanent test pages/accounts created).
+
+**Remaining / NOT done (durable):**
+
+- **Invite/claim flow** — admin-created pages are ownerless (`user_id` null) drafts; there is a directory `claimed` status filter but **no invite/claim implementation**. Next slice.
+- **Staff MFA / session-security** hardening for the admin tier — not started.
+- **Stream PR #24** (`stream/5a3-composer-ui`, composer UI) remains **separate and unmerged** — untouched by this release.
+- Money stays **demo-only**; **no real payments/KYC/adult-upload** readiness is implied by any of this.
 
 ## Session update — July 14, 2026 (Admin creator pages: live directory + Phase 2A.1 visibility + 2A.2 admin RPCs)
 
@@ -38,7 +58,7 @@ Branch-isolated, gated work on **`admin/creator-pages`** (HEAD `7e72825`, 0/0 wi
 - **Draft/archived pages are hidden from anon at the base-table RLS** (role-split SELECT policies) **and** filtered out of the `public_creator_profiles` view — the public page reads the base table directly, so the boundary lives in both places.
 - **Link visibility inheritance**: a link is anon-visible only if `is_visible` AND its parent page is published.
 - `links.url` gained an **HTTP/HTTPS scheme-prefix guard** (`links_url_http_scheme`, NOT VALID) — a scheme check only, not full URL validation; accepts the `https://` authoring placeholder.
-- Load-bearing RLS gotcha discovered and resolved: an RLS `USING` clause needs the role's column-SELECT on referenced columns (→ anon got a column-scoped `page_status` grant), and a cross-table policy subquery needs *table*-level SELECT (→ the baseline `"Owners manage own links"` policy was rescoped to `authenticated`, which anon never satisfied anyway). No SECURITY DEFINER helper was needed.
+- Load-bearing RLS gotcha discovered and resolved: an RLS `USING` clause needs the role's column-SELECT on referenced columns (→ anon got a column-scoped `page_status` grant), and a cross-table policy subquery needs _table_-level SELECT (→ the baseline `"Owners manage own links"` policy was rescoped to `authenticated`, which anon never satisfied anyway). No SECURITY DEFINER helper was needed.
 - Behavioral SQL: `supabase/tests/creator_page_visibility.sql` (26 assertions) — green from zero; wired into `db-validate.sh` + `ci.yml`.
 
 ### 4. Phase 2A.2 — admin creator-page management (`7e72825`)

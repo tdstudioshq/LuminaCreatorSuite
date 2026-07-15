@@ -2,7 +2,7 @@
 
 > Prepared July 14, 2026 · Audit performed against commit `064623e` (`main`, level with `origin/main`)
 >
-> Status: **PLAN ONLY — not started.** No application code, migrations, or SQL have been written.
+> Status: **SHIPPED July 15 2026** — PR #25 ("feat(admin): complete creator-page management and editor") squash-merged to `main` (merge commit `15cb8ad`); migrations `20260537`–`20260540` applied to cloud `rpzaeqoqcaxxavltgvpe` (now at `20260540`) and verified. This document is the original plan; the sections below were written before implementation and are retained for design rationale. **Remaining (not shipped): the invite/claim flow (§12) and staff MFA/session hardening.**
 >
 > Scope: (1) audit the admin surface and classify it honestly; (2) design an admin-operated
 > creator link-page builder that an administrator can publish and hand to a creator.
@@ -474,6 +474,8 @@ others.
 | **6** | Public rendering honors `page_status` (+ view filter) | in `20260538` |
 | **7** | Invite / claim flow | `20260539` |
 | **8** | Production authorization hardening + end-to-end verification | none |
+
+> **Status (2026-07-15):** Phases 1–6 and 8 SHIPPED via PR #25 (`main` `15cb8ad`). The migration numbering diverged from this plan: the shipped chain is `20260537` (creator-page visibility) → `20260538` (admin RPCs + audit) → `20260539` (audit-visibility restriction + role-management RPCs, **not** creator_invites) → `20260540` (one-page-per-owner uniqueness + owner-UPDATE / `links.profile_id` lockdown), all applied to cloud `20260540`. **Phase 7 (invite/claim, §12) did not ship — admin-created pages are ownerless drafts and a `claimed` status filter exists, but no invite/claim implementation. It remains the open follow-up.**
 
 ---
 

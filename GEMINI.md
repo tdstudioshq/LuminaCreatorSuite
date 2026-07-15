@@ -52,7 +52,7 @@ Server actions live in `src/lib/*-actions.ts`.
 
 ### 2.4 Pure Business Layer & Test Coverage (The "Pure" Set)
 
-- **Pure Modules:** `cabana-money`, `cabana-entitlements`, `cabana-account`, `cabana-relationships`, `cabana-posts`, `cabana-engagement`, `cabana-subscriptions`, `cabana-messaging`, `cabana-notifications`, `cabana-moderation`, `cabana-finance`, `cabana-payouts`, `cabana-notification-engine`, `cabana-discovery`, `cabana-dashboard`, `cabana-creator-analytics`.
+- **Pure Modules:** `cabana-money`, `cabana-entitlements`, `cabana-account`, `cabana-relationships`, `cabana-posts`, `cabana-engagement`, `cabana-subscriptions`, `cabana-messaging`, `cabana-notifications`, `cabana-moderation`, `cabana-finance`, `cabana-payouts`, `cabana-notification-engine`, `cabana-discovery`, `cabana-dashboard`, `cabana-creator-analytics`, `cabana-redirect`, `cabana-stream`, `cabana-stream-upload`, `cabana-admin-creators`, `cabana-creator-pages`, `cabana-admin-roles`, `cabana-creator-page-view`, `cabana-admin-creator-page-detail`, `cabana-admin-creator-editor`. **`vitest.config.ts` `coverage.include` is the authoritative list** — keep new domain logic in a pure, repository-injected module so it joins this set.
 - **Test Setup:** Unit tests use **vitest** with configurations in `vitest.config.ts`.
 - **95% Coverage Gate:** These pure files are subject to a strict **95% coverage** threshold (lines/functions/branches/statements). Maintain new domain logic strictly within these pure modules to ensure ease of testing.
 
@@ -62,6 +62,7 @@ Server actions live in `src/lib/*-actions.ts`.
 - **Demo Mode labeling:** Ensure all payout, subscription, and financial features denote **Demo Mode** or **Mock/Simulation** to prevent confusion with production gateways. Do not integrate real Stripe, billing, or KYC elements.
 - **Append-Only Ledger:** The `transactions` table is strictly append-only and immutable. Historical entries cannot be modified. Reversals or failures must be written as separate `refund` transaction records.
 - **Notifications & Triggers:** In-app events are emitted at the database level. SECURITY DEFINER triggers `emit_notification` are invoked after write operations (e.g., on follows, comments, tips, etc.) to record event details in `activity_events` and `notifications`.
+- **Admin creator-page management (Phase 2A, live in production July 15, 2026; cloud through `20260540`):** admin writes to `creator_profiles`/`links` go through **audited SECURITY DEFINER RPCs** gated internally on `is_current_user_admin()` (never an email, Auth metadata, or client flag); each admin server action also asserts admin app-side (`assertAdmin`), with RLS as the final boundary. Moderator audit visibility is restricted to operational report rows (finance/ownership/role/creator-page audit is admin-only); direct `user_roles` DML is revoked (role changes flow through `admin_grant/remove_user_role`); there is **one creator page per non-null owner**; owners cannot alter `page_status`/`user_id` and links cannot be reparented. Page visibility is `page_status` (`draft`/`published`/`archived`) with anon seeing published only. Invite/claim is **not** implemented yet.
 
 ---
 

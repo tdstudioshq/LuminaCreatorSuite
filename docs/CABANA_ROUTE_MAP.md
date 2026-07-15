@@ -96,15 +96,18 @@
 
 ### Admin
 
-| Route                          | File                            | Protection                 | State                                                                                                                                        |
-| ------------------------------ | ------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/admin`                       | admin.tsx                       | Client role gate (`admin`) | 🟡 labeled demo shell (Batch 1: hub-wide "Demo preview" pill, non-functional controls disabled, real-tools grid linking the five live tools) |
-| `/admin/reports`               | admin.reports.tsx               | Client `StaffGate` (staff) | ✅ real moderation queue (Phase 8)                                                                                                           |
-| `/admin/audit`                 | admin.audit.tsx                 | Client `StaffGate` (staff) | ✅ real append-only audit log (Phase 8)                                                                                                      |
-| `/admin/finance`               | admin.finance.tsx               | Client `AdminGate` (admin) | ✅ real finance overview over the mock ledger (Phase 8C.1, read-only)                                                                        |
-| `/admin/ledger`                | admin.ledger.tsx                | Client `AdminGate` (admin) | ✅ real ledger explorer + CSV export (Phase 8C.1)                                                                                            |
-| `/admin/ledger/$transactionId` | admin.ledger.$transactionId.tsx | Client `AdminGate` (admin) | ✅ transaction detail (Phase 8C.1)                                                                                                           |
-| `/admin/payouts`               | admin.payouts.tsx               | Client `AdminGate` (admin) | ✅ real payout review queue — approve/hold/release/reject/mark-paid (Phase 8C.2, demo money)                                                 |
+| Route                               | File                                 | Protection                 | State                                                                                                                                        |
+| ----------------------------------- | ------------------------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/admin`                            | admin.tsx                            | Client role gate (`admin`) | 🟡 labeled demo shell (Batch 1: hub-wide "Demo preview" pill, non-functional controls disabled, real-tools grid linking the five live tools) |
+| `/admin/reports`                    | admin.reports.tsx                    | Client `StaffGate` (staff) | ✅ real moderation queue (Phase 8)                                                                                                           |
+| `/admin/audit`                      | admin.audit.tsx                      | Client `StaffGate` (staff) | ✅ real append-only audit log (Phase 8)                                                                                                      |
+| `/admin/finance`                    | admin.finance.tsx                    | Client `AdminGate` (admin) | ✅ real finance overview over the mock ledger (Phase 8C.1, read-only)                                                                        |
+| `/admin/ledger`                     | admin.ledger.tsx                     | Client `AdminGate` (admin) | ✅ real ledger explorer + CSV export (Phase 8C.1)                                                                                            |
+| `/admin/ledger/$transactionId`      | admin.ledger.$transactionId.tsx      | Client `AdminGate` (admin) | ✅ transaction detail (Phase 8C.1)                                                                                                           |
+| `/admin/payouts`                    | admin.payouts.tsx                    | Client `AdminGate` (admin) | ✅ real payout review queue — approve/hold/release/reject/mark-paid (Phase 8C.2, demo money)                                                 |
+| `/admin/creators`                   | admin.creators.tsx                   | Client `AdminGate` (admin) | ✅ live creator directory over real `creator_profiles` (Phase 2A; paginated; `user_id`/email never wired to the browser)                     |
+| `/admin/creators/new`               | admin.creators.new.tsx               | Client `AdminGate` (admin) | ✅ admin creator-page create form (Phase 2A; audited SECURITY DEFINER RPC)                                                                   |
+| `/admin/creators/$creatorProfileId` | admin.creators.$creatorProfileId.tsx | Client `AdminGate` (admin) | ✅ admin creator-page editor — identity/appearance/links/lifecycle/ownership/preview/audit (Phase 2A; cloud `20260540`, prod July 15 2026)   |
 
 ### System
 

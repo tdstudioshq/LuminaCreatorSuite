@@ -6,6 +6,8 @@
 > Production baseline branch: `main` / `origin/main` at `9638e32`
 > Checklist source: `/Users/tdstudiosny/Downloads/CABANA_ADMIN_MASTER_CHECKLIST.md`
 > Checklist SHA-256: `c62bc1c2b9204776d6f1b948fa05d801a2e97c2175db8fbdfe40b31464bd1d39`
+>
+> **Update 2026-07-15 — Phase 2A SHIPPED (PR #25 → `main` `15cb8ad`, cloud `20260540`).** Admin creator-page management is now live in production: PR #25 ("feat(admin): complete creator-page management and editor") squash-merged to `main`, and migrations `20260537`–`20260540` are applied to cloud `rpzaeqoqcaxxavltgvpe` and verified. `/admin/creators`, the new/detail editor (`/admin/creators/new`, `/admin/creators/$creatorProfileId`), the shared public creator-page renderer, regenerated `types.ts`, and the audited admin write path for `creator_profiles`/`links` are live. `20260539` restricts finance/ownership audit visibility to admins (moderators no longer see those rows) and `20260540` adds one-page-per-owner uniqueness plus owner column-UPDATE and `links.profile_id` lockdowns. The "branch-only" / "not production" / hardening-pending notes throughout this audit predate that merge. Still remaining (not shipped): the invite/claim flow and staff MFA/session hardening.
 
 ## Executive summary
 
@@ -13,7 +15,7 @@ CABANA has a small, real admin foundation: database-backed `admin` and `moderato
 
 No Critical vulnerability was confirmed. High launch risks are missing staff MFA/session controls, unaudited unrestricted admin role changes, upload eligibility without identity/age verification, storage paths without database-enforced MIME/size/malware controls, and a Stream publish-readiness rule that is not enforced by `publishPost`. Real money, real payouts, and adult-content uploads must remain disabled.
 
-The creator-page work at this HEAD is committed and pushed but branch-only. Migrations `20260537` and `20260538` are not production capabilities. They also need hardening before deployment: creator owners can bypass the new lifecycle RPC through direct column updates, one-page-per-owner is not protected by a unique constraint, and creator-transfer audit payloads are visible to moderators.
+The creator-page work at this HEAD is committed and pushed but branch-only. Migrations `20260537` and `20260538` are not production capabilities. They also need hardening before deployment: creator owners can bypass the new lifecycle RPC through direct column updates, one-page-per-owner is not protected by a unique constraint, and creator-transfer audit payloads are visible to moderators. **(SHIPPED July 15 2026, PR #25 → `main` `15cb8ad`, cloud `20260540`: `20260540` adds the one-page-per-owner unique index and blocks owner direct `page_status`/`user_id` updates; `20260539` restricts the transfer-audit rows to admins — these hardening gaps are now closed.)**
 
 ## Audit method and evidence boundary
 
@@ -86,7 +88,7 @@ Repository documentation says the cloud schema is current through `20260536`. Th
 - Cloudflare Stream migration `20260536`, ticket/action/webhook/tus/controller foundations, and signed-playback server actions. `CLAUDE.md` says the webhook is registered and live; no successful real-video flow is documented.
 - Unit/injected-dependency/SSR-oriented tests, 25 behavioral SQL suites on this branch, frozen Bun and pnpm lockfile validation, builds, and from-zero database rebuilds in CI.
 
-Production does **not** have `/admin/creators`, `page_status`, creator-page admin RPCs, or creator-page mutation audit records from migrations `20260537`/`20260538`.
+Production **now has** `/admin/creators`, `page_status`, creator-page admin RPCs, and creator-page mutation audit records — migrations `20260537`/`20260538` (plus `20260539`/`20260540`) shipped via PR #25 (`main` `15cb8ad`) and are applied to cloud `20260540`. _(The branch/production comparison below was written pre-merge and describes the prior branch-only state.)_
 
 ## Branch-only state
 
@@ -107,7 +109,7 @@ The separate `stream/5a3-composer-ui` branch contains commit `308476b` with uplo
 | Route | Scope | UI gate | Data and writes | Effective authorization | Pagination/filtering | Audit/tests | Status |
 |---|---|---|---|---|---|---|---|
 | `/admin` | Main / documented production | Local `AdminGate` in `src/routes/admin.tsx` | Hardcoded overview, verification, subscriptions, payouts, flagged, featured, growth; links to live tools | Client `useHasRole("admin")` only; no privileged data action on the hub | Disabled demo filters | Demo controls are disabled/labeled; no dashboard data tests | `PLACEHOLDER` |
-| `/admin/creators` | Branch only | `AdminGate` | `useAdminCreators` -> `getAdminCreators` -> `creator_profiles` and `links`; read-only | Bearer validation -> explicit `assertAdmin` -> caller RLS | Server search, claimed filter, page/page-size, `.range()` | `cabana-admin-creators.test.ts`, `CreatorDirectory.test.tsx`; no browser E2E | `PARTIAL` |
+| `/admin/creators` | Live (PR #25 → `main` `15cb8ad`, cloud `20260540`) | `AdminGate` | `useAdminCreators` -> `getAdminCreators` -> `creator_profiles` and `links`; read-only directory (create/edit via `/admin/creators/new` + `/admin/creators/$creatorProfileId`) | Bearer validation -> explicit `assertAdmin` -> caller RLS | Server search, claimed filter, page/page-size, `.range()` | `cabana-admin-creators.test.ts`, `CreatorDirectory.test.tsx`; no browser E2E | `PARTIAL` |
 | `/admin/reports` | Main / documented production | `StaffGate` | `getReports`, `assignReport`, `updateReportStatus` -> `reports` | Bearer validation; actions rely on staff RLS, not explicit `assertStaff` | Status filter; capped at 200, no cursor/page | Report audit trigger; unit + `admin_moderation.sql` | `PARTIAL` |
 | `/admin/audit` | Main / documented production | `StaffGate` | `getAuditLogs` -> `audit_logs` | Bearer validation + broad staff RLS | Latest 200 only; no search/page/export | Append-only trigger + SQL tests; payload scope too broad | `PARTIAL` |
 | `/admin/finance` | Main / documented production | `AdminGate` | `transactions`, `payouts`, `creator_balances`; read-only | Bearer validation + caller RLS: creator/payer owner policies plus admin read-all; non-admin calls return scoped own rows rather than 403 | 500/1,000 windows; client filters | Pure finance + ledger SQL tests; mock data | `PARTIAL` |
@@ -171,7 +173,7 @@ The companion `docs/CABANA_ADMIN_GAP_MATRIX.md` is the authoritative capability-
 | 4 | User directory and account management | `MISSING` | No route, admin query, account state model, session action, timeline, notes, export, suspension or deletion workflow. |
 | 5 | Creator onboarding and verification | `PLACEHOLDER` | Disabled sample verification cards; no identity provider, tables, queue, decisions, appeals, or webhook history. |
 | 6 | Adult-content performer identity and consent | `REQUIRES_LEGAL_OR_VENDOR_DECISION` | No runtime controls or records; architecture docs are planning only. Counsel, identity vendor and operating policy are prerequisites. |
-| 7 | Creator profile and link-page management | `PARTIAL` | Branch-only directory + backend RPCs/audit; no editor/invite/claim/production apply; lifecycle and uniqueness gaps remain. |
+| 7 | Creator profile and link-page management | `PARTIAL` | **SHIPPED to production (PR #25 → `main` `15cb8ad`, cloud `20260540`):** directory + new/detail editor + audited admin write path + shared public renderer are live; lifecycle/uniqueness gaps closed by `20260539`/`20260540`. Still remaining: invite/claim flow. |
 | 8 | Content management | `MISSING` | Creator-owned post CRUD exists, but there is no admin inventory, safe review, enforcement, evidence, appeal or cleanup verification. |
 | 9 | Video and live-stream administration | `PARTIAL` | Stream backend is substantial; upload UI is branch-only, playback UI and admin/live-stream/cleanup tooling are missing, and publish readiness is client-only. |
 | 10 | Trust and safety moderation | `PARTIAL` | Reports queue and assignment/status audit exist; policy taxonomy, evidence, enforcement, appeals, holds and severe-review controls do not. |
@@ -298,10 +300,10 @@ None confirmed from repository evidence.
 
 ### Medium
 
-- Moderators receive all audit payloads, including payout details and branch creator-transfer owner UUIDs; sensitive audit categories are not role-scoped.
+- Moderators receive all audit payloads, including payout details and branch creator-transfer owner UUIDs; sensitive audit categories are not role-scoped. **(CLOSED July 15 2026 by `20260539` — finance/ownership audit rows are now admin-only, so moderators no longer see them; shipped via PR #25 → `main` `15cb8ad`.)**
 - Direct staff PostgREST updates can bypass the TypeScript report transition machine; resolution-only edits are not audited.
 - Admin route gates are client-only, and finance/report/audit actions inconsistently rely on RLS rather than explicit strict server denial.
-- Branch creator owners can directly alter `page_status` without admin lifecycle/audit; ownership uniqueness is not concurrency-safe.
+- Branch creator owners can directly alter `page_status` without admin lifecycle/audit; ownership uniqueness is not concurrency-safe. **(CLOSED July 15 2026 by `20260540` — owner column-UPDATE excludes `page_status`/`user_id` and a one-page-per-owner unique index enforces uniqueness; shipped via PR #25 → `main` `15cb8ad`.)**
 - Stream publish readiness is not server-enforced: `publishPost` can accept processing/errored media despite the composer branch's UI gate. Evidence: `src/lib/cabana-stream.ts:331-363`, `src/lib/post-actions.ts:184-201`.
 - Authenticated users can enumerate `creator_profiles.user_id` for visible rows because only anon received a column-scoped grant.
 - No application throttling is present for reports, uploads, analytics-event ingestion or privileged mutations; cloud/provider limits were not verified.
@@ -376,6 +378,6 @@ Admin areas with no meaningful tests because the capability does not exist inclu
 - Production schema, data, RLS catalog, Auth policy, rate limits, password policy, MFA availability, session behavior, backups/PITR and environment variables were not queried.
 - GitHub PR/check state, Vercel previews/deploy aliases and Cloudflare registration were not fetched. PR #24/#25 and production Stream claims come from repository documents.
 - `CLAUDE.md` says the Stream webhook is live, while `docs/CABANA_API.md`, `docs/CABANA_ROUTE_MAP.md`, `docs/CABANA_TECH_DEBT.md` and older handoff passages still call it dormant. The latest dated source was preferred and the drift is a release-documentation defect.
-- `docs/CABANA_ADMIN_CREATOR_PAGES_PLAN.md` still begins “plan only” and reserves `20260539` for invites; the current handoff records implemented `20260537`/`20260538` and reserves `20260539` for audit visibility, but no `20260539` file exists. The handoff/current tree were treated as authoritative.
+- `docs/CABANA_ADMIN_CREATOR_PAGES_PLAN.md` still begins “plan only” and reserves `20260539` for invites; the current handoff records implemented `20260537`/`20260538` and reserves `20260539` for audit visibility, but no `20260539` file exists. The handoff/current tree were treated as authoritative. **(Update 2026-07-15: `20260539` (audit visibility + role management) and `20260540` (one-page-per-owner + owner-UPDATE lockdown) now exist and are applied to cloud `20260540`; the plan doc's “plan only” header is superseded — see PR #25 → `main` `15cb8ad`. Invite/claim did not ship and remains open.)**
 - No full CI, database rebuild, browser, load, accessibility, security scan, provider call or production smoke was run as part of this read-only audit.
 - The historical `supabase/reconcile` scaffold contained empty compliance/support tables that were deliberately dropped. They are not current capabilities and were not counted.
