@@ -215,6 +215,11 @@ jobs:
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
             -v ON_ERROR_STOP=1 -f supabase/tests/admin_creator_page_management.sql
 
+      - name: Behavioral checks (audit visibility + role management — RLS + RPC authz + audit)
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 -f supabase/tests/audit_log_visibility.sql
+
       - name: Stop Supabase
         if: always()
         run: supabase stop || true

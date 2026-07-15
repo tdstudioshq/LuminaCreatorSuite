@@ -258,6 +258,8 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
   "report.resolved": "Report resolved",
   "report.dismissed": "Report dismissed",
   "report.assigned": "Report assigned",
+  "user_role.granted": "Staff role granted",
+  "user_role.removed": "Staff role removed",
 };
 
 /** Human label for an audit action key (falls back to a title-cased form). */

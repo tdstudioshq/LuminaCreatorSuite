@@ -4,9 +4,9 @@
 -- Proves the fix in 20260526000000_user_roles_admin_policy.sql: an authenticated
 -- user can read their OWN role (the useHasRole path that previously failed with
 -- `permission denied for function has_role`), cannot read other users' roles,
--- and cannot self-escalate; an admin can still read and manage all roles via the
--- is_current_user_admin() wrapper; anon is denied entirely. Self-cleaning; any
--- failed assertion exits non-zero.
+-- and cannot self-escalate; an admin can still read all roles but cannot bypass
+-- the audited role-management RPCs with direct DML; anon is denied entirely.
+-- Self-cleaning; any failed assertion exits non-zero.
 -- ============================================================================
 
 delete from auth.users
@@ -63,7 +63,7 @@ begin
     raise exception 'authenticated user read % other-user role rows (expected 0)', cnt;
   end if;
 
-  -- 1d. cannot self-escalate (admin-manage WITH CHECK denies the insert).
+  -- 1d. cannot self-escalate (direct authenticated role DML is revoked).
   denied := false;
   begin
     insert into public.user_roles (user_id, role) values (v_user_id, 'admin');
@@ -75,7 +75,8 @@ begin
   reset role;
 
   -- ---------------------------------------------------------------------------
-  -- 2. An authenticated admin: read + manage all roles still function.
+  -- 2. An authenticated admin: read-all remains, direct role DML is closed,
+  --    and the audited role-management RPC remains available.
   -- ---------------------------------------------------------------------------
   perform set_config(
     'request.jwt.claims',
@@ -91,12 +92,26 @@ begin
     raise exception 'admin sees % role rows for the 3 test users (expected 4)', cnt;
   end if;
 
-  -- 2b. can manage roles (grant another user a moderator role).
-  insert into public.user_roles (user_id, role) values (v_other_id, 'moderator');
+  -- 2b. cannot bypass the audited RPC with direct table DML.
+  denied := false;
+  begin
+    insert into public.user_roles (user_id, role) values (v_other_id, 'moderator');
+  exception when insufficient_privilege then denied := true;
+  end;
+  if not denied then
+    raise exception 'admin directly inserted a role despite revoked DML';
+  end if;
+
+  -- 2c. can grant a role through the audited RPC.
+  perform public.admin_grant_user_role(
+    v_other_id,
+    'moderator',
+    'user_roles policy behavioral test'
+  );
   select count(*) into cnt
     from public.user_roles where user_id = v_other_id and role = 'moderator';
   if cnt <> 1 then
-    raise exception 'admin could not insert a role (got %)', cnt;
+    raise exception 'admin RPC could not grant a role (got %)', cnt;
   end if;
   reset role;
 
