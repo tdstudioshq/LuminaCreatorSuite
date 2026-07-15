@@ -1,6 +1,6 @@
 # CABANA — Claude Agent Session Handoff
 
-> Prepared June 25, 2026 · Last updated July 13, 2026
+> Prepared June 25, 2026 · Last updated July 14, 2026
 >
 > Workspace: `/Users/tdstudiosny/LuminaCreatorSuite`
 
@@ -15,6 +15,67 @@ Use these documents as the source of truth:
 1. [`CABANA_ARCHITECTURE.md`](../CABANA_ARCHITECTURE.md)
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
+
+## Session update — July 14, 2026 (Admin creator pages: live directory + Phase 2A.1 visibility + 2A.2 admin RPCs)
+
+Branch-isolated, gated work on **`admin/creator-pages`** (HEAD `7e72825`, 0/0 with origin). **PR #25 is open, draft, unmerged.** CI green on every commit. Working tree clean except untracked `.claude/`. **No production SQL applied; no production deployment; migrations `20260537`/`20260538` exist only on this branch.**
+
+### 1. Admin directory — Phase 1 (`e37fe02`)
+
+- Live, **read-only** `/admin/creators` directory backed by real `creator_profiles` data.
+- Replaced the fabricated "Users" surface (invented creators/emails behind disabled menus) with the real directory + honest "no backend yet" copy.
+- Established the server-side `assertAdmin` defense-in-depth convention (route `AdminGate` = UX only; handler reads the caller's own `user_roles` row under RLS; RLS is the final authority). No schema change, no write path.
+
+### 2. Documentation (`9638e32`, `1e3a172`)
+
+- `9638e32` — added the admin creator-page implementation plan (`docs/CABANA_ADMIN_CREATOR_PAGES_PLAN.md`).
+- `1e3a172` — refreshed `CLAUDE.md`: added `cabana-admin-creators` to the coverage-gate list, replaced a dead Stream-composer example with real coverage-gated function names, and documented the `assertAdmin` admin-action convention.
+
+### 3. Phase 2A.1 — creator-page visibility (`fe4b537`)
+
+- Migration `20260537000000_creator_page_visibility.sql` (visibility/schema only — no RPCs, no audit, no UI).
+- `page_status` enum (`draft` | `published` | `archived`), **default `published`** so every existing row and self-signup creator stays visible (no regression); appearance fields `font_family` / `background_style` (CHECK-constrained); link `kind` + `is_visible`.
+- **Draft/archived pages are hidden from anon at the base-table RLS** (role-split SELECT policies) **and** filtered out of the `public_creator_profiles` view — the public page reads the base table directly, so the boundary lives in both places.
+- **Link visibility inheritance**: a link is anon-visible only if `is_visible` AND its parent page is published.
+- `links.url` gained an **HTTP/HTTPS scheme-prefix guard** (`links_url_http_scheme`, NOT VALID) — a scheme check only, not full URL validation; accepts the `https://` authoring placeholder.
+- Load-bearing RLS gotcha discovered and resolved: an RLS `USING` clause needs the role's column-SELECT on referenced columns (→ anon got a column-scoped `page_status` grant), and a cross-table policy subquery needs *table*-level SELECT (→ the baseline `"Owners manage own links"` policy was rescoped to `authenticated`, which anon never satisfied anyway). No SECURITY DEFINER helper was needed.
+- Behavioral SQL: `supabase/tests/creator_page_visibility.sql` (26 assertions) — green from zero; wired into `db-validate.sh` + `ci.yml`.
+
+### 4. Phase 2A.2 — admin creator-page management (`7e72825`)
+
+- Migration `20260538000000_admin_creator_page_management.sql` — purely additive: **eight admin SECURITY DEFINER RPCs** (create / update / set-status / transfer page; upsert / set-visibility / reorder / delete link) + an internal `write_creator_audit` helper. No visibility-policy change, no invite/claim, no service-role dependency.
+- Every RPC: `search_path=''`, rejects unauthenticated, internal `is_current_user_admin()` gate, trusted-row targets, `FOR UPDATE` locks, generic non-leaking errors, `revoke from public/anon` + `grant to authenticated`.
+- **Complete one-per-operation audit coverage** across all nine creator-page/link mutation events (target types `creator_profile` / `creator_link`); no audit on failure; no email/token/secret in payloads; owner Auth UUIDs recorded only on transfer (honest `profiles.id === auth.users.id`).
+- Pure `src/lib/cabana-creator-pages.ts` (in the 95% coverage gate) mirrors the rules (status machine, allow-lists, reorder validation, error mapping); SQL stays authoritative.
+- Thin server-action wrappers `src/lib/admin-creator-page-actions.ts` (`attachSupabaseToken` + `requireSupabaseAuth` + `assertAdmin`, caller-RLS only, no service role) with injected-dependency tests.
+- At completion: **893/893** unit tests (28 files), coverage thresholds pass, CI + from-zero database baseline green. Behavioral SQL `supabase/tests/admin_creator_page_management.sql` (7 blocks) wired into `db-validate.sh` + `ci.yml`.
+
+### 5. Production / cloud state — ACTION REQUIRED before the UI phase
+
+- **`20260537` and `20260538` are NOT applied to Supabase production.** They exist only on `admin/creator-pages`.
+- Apply **only with explicit approval**, via the **Management API pattern** — **never `supabase db push`** (the cloud `schema_migrations` ledger uses reconcile-era versions).
+- Apply **in order: `20260537` then `20260538`.**
+- After applying, **regenerate `types.ts`** and remove the temporary RPC cast shim in `admin-creator-page-actions.ts` (the new RPCs are absent from the cloud-generated types until then).
+
+### 6. Open risks
+
+- **Moderator-readable audit rows** currently include payout data (`payout.*` amounts) and, now, creator-page **transfer owner UUIDs** — `audit_logs` is staff-readable (admin OR moderator). The reserved corrective migration **`20260539000000_audit_log_visibility.sql` is not created yet.**
+- **One-creator-page-per-user is RPC-enforced, not DB-constraint enforced** (no unique index on `creator_profiles.user_id`); a non-RPC write path could bypass it.
+- **PR #25 must stay draft/unmerged** until the migrations and a UI release plan are coordinated.
+- **Pushes to `main` auto-deploy production** — keep this work on the branch; branch pushes create Vercel **preview** deployments only (confirmed this session).
+
+### 7. Next recommended work (in order)
+
+1. **Phase 2A.3 — audit-log visibility hardening** (`20260539`): restrict finance/ownership audit rows to admins.
+2. Admin creator-page **editor UI** over the 2A.2 RPCs + the `/admin/creators` directory.
+3. **Controlled cloud migration apply** (`20260537` → `20260538`, Management API, approval).
+4. **Regenerate `types.ts`** and drop the RPC cast shim.
+5. **End-to-end admin-created draft → publish test** against the deployed app.
+6. Invite/claim remains later work.
+
+### Cross-stream isolation note
+
+- The Cloudflare Stream composer work lives on **`stream/5a3-composer-ui` (PR #24, open, draft, unmerged)** and is entirely separate. **Do not mix Stream work into `admin/creator-pages`** (and vice-versa); keep the two branches and PRs isolated.
 
 ## Session update — July 13, 2026 (Stream Checkpoints 3 finalized + 4 shipped: webhook + lifecycle sync)
 
