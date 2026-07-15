@@ -30,6 +30,7 @@ import {
   resolveMediaProcessingStatus,
   assertStreamStatusTransition,
   buildStreamPlaybackUrls,
+  formatStreamDuration,
   buildStreamStoragePath,
   buildTusUploadMetadata,
   buildWebhookSigningInput,
@@ -498,6 +499,23 @@ describe("resolveMediaProcessingStatus", () => {
 
   it("treats an empty media set as publishable (caption-only posts)", () => {
     expect(() => assertPublishableMediaRows([])).not.toThrow();
+  });
+});
+
+describe("formatStreamDuration", () => {
+  it("formats m:ss with a zero-padded seconds field", () => {
+    expect(formatStreamDuration(65)).toBe("1:05");
+    expect(formatStreamDuration(9)).toBe("0:09");
+    expect(formatStreamDuration(600)).toBe("10:00");
+    expect(formatStreamDuration(0)).toBe("0:00");
+    expect(formatStreamDuration(59.6)).toBe("1:00");
+  });
+
+  it("returns null for an unknown duration rather than a confident fake 0:00", () => {
+    // Cloudflare reports duration only once encoding finishes.
+    for (const bad of [null, Number.NaN, -1, Number.POSITIVE_INFINITY]) {
+      expect(formatStreamDuration(bad)).toBeNull();
+    }
   });
 });
 

@@ -103,7 +103,11 @@ export function PostCard({
           )}
           {post.media.length > 0 && (
             <div className="mx-3 overflow-hidden rounded-3xl border border-white/[0.075] bg-black/20 sm:mx-4">
-              <PostMediaGallery postId={post.postId} flush />
+              <PostMediaGallery
+                postId={post.postId}
+                flush
+                hasVideo={post.media.some((m) => m.kind === "video")}
+              />
             </div>
           )}
           <div

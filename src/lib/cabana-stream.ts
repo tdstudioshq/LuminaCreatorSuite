@@ -433,6 +433,19 @@ export type StreamPlaybackUrls = {
 };
 
 /**
+ * Runtime as `m:ss` for a playback badge, or null when it is not yet known.
+ *
+ * Returns null rather than "0:00" for an unknown duration: Cloudflare reports it
+ * only once encoding finishes, and a confident "0:00" on a real video is a lie
+ * the viewer would read as a broken upload.
+ */
+export function formatStreamDuration(seconds: number | null): string | null {
+  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) return null;
+  const total = Math.round(seconds);
+  return `${Math.floor(total / 60)}:${(total % 60).toString().padStart(2, "0")}`;
+}
+
+/**
  * Build the four playback URLs for a signed token on a customer subdomain.
  * Throws on malformed inputs so an injected value can never reach a browser.
  */

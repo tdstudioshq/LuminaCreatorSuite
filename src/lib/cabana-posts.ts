@@ -101,6 +101,37 @@ export type FeedPost = {
   media: FeedMediaItem[];
 };
 
+/** True when a feed card's media descriptors include a Stream video. */
+export function feedPostHasVideo(post: Pick<FeedPost, "media">): boolean {
+  return post.media.some((m) => m.kind === "video");
+}
+
+/**
+ * Split a feed page into the two prefetch batches a <FeedBatchScope> needs.
+ *
+ * Image media and video media live in different backends behind different
+ * actions, so they batch separately. Locked posts are excluded from BOTH: their
+ * media is blanked by the feed RPC and the server would deny the request anyway,
+ * so asking is pure waste that also leaks intent.
+ *
+ * The media-mix rule (one video XOR images) means these two lists never overlap
+ * — but this derives each independently rather than assuming it, so a post that
+ * somehow carried both would still render both instead of silently dropping one.
+ */
+export function partitionFeedMediaIds(posts: readonly FeedPost[]): {
+  imagePostIds: string[];
+  videoPostIds: string[];
+} {
+  const imagePostIds: string[] = [];
+  const videoPostIds: string[] = [];
+  for (const post of posts) {
+    if (post.locked || post.media.length === 0) continue;
+    if (feedPostHasVideo(post)) videoPostIds.push(post.postId);
+    if (post.media.some((m) => m.kind !== "video")) imagePostIds.push(post.postId);
+  }
+  return { imagePostIds, videoPostIds };
+}
+
 export type NewPostInput = {
   caption: string;
   visibility: PostVisibility;

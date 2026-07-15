@@ -12,6 +12,7 @@ import {
   Package,
   RefreshCw,
   ImageOff,
+  Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -25,9 +26,11 @@ import { comingSoon } from "@/lib/coming-soon";
 import { useFollow } from "@/lib/use-relationships";
 import { usePurchaseUnlock } from "@/lib/use-money";
 import { useCreatorFeed, usePostMediaUrls } from "@/lib/use-posts";
+import { useStreamPlayback } from "@/lib/use-stream-playback";
 import type { FeedPost } from "@/lib/cabana-posts";
 import { PostCard } from "@/components/cabana/posts/PostCard";
 import { FeedBatchScope } from "@/components/cabana/posts/FeedBatchScope";
+import { feedPostHasVideo, partitionFeedMediaIds } from "@/lib/cabana-posts";
 import { ReportButton } from "@/components/cabana/reporting/ReportButton";
 import { CreatorSubscribePanel } from "@/components/cabana/subscriptions/CreatorSubscribePanel";
 import { useCreatorTiers } from "@/lib/use-subscriptions";
@@ -467,10 +470,14 @@ function CreatorPosts({
   }
   const nonLocked = posts.filter((p) => !p.locked);
   const engagementPostIds = nonLocked.map((p) => p.postId);
-  const mediaPostIds = nonLocked.filter((p) => p.media.length > 0).map((p) => p.postId);
+  const { imagePostIds, videoPostIds } = partitionFeedMediaIds(posts);
   return (
     <div className="space-y-5 p-4 sm:p-5">
-      <FeedBatchScope mediaPostIds={mediaPostIds} engagementPostIds={engagementPostIds}>
+      <FeedBatchScope
+        mediaPostIds={imagePostIds}
+        videoPostIds={videoPostIds}
+        engagementPostIds={engagementPostIds}
+      >
         {posts.map((post, i) => {
           const isPurchase = post.visibility === "purchase";
           return (
@@ -558,8 +565,18 @@ function CreatorMedia({ username }: { username: string }) {
 }
 
 function ProfileMediaTile({ post, index }: { post: FeedPost; index: number }) {
-  const { data: media, isLoading, isError } = usePostMediaUrls(post.postId);
-  const firstMedia = media?.[0];
+  // A video post has no image rows to sign, so its tile poster comes from the
+  // signed playback thumbnail instead. Exactly one of these queries is ever
+  // enabled — the media-mix rule guarantees a post is video XOR images.
+  const isVideo = feedPostHasVideo(post);
+  const images = usePostMediaUrls(post.postId, !isVideo);
+  const playback = useStreamPlayback(post.postId, isVideo);
+
+  const isLoading = isVideo ? playback.isLoading : images.isLoading;
+  const isError = isVideo ? playback.isError : images.isError;
+  // Both shapes expose a URL for the tile; only the source differs.
+  const posterUrl = isVideo ? playback.data?.[0]?.urls.thumbnail : images.data?.[0]?.url;
+  const firstMedia = posterUrl ? { url: posterUrl } : undefined;
 
   return (
     <motion.div
@@ -588,6 +605,13 @@ function ProfileMediaTile({ post, index }: { post: FeedPost; index: number }) {
             {isError ? <ImageOff className="h-5 w-5" /> : <Images className="h-5 w-5" />}
           </span>
         )}
+        {isVideo && firstMedia?.url ? (
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/55 backdrop-blur-md">
+              <Play className="ml-0.5 h-4 w-4 fill-white text-white" />
+            </span>
+          </span>
+        ) : null}
         {post.media.length > 1 ? (
           <span className="absolute right-2 top-2 rounded-full border border-white/15 bg-black/55 px-2 py-1 text-[10px] font-medium backdrop-blur-md">
             +{post.media.length - 1}

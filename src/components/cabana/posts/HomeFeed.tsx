@@ -16,6 +16,7 @@ import { useCabana, type CabanaProfile } from "@/lib/cabana-store";
 import { useHomeFeed } from "@/lib/use-posts";
 import { PostCard } from "./PostCard";
 import { FeedBatchScope } from "./FeedBatchScope";
+import { partitionFeedMediaIds } from "@/lib/cabana-posts";
 
 const FILTERS = ["All", "Photos", "Free", "Locked"] as const;
 const LOADING_PLACEHOLDERS = [0, 1] as const;
@@ -34,7 +35,7 @@ export function HomeFeed() {
   // filter) so switching filters never triggers new per-card requests.
   const nonLocked = (posts ?? []).filter((p) => !p.locked);
   const engagementPostIds = nonLocked.map((p) => p.postId);
-  const mediaPostIds = nonLocked.filter((p) => p.media.length > 0).map((p) => p.postId);
+  const { imagePostIds, videoPostIds } = partitionFeedMediaIds(posts ?? []);
 
   // Client-side, presentational filtering over the already-fetched feed.
   const visiblePosts = (posts ?? []).filter((p) => {
@@ -149,7 +150,11 @@ export function HomeFeed() {
               }
             />
           ) : (
-            <FeedBatchScope mediaPostIds={mediaPostIds} engagementPostIds={engagementPostIds}>
+            <FeedBatchScope
+              mediaPostIds={imagePostIds}
+              videoPostIds={videoPostIds}
+              engagementPostIds={engagementPostIds}
+            >
               {visiblePosts.map((post, i) => (
                 <PostCard key={post.postId} post={post} index={i} />
               ))}
