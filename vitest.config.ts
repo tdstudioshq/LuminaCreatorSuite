@@ -39,6 +39,7 @@ export default defineConfig({
         "src/lib/cabana-stream.ts",
         "src/lib/cabana-stream-upload.ts",
         "src/lib/cabana-admin-creators.ts",
+        "src/lib/cabana-creator-pages.ts",
       ],
       thresholds: {
         lines: 95,
