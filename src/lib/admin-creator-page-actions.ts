@@ -44,10 +44,10 @@ import {
 
 type Db = SupabaseClient<Database>;
 
-// The 2A.2 RPCs are defined in local migration 20260538 and are NOT yet in the
-// Lovable-generated types.ts (which tracks the cloud schema), so they are called
-// through a narrowly-typed shim rather than regenerating types (which would
-// require a cloud apply). SQL remains the authoritative security layer.
+// The 2A.2 RPC names are kept as a union so the injected-dependency `rpc`
+// boundary stays small and unit-testable. types.ts now carries these RPC
+// signatures (regenerated after the cloud apply); SQL remains the authoritative
+// security layer.
 export type CreatorPageRpc =
   | "admin_create_creator_page"
   | "admin_update_creator_page"
@@ -85,13 +85,10 @@ export async function assertAdmin(supabase: Db, userId: string): Promise<void> {
 }
 
 function makeRpc(supabase: Db): RpcFn {
-  return (fn, args) =>
-    (
-      supabase.rpc as unknown as (
-        name: string,
-        params?: Record<string, unknown>,
-      ) => Promise<RpcResult>
-    )(fn, args);
+  return async (fn, args) => {
+    const { data, error } = await supabase.rpc(fn, args as never);
+    return { data, error };
+  };
 }
 
 function fail(error: DbErrorLike): never {

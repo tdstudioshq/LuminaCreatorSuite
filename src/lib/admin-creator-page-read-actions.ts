@@ -1,9 +1,10 @@
 // ============================================================================
 // CABANA — admin creator-page detail server reads
 // ----------------------------------------------------------------------------
-// Caller-scoped, explicitly admin-gated reads for the editor. The local schema
-// includes migrations 20260537-40 while generated cloud types still lag, so the
-// new columns and audit RPC use narrow casts. No service-role client is used.
+// Caller-scoped, explicitly admin-gated reads for the editor. types.ts now
+// carries the 20260537-40 columns + audit RPC (regenerated after the cloud
+// apply); row shapes are mapped to the editor's narrow view model. No
+// service-role client is used.
 // ============================================================================
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServerFn } from "@tanstack/react-start";
@@ -105,7 +106,7 @@ async function selectProfile(
     .select(ADMIN_CREATOR_PAGE_DETAIL_SELECT)
     .eq("id", creatorProfileId)
     .maybeSingle();
-  return result as unknown as ReadResult<AdminCreatorPageRow | null>;
+  return result as ReadResult<AdminCreatorPageRow | null>;
 }
 
 async function selectLinks(
@@ -120,30 +121,22 @@ async function selectLinks(
     .order("created_at", { ascending: true })
     .order("id", { ascending: true })
     .limit(ADMIN_CREATOR_PAGE_LINK_LIMIT + 1);
-  return result as unknown as ReadResult<AdminCreatorPageLinkRow[]>;
+  return result as ReadResult<AdminCreatorPageLinkRow[]>;
 }
-
-type AuditRpcBuilder = {
-  select: (columns: string) => {
-    limit: (limit: number) => PromiseLike<ReadResult<AdminCreatorPageAuditRow[]>>;
-  };
-};
 
 async function selectAuditHistory(
   supabase: Db,
   creatorProfileId: string,
   limit: number,
 ): Promise<ReadResult<AdminCreatorPageAuditRow[]>> {
-  const rpc = supabase.rpc as unknown as (
-    name: "admin_get_creator_page_audit_history",
-    args: { _creator_profile_id: string; _limit: number },
-  ) => AuditRpcBuilder;
-  return rpc("admin_get_creator_page_audit_history", {
-    _creator_profile_id: creatorProfileId,
-    _limit: limit,
-  })
+  const result = await supabase
+    .rpc("admin_get_creator_page_audit_history", {
+      _creator_profile_id: creatorProfileId,
+      _limit: limit,
+    })
     .select(ADMIN_CREATOR_PAGE_AUDIT_SELECT)
     .limit(limit);
+  return result as unknown as ReadResult<AdminCreatorPageAuditRow[]>;
 }
 
 function depsFrom(supabase: Db, userId: string): AdminCreatorPageReadDeps {

@@ -44,13 +44,10 @@ export async function assertAdmin(supabase: Db, userId: string): Promise<void> {
 }
 
 function makeRpc(supabase: Db): AdminRoleRpcFn {
-  return (fn, args) =>
-    (
-      supabase.rpc as unknown as (
-        name: string,
-        params?: Record<string, unknown>,
-      ) => Promise<AdminRoleRpcResult>
-    )(fn, args);
+  return async (fn, args) => {
+    const { data, error } = await supabase.rpc(fn, args as never);
+    return { data, error };
+  };
 }
 
 async function mutateRole(
