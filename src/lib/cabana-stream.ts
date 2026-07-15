@@ -866,6 +866,22 @@ export type OrphanReason =
   | "never_attached"
   | "stuck_processing";
 
+/** Operator-facing label for why a video was selected for reclamation. */
+export function orphanReasonLabel(reason: OrphanReason): string {
+  switch (reason) {
+    case "upload_expired":
+      return "Upload ticket expired";
+    case "stale_pending":
+      return "Upload never started";
+    case "failed":
+      return "Encoding failed";
+    case "never_attached":
+      return "Never added to a post";
+    case "stuck_processing":
+      return "Stuck processing";
+  }
+}
+
 export type OrphanGracePeriods = {
   pendingMs: number;
   errorMs: number;
@@ -876,7 +892,13 @@ export type OrphanGracePeriods = {
 export const DEFAULT_ORPHAN_GRACE: OrphanGracePeriods = {
   pendingMs: 24 * 60 * 60 * 1000,
   errorMs: 24 * 60 * 60 * 1000,
-  readyUnattachedMs: 24 * 60 * 60 * 1000,
+  // 7 days, NOT 24h: a `ready` unattached video is a real upload a creator has
+  // not composed into a post yet, so this window is the length of time we let
+  // them take. A day strands anyone who uploads Friday and writes Monday —
+  // deleting finished work is far worse than storing it for a week. The other
+  // windows stay short because they reclaim failures and abandoned tickets,
+  // which nobody is coming back for.
+  readyUnattachedMs: 7 * 24 * 60 * 60 * 1000,
   processingStuckMs: 7 * 24 * 60 * 60 * 1000,
 };
 

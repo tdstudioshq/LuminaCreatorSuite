@@ -318,7 +318,7 @@ export function createStreamUploadController(
     if (disposed || myRun !== runId) {
       // The session is gone (unmount, or reset after a debt-free cancel) but
       // the server minted a row + Cloudflare asset. Best-effort reclaim; the
-      // server-side orphan sweep is the backstop.
+      // server-side orphan sweep (`stream-reconcile-actions`) is the backstop.
       void Promise.resolve(deps.actions.deleteVideo({ streamVideoId: ticket.streamVideoId })).catch(
         () => {},
       );
@@ -510,7 +510,8 @@ export function createStreamUploadController(
     } catch {
       if (disposed || myRun !== runId) return;
       // Debt stays visible (cleanupRequired remains true; reset stays
-      // blocked). The server-side orphan sweep is the terminal backstop.
+      // blocked). The server-side orphan sweep (`stream-reconcile-actions`,
+      // admin-triggered) is the terminal backstop.
       if (cleanupAttempts >= UPLOAD_RETRY_LIMITS.cleanup) return;
       scheduleCleanup(computeUploadRetryDelayMs("cleanup", cleanupAttempts));
       return;
