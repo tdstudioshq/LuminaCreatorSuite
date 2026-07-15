@@ -36,6 +36,7 @@ function render(
       onRetry={noop}
       onCancel={noop}
       onRemove={noop}
+      onDetach={noop}
       onDismiss={noop}
     />,
   );
@@ -310,19 +311,38 @@ describe("cancellation and cleanup", () => {
     expect(isDisabled(remove)).toBe(false);
   });
 
-  it("reports a detach-required cancel instead of pretending it is gone", () => {
+  it("still reports a detach-required cancel rather than pretending it is gone", () => {
     const html = render(canceledDetach);
     expect(html).toContain("Video still attached");
-    expect(text(html)).toMatch(/can't be removed automatically/i);
-    expect(isDisabled(buttonFor(html, "Remove"))).toBe(true);
+    // The detach control is live now, so this cancel has a way out.
+    expect(isDisabled(buttonFor(html, "Remove video"))).toBe(false);
   });
 
-  it("shows a ready video as attached, with removal disabled (5A.4 detach flow)", () => {
+  it("offers a live removal for a ready video, warning that it deletes the upload", () => {
     const html = render(ready);
     const remove = buttonFor(html, "Remove video");
     expect(remove).toBeDefined();
-    expect(isDisabled(remove)).toBe(true);
-    expect(text(remove ?? "")).toMatch(/isn't available yet/i);
+    expect(isDisabled(remove)).toBe(false);
+    expect(text(remove ?? "")).toMatch(/deletes the uploaded file/i);
+  });
+
+  it("disables removal while a detach is in flight, so it cannot be double-fired", () => {
+    const html = renderToStaticMarkup(
+      <VideoUploadCard
+        session={ready}
+        rejection={null}
+        onChooseFile={noop}
+        onPause={noop}
+        onResume={noop}
+        onRetry={noop}
+        onCancel={noop}
+        onRemove={noop}
+        onDetach={noop}
+        detaching
+        onDismiss={noop}
+      />,
+    );
+    expect(isDisabled(buttonFor(html, "Removing"))).toBe(true);
   });
 });
 

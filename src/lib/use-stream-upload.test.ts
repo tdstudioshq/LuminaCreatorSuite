@@ -97,6 +97,7 @@ function makeHarness(
     attachVideo: vi.fn(async () => ({})),
     getVideoStatus: vi.fn(async () => ({ status: "processing" as const })),
     deleteVideo: vi.fn(async () => ({})),
+    detachVideo: vi.fn(async () => ({})),
     ...overrides.actions,
   };
   const transports: FakeTransport[] = [];
@@ -667,6 +668,45 @@ describe("reset and full-cycle reuse", () => {
     expect(h.controller.beginUpload(fakeFile(), "post-2").ok).toBe(true);
     await flushMicrotasks();
     expect(h.transports).toHaveLength(2);
+  });
+
+  // 5A.4 — the detach flow. A ready video has a post_media row, so "removing"
+  // it is a server round-trip, not a local discard.
+  it("removeAttached detaches a ready video, then clears the session", async () => {
+    const h = makeHarness({
+      actions: { getVideoStatus: vi.fn(async () => ({ status: "ready" as const })) },
+    });
+    await startProcessing(h);
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    expect(h.session().phase).toBe("ready");
+
+    await expect(h.controller.removeAttached()).resolves.toBe(true);
+    expect(h.actions.detachVideo).toHaveBeenCalledWith({ streamVideoId: TICKET.streamVideoId });
+    expect(h.session().phase).toBe("idle");
+  });
+
+  // The whole point of the honesty model: a failed detach must not tell the
+  // creator their video is gone while the post still references it.
+  it("removeAttached keeps the session intact when the server refuses", async () => {
+    const h = makeHarness({
+      actions: {
+        getVideoStatus: vi.fn(async () => ({ status: "ready" as const })),
+        detachVideo: vi.fn(async () => Promise.reject(new Error("denied"))),
+      },
+    });
+    await startProcessing(h);
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+
+    await expect(h.controller.removeAttached()).resolves.toBe(false);
+    expect(h.session().phase).toBe("ready");
+  });
+
+  it("removeAttached is a no-op in phases where nothing can be attached", async () => {
+    const h = makeHarness();
+    await expect(h.controller.removeAttached()).resolves.toBe(false); // idle
+    await startUploading(h);
+    await expect(h.controller.removeAttached()).resolves.toBe(false); // uploading
+    expect(h.actions.detachVideo).not.toHaveBeenCalled();
   });
 
   it("notifies subscribers on every state change and honors unsubscribe", async () => {

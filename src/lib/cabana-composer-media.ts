@@ -334,23 +334,26 @@ export type VideoControls = {
   canCancel: boolean;
   /** Discard the session from the UI — ONLY when nothing is left attached. */
   canRemove: boolean;
+  /** Remove via the server: detach post_media + reclaim the Cloudflare asset. */
+  canDetach: boolean;
 };
 
 /**
  * Which controls are live.
  *
- * `canRemove` is deliberately NARROWER than the machine's `reset` gate. The
- * machine permits reset from `ready` (the session is complete and it is the
- * composer's job to clear itself after a save), but a ready video is ATTACHED:
- * its `post_media` row exists. Offering the creator a "Remove" that only
- * forgets the session client-side would desync the UI from the database and
- * then let them add images the server would reject. Detaching attached media is
- * the Checkpoint 5A.4 flow, so here a ready video reports "attached" and the
- * control stays disabled rather than lying.
+ * `canRemove` covers the two ways a session ends up with nothing left to settle
+ * (a debt-free cancel) — a pure client-side discard. It does NOT cover a video
+ * that is still attached or still owes a Cloudflare asset: "removing" those by
+ * forgetting the session would desync the UI from the database and then let the
+ * creator add images the server would reject.
  *
- * From `error` the exit is cancel → cleanup → remove, which is why `canRemove`
- * is false there too: the machine refuses reset from `error` so the session can
- * never silently forget a remote asset.
+ * Those cases are `canDetach` instead (5A.4): a real server round-trip that
+ * drops the post_media row and reclaims the asset before the session clears. The
+ * two are separate flags rather than one because they have different costs and
+ * different failure modes — one cannot fail, the other can.
+ *
+ * From `error` the exit is still cancel → cleanup → remove: the machine refuses
+ * reset from `error` so a session can never silently forget a remote asset.
  */
 export function resolveVideoControls(session: UploadSession): VideoControls {
   const canceledWithDebt =
@@ -368,16 +371,21 @@ export function resolveVideoControls(session: UploadSession): VideoControls {
       session.phase === "processing" ||
       session.phase === "error",
     canRemove: session.phase === "canceled" && !canceledWithDebt,
+    canDetach:
+      session.phase === "ready" || (session.phase === "canceled" && session.detachRequired),
   };
 }
 
 /**
- * Why a ready video can't be removed from the composer yet. Non-null ONLY in
- * `ready` — the honest placeholder for the missing 5A.4 detach flow.
+ * Why a ready video can't simply be discarded client-side.
+ *
+ * Kept as an explanation, not a blocker: the control is live via `canDetach`,
+ * and this is the copy that tells the creator removing it also deletes the
+ * uploaded video — a destructive act they should not discover afterwards.
  */
 export function readyRemovalBlockedReason(session: UploadSession): string | null {
   return session.phase === "ready"
-    ? "This video is attached to the post. Removing attached media isn't available yet — discard the draft to start over."
+    ? "Removing this video also deletes the uploaded file. You’ll need to upload it again."
     : null;
 }
 

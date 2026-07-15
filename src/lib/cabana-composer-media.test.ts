@@ -431,11 +431,28 @@ describe("resolveVideoControls", () => {
     expect(resolveVideoControls(canceledDetach).canRemove).toBe(false);
   });
 
-  it("never offers removal of a READY video — it is attached (5A.4 detach flow)", () => {
+  // A ready video is ATTACHED, so it can never be discarded client-side — that
+  // would desync the composer from the database. It is removable, but only
+  // through the server round-trip that actually drops the row (5A.4).
+  it("routes removal of a READY video through detach, never a local discard", () => {
     expect(resolveVideoControls(ready).canRemove).toBe(false);
-    expect(readyRemovalBlockedReason(ready)).toMatch(/attached/i);
+    expect(resolveVideoControls(ready).canDetach).toBe(true);
+    // The copy warns that removing also destroys the upload.
+    expect(readyRemovalBlockedReason(ready)).toMatch(/deletes the uploaded file/i);
     expect(readyRemovalBlockedReason(idle)).toBeNull();
     expect(readyRemovalBlockedReason(canceledClean)).toBeNull();
+  });
+
+  it("routes a detach-required cancel through detach, and a clean one through discard", () => {
+    expect(resolveVideoControls(canceledDetach).canDetach).toBe(true);
+    expect(resolveVideoControls(canceledDetach).canRemove).toBe(false);
+    expect(resolveVideoControls(canceledClean).canDetach).toBe(false);
+    expect(resolveVideoControls(canceledClean).canRemove).toBe(true);
+  });
+
+  it("never offers detach where nothing can be attached", () => {
+    expect(resolveVideoControls(idle).canDetach).toBe(false);
+    expect(resolveVideoControls(retryableError).canDetach).toBe(false);
   });
 
   it("never offers removal from an error — the exit is cancel → cleanup → remove", () => {

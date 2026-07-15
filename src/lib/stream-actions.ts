@@ -806,6 +806,56 @@ export async function executeDeleteFlow(
   return { streamVideoId: video.id, deleted: true };
 }
 
+/**
+ * Detach a Stream video from whatever post holds it, then reclaim it
+ * (Checkpoint 5A.4) — the flow `deleteStreamVideo` deliberately refuses.
+ *
+ * `deleteStreamVideo` rejects an ATTACHED video on purpose: removing a live
+ * post's media must be an explicit decision, never a cascade or a background
+ * side effect. This IS that explicit decision, so it does the two steps in the
+ * only safe order — drop the `post_media` row first so the post immediately
+ * stops referencing the asset, and only then destroy the asset. The reverse
+ * would leave a post pointing at a destroyed video.
+ *
+ * Ownership is RLS's job at every step: the caller can only see their own
+ * `stream_videos` row, and can only delete `post_media` rows they own. A
+ * foreign id is simply invisible, so this cannot touch another creator's video.
+ *
+ * Best-effort remote reclaim: the detach is what the creator asked for and it
+ * has already succeeded by then, so a Cloudflare outage must not fail the
+ * request. The `stream_videos` row survives unattached, which is exactly what
+ * the orphan sweep reclaims.
+ */
+export const detachStreamVideoFromPost = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseToken, requireSupabaseAuth])
+  .inputValidator((raw: { streamVideoId?: unknown }) => ({
+    streamVideoId: normalizeUuid(raw?.streamVideoId, "stream video id"),
+  }))
+  .handler(async ({ context, data }): Promise<{ streamVideoId: string; detached: true }> => {
+    const { supabase } = context;
+    const { data: video, error: videoError } = await supabase
+      .from("stream_videos")
+      .select("id, uid")
+      .eq("id", data.streamVideoId)
+      .maybeSingle();
+    if (videoError) throw new Error(videoError.message);
+    if (!video) throw new Error("Video not found.");
+
+    const { error: detachError } = await supabase
+      .from("post_media")
+      .delete()
+      .eq("stream_video_id", video.id);
+    if (detachError) throw new Error(detachError.message);
+
+    try {
+      const { reclaimStreamVideos } = await import("@/lib/stream-reclaim.server");
+      await reclaimStreamVideos(supabase, [{ id: video.id, uid: video.uid }]);
+    } catch {
+      // The detach stands; the sweep reclaims the asset later.
+    }
+    return { streamVideoId: video.id, detached: true };
+  });
+
 export const deleteStreamVideo = createServerFn({ method: "POST" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
   .inputValidator((raw: { streamVideoId?: unknown }) => ({

@@ -50,6 +50,28 @@ export function PostComposer() {
   );
   const videoInput = useRef<HTMLInputElement>(null);
   const upload = useStreamUpload();
+  const [detaching, setDetaching] = useState(false);
+
+  /**
+   * Remove an attached video (5A.4). The controller only clears the session when
+   * the server confirms the detach, so a failure leaves the card exactly as it
+   * was — still showing the video that is still on the post.
+   */
+  const handleDetach = async () => {
+    if (detaching) return;
+    setDetaching(true);
+    try {
+      const removed = await upload.removeAttached();
+      if (removed) {
+        setVideoMode(false);
+        setRejection(null);
+      } else {
+        toast.error("Couldn’t remove the video. It’s still attached to this post.");
+      }
+    } finally {
+      setDetaching(false);
+    }
+  };
 
   const createPost = useCreatePost();
   const updatePost = useUpdatePost();
@@ -239,6 +261,8 @@ export function PostComposer() {
             setVideoMode(false);
             setRejection(null);
           }}
+          onDetach={() => void handleDetach()}
+          detaching={detaching}
           onDismiss={() => {
             setVideoMode(false);
             setRejection(null);

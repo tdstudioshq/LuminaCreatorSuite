@@ -66,6 +66,10 @@ export type VideoUploadCardProps = {
   onRetry: () => void;
   onCancel: () => void;
   onRemove: () => void;
+  /** Detach an attached video server-side, then clear the session (5A.4). */
+  onDetach: () => void;
+  /** True while the detach round-trip is in flight. */
+  detaching?: boolean;
   /** Leave video mode entirely (only offered while nothing is in flight). */
   onDismiss: () => void;
 };
@@ -79,6 +83,8 @@ export function VideoUploadCard({
   onRetry,
   onCancel,
   onRemove,
+  onDetach,
+  detaching = false,
   onDismiss,
 }: VideoUploadCardProps) {
   const phase = describeUploadPhase(session);
@@ -179,36 +185,37 @@ export function VideoUploadCard({
             <X className="h-4 w-4" /> Cancel upload
           </Button>
         )}
-        {session.phase === "canceled" && (
+        {session.phase === "canceled" && !controls.canDetach && (
           <Button
             variant="ghost"
             size="sm"
             onClick={onRemove}
             disabled={!controls.canRemove}
-            title={
-              controls.canRemove
-                ? undefined
-                : debt.detachRequired
-                  ? "This video is still attached to the post."
-                  : "Waiting for the canceled video to be removed."
-            }
+            title={controls.canRemove ? undefined : "Waiting for the canceled video to be removed."}
             className={TAP_TARGET}
           >
             <Trash2 className="h-4 w-4" /> Remove
           </Button>
         )}
-        {/* A ready video is ATTACHED. Removing it needs the post_media detach
-            flow (5A.4), so the control is an honest disabled placeholder rather
-            than a reset that would desync the composer from the database. */}
-        {readyBlockedReason !== null && (
+        {/* An attached video (ready, or a cancel that left post_media behind) is
+            removed through the server: detach the row, then reclaim the asset.
+            The title warns that this deletes the upload — destructive, and the
+            creator should not learn that afterwards. */}
+        {controls.canDetach && (
           <Button
             variant="ghost"
             size="sm"
-            disabled
-            title={readyBlockedReason}
+            onClick={onDetach}
+            disabled={detaching}
+            title={readyBlockedReason ?? "Removing this video also deletes the uploaded file."}
             className={TAP_TARGET}
           >
-            <Trash2 className="h-4 w-4" /> Remove video
+            {detaching ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+            {detaching ? "Removing…" : "Remove video"}
           </Button>
         )}
       </div>
