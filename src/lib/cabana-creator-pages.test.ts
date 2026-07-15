@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BACKGROUND_STYLES,
   BUTTON_STYLES,
+  CREATOR_PAGE_THEMES,
   CREATOR_PAGE_STATUSES,
   FONT_FAMILIES,
   LINK_KINDS,
@@ -18,8 +19,11 @@ import {
   isValidAccentColor,
   isValidBackgroundStyle,
   isValidButtonStyle,
+  isValidCreatorPageTheme,
   isValidFontFamily,
+  isValidHttpUrl,
   isValidLinkKind,
+  isUuid,
   mapCreatorPageError,
   nextPageStatus,
   normalizeHandle,
@@ -116,6 +120,10 @@ describe("appearance allow-lists", () => {
     expect(isValidButtonStyle("hexagon")).toBe(false);
     expect(isValidButtonStyle(undefined)).toBe(false);
   });
+  it("validates the existing creator themes", () => {
+    for (const theme of CREATOR_PAGE_THEMES) expect(isValidCreatorPageTheme(theme)).toBe(true);
+    expect(isValidCreatorPageTheme("arbitrary-css")).toBe(false);
+  });
   it("validates accent color (empty or 6-digit hex)", () => {
     expect(isValidAccentColor("")).toBe(true);
     expect(isValidAccentColor("#c084fc")).toBe(true);
@@ -145,6 +153,17 @@ describe("link kind + url scheme", () => {
     expect(hasHttpScheme("//example.com")).toBe(false);
     expect(hasHttpScheme("just text")).toBe(false);
     expect(hasHttpScheme(123)).toBe(false);
+  });
+
+  it("strictly validates editor URLs and account ids", () => {
+    expect(isValidHttpUrl("https://example.com/path")).toBe(true);
+    expect(isValidHttpUrl("http://127.0.0.1:8080/path")).toBe(true);
+    expect(isValidHttpUrl("https://")).toBe(false);
+    expect(isValidHttpUrl("example.com")).toBe(false);
+    expect(isValidHttpUrl("javascript:alert(1)")).toBe(false);
+    expect(isValidHttpUrl("https://user:secret@example.com")).toBe(false);
+    expect(isUuid("0a000000-0000-4000-a000-000000000001")).toBe(true);
+    expect(isUuid("not-a-uuid")).toBe(false);
   });
 });
 
@@ -190,7 +209,7 @@ describe("mapCreatorPageError", () => {
     );
     expect(mapCreatorPageError({ code: "P0002" })).toBe("That item could not be found.");
     expect(mapCreatorPageError({ code: "23514", message: "Invalid font_family" })).toBe(
-      "Invalid font_family",
+      "Invalid font family.",
     );
     expect(mapCreatorPageError({ code: "23514" })).toBe("That change is not allowed.");
   });
@@ -205,7 +224,15 @@ describe("mapCreatorPageError", () => {
     expect(mapCreatorPageError({ message: "Creator page not found" })).toBe(
       "That item could not be found.",
     );
-    expect(mapCreatorPageError({ message: "weird boom" })).toBe("weird boom");
+    expect(mapCreatorPageError({ message: "Handle admin is reserved" })).toBe(
+      "That handle is reserved.",
+    );
+    expect(
+      mapCreatorPageError({ message: "Destination account already owns a creator page" }),
+    ).toBe("That creator account already owns a page.");
+    expect(mapCreatorPageError({ message: "weird boom with private SQL" })).toBe(
+      "Something went wrong. Please try again.",
+    );
   });
 
   it("handles null/undefined/empty safely", () => {

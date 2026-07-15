@@ -16,11 +16,37 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ADMIN_CREATOR_SELECT, type AdminCreatorsPage } from "@/lib/cabana-admin-creators";
+import {
+  ADMIN_CREATOR_SELECT,
+  type AdminCreatorRow,
+  type AdminCreatorsPage,
+} from "@/lib/cabana-admin-creators";
 
 const state = vi.hoisted(() => ({
   result: {} as Record<string, unknown>,
 }));
+
+vi.mock("@tanstack/react-router", async () => {
+  const React = await import("react");
+  return {
+    Link: ({
+      to,
+      params,
+      children,
+      ...props
+    }: {
+      to: string;
+      params?: Record<string, string>;
+      children: React.ReactNode;
+      [key: string]: unknown;
+    }) => {
+      const href = params
+        ? Object.entries(params).reduce((path, [key, value]) => path.replace(`$${key}`, value), to)
+        : to;
+      return React.createElement("a", { ...props, href }, children);
+    },
+  };
+});
 
 vi.mock("@/lib/use-admin-creators", () => ({
   useAdminCreators: () => state.result,
@@ -28,7 +54,7 @@ vi.mock("@/lib/use-admin-creators", () => ({
 
 const { CreatorDirectory } = await import("@/components/cabana/admin-creators/CreatorDirectory");
 
-const CLAIMED = {
+const CLAIMED: AdminCreatorRow = {
   id: "p1",
   handle: "aurora",
   displayName: "Aurora Vale",
@@ -38,6 +64,7 @@ const CLAIMED = {
   buttonStyle: "pill",
   accentColor: "#ff00aa",
   plan: "free",
+  pageStatus: "published",
   claimed: true,
   linkCount: 3,
   createdAt: "2026-03-04T12:00:00.000Z",
@@ -98,6 +125,11 @@ describe("rows", () => {
     expect(html).toContain("Unclaimed");
   });
 
+  it("shows the current creator-page lifecycle state", () => {
+    expect(render()).toContain('data-page-status="published"');
+    expect(render()).toContain("All lifecycle states");
+  });
+
   it("renders an avatar fallback rather than a broken image", () => {
     expect(render()).not.toContain("<img");
   });
@@ -113,11 +145,13 @@ describe("honesty invariants", () => {
     expect(html).toContain("Email isn’t shown");
   });
 
-  it("renders NO write control — no manage, edit, suspend, or action menu", () => {
+  it("links to real create and management routes without fake moderation controls", () => {
     const html = render().toLowerCase();
-    for (const word of ["edit", "suspend", "manage", "approve", "delete", "invite", "publish"]) {
-      expect(html).not.toContain(`>${word}`);
-    }
+    expect(html).toContain("new page");
+    expect(html).toContain("manage");
+    expect(html).toContain('href="/admin/creators/new"');
+    expect(html).toContain('href="/admin/creators/p1"');
+    for (const word of ["suspend", "approve", "invite"]) expect(html).not.toContain(`>${word}`);
   });
 
   it("never leaks a user_id / auth uuid", () => {
@@ -234,10 +268,17 @@ describe("source invariants", () => {
     expect(src).not.toMatch(/[\w.]+@[\w.]+\.\w+/);
   });
 
-  it("reads are paginated with .range(), not capped with .limit()", () => {
+  it("paginates profiles and explicitly bounds the per-page link-count read", () => {
     const src = code(ACTIONS);
     expect(src).toContain(".range(from, to)");
-    expect(src).not.toContain(".limit(");
+    expect(src).toContain(".limit(linkReadLimit + 1)");
+    expect(src).toContain("links ?? []).length > linkReadLimit");
+  });
+
+  it("does not forward raw query diagnostics to the browser", () => {
+    const src = code(ACTIONS);
+    expect(src).not.toContain("error.message");
+    expect(src).not.toContain("linkError.message");
   });
 
   it("never selects an email column", () => {

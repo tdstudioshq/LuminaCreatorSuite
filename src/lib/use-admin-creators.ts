@@ -25,6 +25,7 @@ export function useAdminCreators(query: AdminCreatorsQuery) {
       query.pageSize,
       query.search,
       query.claimed,
+      query.status,
     ] as const,
     enabled: !loading && !!user,
     placeholderData: keepPreviousData,
@@ -35,6 +36,7 @@ export function useAdminCreators(query: AdminCreatorsQuery) {
           pageSize: query.pageSize,
           search: query.search,
           claimed: query.claimed,
+          status: query.status,
         },
       }),
   });

@@ -1,5 +1,5 @@
 // ============================================================================
-// CABANA — admin creator directory server actions (Phase 1, READ-ONLY)
+// CABANA — admin creator directory server actions
 // ----------------------------------------------------------------------------
 // The read side of admin creator management. NO schema change, NO new policy,
 // NO write path — `creator_profiles` and `links` have no admin write policy in
@@ -33,6 +33,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import {
   ADMIN_CREATOR_SELECT,
+  ADMIN_CREATOR_LINKS_PER_PAGE_MAX,
   type AdminCreatorsPage,
   type CreatorProfileRow,
   buildSearchFilter,
@@ -77,7 +78,15 @@ export const getAdminCreators = createServerFn({ method: "GET" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
   .inputValidator(
     (
-      raw: { page?: unknown; pageSize?: unknown; search?: unknown; claimed?: unknown } | undefined,
+      raw:
+        | {
+            page?: unknown;
+            pageSize?: unknown;
+            search?: unknown;
+            claimed?: unknown;
+            status?: unknown;
+          }
+        | undefined,
     ) => normalizeAdminCreatorsQuery(raw ?? {}),
   )
   .handler(async ({ context, data }): Promise<AdminCreatorsPage> => {
@@ -94,12 +103,16 @@ export const getAdminCreators = createServerFn({ method: "GET" })
 
     if (data.claimed === "claimed") query = query.not("user_id", "is", null);
     if (data.claimed === "unclaimed") query = query.is("user_id", null);
+    if (data.status !== "all") {
+      const pageStatusColumn: string = "page_status";
+      query = query.eq(pageStatusColumn, data.status);
+    }
 
     const searchFilter = buildSearchFilter(data.search);
     if (searchFilter !== null) query = query.or(searchFilter);
 
     const { data: rows, error, count } = await query;
-    if (error) throw new Error(error.message);
+    if (error) throw new Error("Creator directory could not be loaded.");
 
     const profiles = (rows ?? []) as unknown as CreatorProfileRow[];
 
@@ -107,11 +120,16 @@ export const getAdminCreators = createServerFn({ method: "GET" })
     const ids = profiles.map((p) => p.id);
     let linkRows: { profile_id: string }[] = [];
     if (ids.length > 0) {
+      const linkReadLimit = data.pageSize * ADMIN_CREATOR_LINKS_PER_PAGE_MAX;
       const { data: links, error: linkError } = await supabase
         .from("links")
         .select("profile_id")
-        .in("profile_id", ids);
-      if (linkError) throw new Error(linkError.message);
+        .in("profile_id", ids)
+        .limit(linkReadLimit + 1);
+      if (linkError) throw new Error("Creator link counts could not be loaded.");
+      if ((links ?? []).length > linkReadLimit) {
+        throw new Error("Creator link counts exceed the safe directory limit.");
+      }
       linkRows = (links ?? []) as { profile_id: string }[];
     }
 

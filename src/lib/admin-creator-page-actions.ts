@@ -28,13 +28,16 @@ import type { Database } from "@/integrations/supabase/types";
 import {
   type DbErrorLike,
   type PageStatusAction,
-  hasHttpScheme,
+  isPlausibleHandle,
   isPageStatusAction,
   isValidAccentColor,
   isValidBackgroundStyle,
   isValidButtonStyle,
+  isValidCreatorPageTheme,
   isValidFontFamily,
+  isValidHttpUrl,
   isValidLinkKind,
+  isUuid,
   mapCreatorPageError,
   normalizeHandle,
 } from "@/lib/cabana-creator-pages";
@@ -149,6 +152,188 @@ export interface DeleteLinkInput {
   linkId: string;
 }
 
+const MAX_NAME = 120;
+const MAX_BIO = 2_000;
+const MAX_HEADLINE = 160;
+const MAX_URL = 2_048;
+const MAX_LINK_TITLE = 200;
+const MAX_ICON = 50;
+const MAX_LINKS_PER_REORDER = 200;
+
+function inputRecord(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("Invalid creator-page request.");
+  }
+  return raw as Record<string, unknown>;
+}
+
+function requiredUuid(value: unknown, label: string): string {
+  const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (!isUuid(normalized)) throw new Error(`${label} is invalid.`);
+  return normalized;
+}
+
+function optionalText(value: unknown, label: string, maximum: number): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== "string") throw new Error(`${label} is invalid.`);
+  const normalized = value.trim();
+  if (normalized.length > maximum) throw new Error(`${label} is too long.`);
+  return normalized;
+}
+
+function optionalBoolean(value: unknown, label: string): boolean | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== "boolean") throw new Error(`${label} is invalid.`);
+  return value;
+}
+
+export function validateCreatePageInput(raw: unknown): CreatePageInput {
+  const value = inputRecord(raw);
+  const handle = normalizeHandle(typeof value.handle === "string" ? value.handle : "");
+  const displayName = typeof value.displayName === "string" ? value.displayName.trim() : "";
+  const bio = optionalText(value.bio, "Biography", MAX_BIO);
+  const headline = optionalText(value.headline, "Headline", MAX_HEADLINE);
+  if (!isPlausibleHandle(handle)) {
+    throw new Error("Handle must use 1–64 letters, numbers, hyphens, or underscores.");
+  }
+  if (!displayName || displayName.length > MAX_NAME) {
+    throw new Error("Display name must be between 1 and 120 characters.");
+  }
+  return { handle, displayName, bio, headline };
+}
+
+export function validateUpdatePageInput(raw: unknown): UpdatePageInput {
+  const value = inputRecord(raw);
+  const result: UpdatePageInput = {
+    creatorProfileId: requiredUuid(value.creatorProfileId, "Creator page ID"),
+  };
+  result.handle = optionalText(value.handle, "Handle", 64);
+  if (result.handle != null) {
+    result.handle = normalizeHandle(result.handle);
+    if (!isPlausibleHandle(result.handle)) {
+      throw new Error("Handle must use 1–64 letters, numbers, hyphens, or underscores.");
+    }
+  }
+  result.name = optionalText(value.name, "Display name", MAX_NAME);
+  if (result.name !== undefined && result.name !== null && !result.name) {
+    throw new Error("Display name is required.");
+  }
+  result.bio = optionalText(value.bio, "Biography", MAX_BIO);
+  result.headline = optionalText(value.headline, "Headline", MAX_HEADLINE);
+  result.avatarUrl = optionalText(value.avatarUrl, "Avatar URL", MAX_URL);
+  result.bannerUrl = optionalText(value.bannerUrl, "Banner URL", MAX_URL);
+  for (const [label, asset] of [
+    ["Avatar URL", result.avatarUrl],
+    ["Banner URL", result.bannerUrl],
+  ] as const) {
+    if (asset != null && asset !== "" && !isValidHttpUrl(asset)) {
+      throw new Error(`${label} must be a valid HTTP or HTTPS URL.`);
+    }
+  }
+  result.theme = optionalText(value.theme, "Theme", 30);
+  if (result.theme != null && !isValidCreatorPageTheme(result.theme)) {
+    throw new Error("Invalid theme.");
+  }
+  result.accentColor = optionalText(value.accentColor, "Accent color", 7);
+  if (result.accentColor != null && !isValidAccentColor(result.accentColor)) {
+    throw new Error("Invalid accent color.");
+  }
+  result.buttonStyle = optionalText(value.buttonStyle, "Button style", 20);
+  if (result.buttonStyle != null && !isValidButtonStyle(result.buttonStyle)) {
+    throw new Error("Invalid button style.");
+  }
+  result.fontFamily = optionalText(value.fontFamily, "Font family", 20);
+  if (result.fontFamily != null && !isValidFontFamily(result.fontFamily)) {
+    throw new Error("Invalid font family.");
+  }
+  result.backgroundStyle = optionalText(value.backgroundStyle, "Background style", 20);
+  if (result.backgroundStyle != null && !isValidBackgroundStyle(result.backgroundStyle)) {
+    throw new Error("Invalid background style.");
+  }
+  return result;
+}
+
+export function validateSetStatusInput(raw: unknown): SetStatusInput {
+  const value = inputRecord(raw);
+  if (!isPageStatusAction(value.action)) throw new Error("Invalid status action.");
+  return {
+    creatorProfileId: requiredUuid(value.creatorProfileId, "Creator page ID"),
+    action: value.action,
+  };
+}
+
+export function validateTransferInput(raw: unknown): TransferInput {
+  const value = inputRecord(raw);
+  return {
+    creatorProfileId: requiredUuid(value.creatorProfileId, "Creator page ID"),
+    toUserId: value.toUserId == null ? null : requiredUuid(value.toUserId, "Creator account ID"),
+  };
+}
+
+export function validateUpsertLinkInput(raw: unknown): UpsertLinkInput {
+  const value = inputRecord(raw);
+  const title = typeof value.title === "string" ? value.title.trim() : "";
+  const url = typeof value.url === "string" ? value.url.trim() : "";
+  if (!title || title.length > MAX_LINK_TITLE) {
+    throw new Error("Link title must be between 1 and 200 characters.");
+  }
+  if (!url || url.length > MAX_URL || !isValidHttpUrl(url)) {
+    throw new Error("Link URL must be a valid HTTP or HTTPS URL.");
+  }
+  const icon = optionalText(value.icon, "Link icon", MAX_ICON);
+  if (icon === "") throw new Error("Link icon is required.");
+  const scheduled = optionalText(value.scheduled, "Link schedule", 120);
+  const kind = optionalText(value.kind, "Link kind", 20);
+  if (kind != null && !isValidLinkKind(kind)) throw new Error("Invalid link kind.");
+  const position = value.position;
+  if (
+    position !== undefined &&
+    position !== null &&
+    (!Number.isInteger(position) || Number(position) < 0 || Number(position) > 10_000)
+  ) {
+    throw new Error("Link position is invalid.");
+  }
+  return {
+    creatorProfileId: requiredUuid(value.creatorProfileId, "Creator page ID"),
+    id: value.id == null ? null : requiredUuid(value.id, "Link ID"),
+    title,
+    url,
+    icon,
+    featured: optionalBoolean(value.featured, "Featured value"),
+    scheduled,
+    kind,
+    isVisible: optionalBoolean(value.isVisible, "Visibility value"),
+    position: position == null ? position : Number(position),
+  };
+}
+
+export function validateSetLinkVisibilityInput(raw: unknown): SetLinkVisibilityInput {
+  const value = inputRecord(raw);
+  if (typeof value.isVisible !== "boolean") throw new Error("Visibility value is invalid.");
+  return { linkId: requiredUuid(value.linkId, "Link ID"), isVisible: value.isVisible };
+}
+
+export function validateReorderLinksInput(raw: unknown): ReorderLinksInput {
+  const value = inputRecord(raw);
+  if (!Array.isArray(value.orderedIds) || value.orderedIds.length === 0) {
+    throw new Error("No links provided.");
+  }
+  if (value.orderedIds.length > MAX_LINKS_PER_REORDER) throw new Error("Too many links provided.");
+  const orderedIds = value.orderedIds.map((id) => requiredUuid(id, "Link ID"));
+  if (new Set(orderedIds).size !== orderedIds.length) throw new Error("Duplicate link ids.");
+  return {
+    creatorProfileId: requiredUuid(value.creatorProfileId, "Creator page ID"),
+    orderedIds,
+  };
+}
+
+export function validateDeleteLinkInput(raw: unknown): DeleteLinkInput {
+  const value = inputRecord(raw);
+  return { linkId: requiredUuid(value.linkId, "Link ID") };
+}
+
 // ─────────────────────────────── Flow functions ────────────────────────────
 
 export async function createCreatorPage(
@@ -156,16 +341,16 @@ export async function createCreatorPage(
   input: CreatePageInput,
 ): Promise<{ id: string }> {
   await deps.assertAdmin();
-  const handle = normalizeHandle(input.handle ?? "");
-  if (!handle) throw new Error("Handle is required.");
+  const valid = validateCreatePageInput(input);
   const { data, error } = await deps.rpc("admin_create_creator_page", {
-    _handle: handle,
-    _display_name: input.displayName ?? "",
-    _bio: input.bio ?? "",
-    _headline: input.headline ?? "",
+    _handle: valid.handle,
+    _display_name: valid.displayName,
+    _bio: valid.bio ?? "",
+    _headline: valid.headline ?? "",
   });
   if (error) fail(error);
-  return { id: String(data) };
+  if (!isUuid(data)) throw new Error("The creator page could not be created. Please try again.");
+  return { id: data };
 }
 
 export async function updateCreatorPage(
@@ -173,28 +358,21 @@ export async function updateCreatorPage(
   input: UpdatePageInput,
 ): Promise<{ ok: true }> {
   await deps.assertAdmin();
-  if (input.fontFamily != null && !isValidFontFamily(input.fontFamily))
-    throw new Error("Invalid font family.");
-  if (input.backgroundStyle != null && !isValidBackgroundStyle(input.backgroundStyle))
-    throw new Error("Invalid background style.");
-  if (input.buttonStyle != null && !isValidButtonStyle(input.buttonStyle))
-    throw new Error("Invalid button style.");
-  if (input.accentColor != null && !isValidAccentColor(input.accentColor))
-    throw new Error("Invalid accent color.");
+  const valid = validateUpdatePageInput(input);
 
   const { error } = await deps.rpc("admin_update_creator_page", {
-    _creator_profile_id: input.creatorProfileId,
-    _handle: input.handle != null ? normalizeHandle(input.handle) : null,
-    _name: input.name ?? null,
-    _bio: input.bio ?? null,
-    _headline: input.headline ?? null,
-    _avatar_url: input.avatarUrl ?? null,
-    _banner_url: input.bannerUrl ?? null,
-    _theme: input.theme ?? null,
-    _accent_color: input.accentColor ?? null,
-    _button_style: input.buttonStyle ?? null,
-    _font_family: input.fontFamily ?? null,
-    _background_style: input.backgroundStyle ?? null,
+    _creator_profile_id: valid.creatorProfileId,
+    _handle: valid.handle ?? null,
+    _name: valid.name ?? null,
+    _bio: valid.bio ?? null,
+    _headline: valid.headline ?? null,
+    _avatar_url: valid.avatarUrl ?? null,
+    _banner_url: valid.bannerUrl ?? null,
+    _theme: valid.theme ?? null,
+    _accent_color: valid.accentColor ?? null,
+    _button_style: valid.buttonStyle ?? null,
+    _font_family: valid.fontFamily ?? null,
+    _background_style: valid.backgroundStyle ?? null,
   });
   if (error) fail(error);
   return { ok: true };
@@ -205,10 +383,10 @@ export async function setCreatorPageStatus(
   input: SetStatusInput,
 ): Promise<{ ok: true }> {
   await deps.assertAdmin();
-  if (!isPageStatusAction(input.action)) throw new Error("Invalid status action.");
+  const valid = validateSetStatusInput(input);
   const { error } = await deps.rpc("admin_set_creator_page_status", {
-    _creator_profile_id: input.creatorProfileId,
-    _action: input.action,
+    _creator_profile_id: valid.creatorProfileId,
+    _action: valid.action,
   });
   if (error) fail(error);
   return { ok: true };
@@ -219,9 +397,10 @@ export async function transferCreatorPage(
   input: TransferInput,
 ): Promise<{ ok: true }> {
   await deps.assertAdmin();
+  const valid = validateTransferInput(input);
   const { error } = await deps.rpc("admin_transfer_creator_page", {
-    _creator_profile_id: input.creatorProfileId,
-    _to_user_id: input.toUserId ?? null,
+    _creator_profile_id: valid.creatorProfileId,
+    _to_user_id: valid.toUserId ?? null,
   });
   if (error) fail(error);
   return { ok: true };
@@ -232,23 +411,22 @@ export async function upsertCreatorLink(
   input: UpsertLinkInput,
 ): Promise<{ id: string }> {
   await deps.assertAdmin();
-  if (input.kind != null && !isValidLinkKind(input.kind)) throw new Error("Invalid link kind.");
-  if (input.url != null && !hasHttpScheme(input.url))
-    throw new Error("Link URL must start with http:// or https://.");
+  const valid = validateUpsertLinkInput(input);
   const { data, error } = await deps.rpc("admin_upsert_creator_link", {
-    _creator_profile_id: input.creatorProfileId,
-    _title: input.title,
-    _url: input.url,
-    _id: input.id ?? null,
-    _icon: input.icon ?? "globe",
-    _featured: input.featured ?? false,
-    _scheduled: input.scheduled ?? null,
-    _kind: input.kind ?? "link",
-    _is_visible: input.isVisible ?? true,
-    _position: input.position ?? null,
+    _creator_profile_id: valid.creatorProfileId,
+    _title: valid.title,
+    _url: valid.url,
+    _id: valid.id ?? null,
+    _icon: valid.icon ?? "globe",
+    _featured: valid.featured ?? false,
+    _scheduled: valid.scheduled ?? null,
+    _kind: valid.kind ?? "link",
+    _is_visible: valid.isVisible ?? true,
+    _position: valid.position ?? null,
   });
   if (error) fail(error);
-  return { id: String(data) };
+  if (!isUuid(data)) throw new Error("The link could not be saved. Please try again.");
+  return { id: data };
 }
 
 export async function setCreatorLinkVisibility(
@@ -256,9 +434,10 @@ export async function setCreatorLinkVisibility(
   input: SetLinkVisibilityInput,
 ): Promise<{ ok: true }> {
   await deps.assertAdmin();
+  const valid = validateSetLinkVisibilityInput(input);
   const { error } = await deps.rpc("admin_set_creator_link_visibility", {
-    _link_id: input.linkId,
-    _is_visible: input.isVisible,
+    _link_id: valid.linkId,
+    _is_visible: valid.isVisible,
   });
   if (error) fail(error);
   return { ok: true };
@@ -269,12 +448,10 @@ export async function reorderCreatorLinks(
   input: ReorderLinksInput,
 ): Promise<{ ok: true }> {
   await deps.assertAdmin();
-  if (input.orderedIds.length === 0) throw new Error("No links provided.");
-  if (new Set(input.orderedIds).size !== input.orderedIds.length)
-    throw new Error("Duplicate link ids.");
+  const valid = validateReorderLinksInput(input);
   const { error } = await deps.rpc("admin_reorder_creator_links", {
-    _creator_profile_id: input.creatorProfileId,
-    _ordered_ids: input.orderedIds,
+    _creator_profile_id: valid.creatorProfileId,
+    _ordered_ids: valid.orderedIds,
   });
   if (error) fail(error);
   return { ok: true };
@@ -285,7 +462,8 @@ export async function deleteCreatorLink(
   input: DeleteLinkInput,
 ): Promise<{ ok: true }> {
   await deps.assertAdmin();
-  const { error } = await deps.rpc("admin_delete_creator_link", { _link_id: input.linkId });
+  const valid = validateDeleteLinkInput(input);
+  const { error } = await deps.rpc("admin_delete_creator_link", { _link_id: valid.linkId });
   if (error) fail(error);
   return { ok: true };
 }
@@ -298,56 +476,56 @@ function depsFrom(supabase: Db, userId: string): AdminPageDeps {
 
 export const adminCreateCreatorPage = createServerFn({ method: "POST" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
-  .inputValidator((raw: CreatePageInput) => raw)
+  .inputValidator(validateCreatePageInput)
   .handler(({ context, data }) =>
     createCreatorPage(depsFrom(context.supabase, context.userId), data),
   );
 
 export const adminUpdateCreatorPage = createServerFn({ method: "POST" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
-  .inputValidator((raw: UpdatePageInput) => raw)
+  .inputValidator(validateUpdatePageInput)
   .handler(({ context, data }) =>
     updateCreatorPage(depsFrom(context.supabase, context.userId), data),
   );
 
 export const adminSetCreatorPageStatus = createServerFn({ method: "POST" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
-  .inputValidator((raw: SetStatusInput) => raw)
+  .inputValidator(validateSetStatusInput)
   .handler(({ context, data }) =>
     setCreatorPageStatus(depsFrom(context.supabase, context.userId), data),
   );
 
 export const adminTransferCreatorPage = createServerFn({ method: "POST" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
-  .inputValidator((raw: TransferInput) => raw)
+  .inputValidator(validateTransferInput)
   .handler(({ context, data }) =>
     transferCreatorPage(depsFrom(context.supabase, context.userId), data),
   );
 
 export const adminUpsertCreatorLink = createServerFn({ method: "POST" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
-  .inputValidator((raw: UpsertLinkInput) => raw)
+  .inputValidator(validateUpsertLinkInput)
   .handler(({ context, data }) =>
     upsertCreatorLink(depsFrom(context.supabase, context.userId), data),
   );
 
 export const adminSetCreatorLinkVisibility = createServerFn({ method: "POST" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
-  .inputValidator((raw: SetLinkVisibilityInput) => raw)
+  .inputValidator(validateSetLinkVisibilityInput)
   .handler(({ context, data }) =>
     setCreatorLinkVisibility(depsFrom(context.supabase, context.userId), data),
   );
 
 export const adminReorderCreatorLinks = createServerFn({ method: "POST" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
-  .inputValidator((raw: ReorderLinksInput) => raw)
+  .inputValidator(validateReorderLinksInput)
   .handler(({ context, data }) =>
     reorderCreatorLinks(depsFrom(context.supabase, context.userId), data),
   );
 
 export const adminDeleteCreatorLink = createServerFn({ method: "POST" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])
-  .inputValidator((raw: DeleteLinkInput) => raw)
+  .inputValidator(validateDeleteLinkInput)
   .handler(({ context, data }) =>
     deleteCreatorLink(depsFrom(context.supabase, context.userId), data),
   );

@@ -1,17 +1,16 @@
 // ============================================================================
-// CABANA — admin creator directory (Phase 1, READ-ONLY)
+// CABANA — admin creator directory
 // ----------------------------------------------------------------------------
 // PRESENTATION ONLY. Every decision — query clamping, search sanitization, row
 // mapping, page summary — comes from the pure `cabana-admin-creators` module.
 //
-// This surface is deliberately READ-ONLY and says so. There are no admin write
-// policies on `creator_profiles` / `links` in the database, so there is nothing
-// honest to wire an edit button to yet. It renders NO action menus, NO disabled
-// "manage" affordances, and NO email column (see the notice — an admin genuinely
-// cannot read another account's email under current policies).
+// Rows link to the protected creator-page editor; no mutation occurs from this
+// list. Email remains absent because the editor uses trusted profile data and an
+// exact UUID ownership control rather than exposing auth.users.
 // ============================================================================
+import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ExternalLink, Link2, Search, UserRound, Users } from "lucide-react";
+import { ExternalLink, FilePlus2, Link2, Search, Settings2, UserRound, Users } from "lucide-react";
 import { EmptyState } from "@/components/cabana/EmptyState";
 import { QueryErrorState } from "@/components/cabana/QueryErrorState";
 import {
@@ -19,6 +18,7 @@ import {
   ADMIN_CREATORS_PAGE_SIZE,
   type AdminCreatorRow,
   type ClaimFilter,
+  type LifecycleFilter,
   formatCreatedAt,
   summarizeAdminCreatorsPage,
 } from "@/lib/cabana-admin-creators";
@@ -30,10 +30,18 @@ const CLAIM_TABS: { value: ClaimFilter; label: string }[] = [
   { value: "unclaimed", label: "Unclaimed" },
 ];
 
+const LIFECYCLE_OPTIONS: { value: LifecycleFilter; label: string }[] = [
+  { value: "all", label: "All lifecycle states" },
+  { value: "draft", label: "Draft" },
+  { value: "published", label: "Published" },
+  { value: "archived", label: "Archived" },
+];
+
 export function CreatorDirectory() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [claimed, setClaimed] = useState<ClaimFilter>("all");
+  const [status, setStatus] = useState<LifecycleFilter>("all");
   const [page, setPage] = useState(0);
 
   // Debounce the server query so typing doesn't fire a request per keystroke.
@@ -47,7 +55,7 @@ export function CreatorDirectory() {
     return () => clearTimeout(id);
   }, [searchInput]);
 
-  const query = { page, pageSize: ADMIN_CREATORS_PAGE_SIZE, search, claimed };
+  const query = { page, pageSize: ADMIN_CREATORS_PAGE_SIZE, search, claimed, status };
   const creators = useAdminCreators(query);
 
   const data = creators.data;
@@ -74,28 +82,53 @@ export function CreatorDirectory() {
           />
         </label>
 
-        <div
-          className="flex items-center gap-1 rounded-full bg-white/5 p-1"
-          role="group"
-          aria-label="Filter by claim status"
-        >
-          {CLAIM_TABS.map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => {
-                setClaimed(tab.value);
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            className="flex items-center gap-1 rounded-full bg-white/5 p-1"
+            role="group"
+            aria-label="Filter by claim status"
+          >
+            {CLAIM_TABS.map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => {
+                  setClaimed(tab.value);
+                  setPage(0);
+                }}
+                aria-pressed={claimed === tab.value}
+                className={`inline-flex min-h-11 items-center rounded-full px-3.5 py-1.5 text-xs transition-colors ${
+                  claimed === tab.value
+                    ? "bg-white/10 text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <label>
+            <span className="sr-only">Filter by page lifecycle</span>
+            <select
+              value={status}
+              onChange={(event) => {
+                setStatus(event.target.value as LifecycleFilter);
                 setPage(0);
               }}
-              aria-pressed={claimed === tab.value}
-              className={`inline-flex min-h-11 items-center rounded-full px-3.5 py-1.5 text-xs transition-colors ${
-                claimed === tab.value
-                  ? "bg-white/10 text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className="min-h-11 rounded-full border border-border bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {tab.label}
-            </button>
-          ))}
+              {LIFECYCLE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Link
+            to="/admin/creators/new"
+            className="btn-luxury inline-flex min-h-11 items-center gap-2 !rounded-full !px-4 !py-2 text-xs"
+          >
+            <FilePlus2 className="h-3.5 w-3.5" /> New page
+          </Link>
         </div>
       </div>
 
@@ -115,21 +148,26 @@ export function CreatorDirectory() {
       ) : summary.isEmpty ? (
         <EmptyState
           icon={Users}
-          title={search || claimed !== "all" ? "No creators match" : "No creators yet"}
+          title={
+            search || claimed !== "all" || status !== "all"
+              ? "No creators match"
+              : "No creators yet"
+          }
           description={
-            search || claimed !== "all"
+            search || claimed !== "all" || status !== "all"
               ? "Try a different search term or clear the filter."
               : "Creator profiles appear here as soon as accounts exist."
           }
         />
       ) : (
         <div className="glass overflow-hidden rounded-3xl">
-          <div className="hidden grid-cols-[2fr_1.6fr_1fr_0.8fr_1fr] gap-4 border-b border-border/50 px-6 py-4 text-xs uppercase tracking-[0.18em] text-muted-foreground md:grid">
+          <div className="hidden grid-cols-[1.8fr_1.5fr_0.9fr_0.6fr_0.9fr_auto] gap-4 border-b border-border/50 px-6 py-4 text-xs uppercase tracking-[0.18em] text-muted-foreground md:grid">
             <div>Creator</div>
             <div>Public page</div>
             <div>Status</div>
             <div>Links</div>
             <div>Created</div>
+            <div className="sr-only">Actions</div>
           </div>
           {(data?.rows ?? []).map((row) => (
             <CreatorRow key={row.id} row={row} />
@@ -172,7 +210,7 @@ export function CreatorDirectory() {
 
 function CreatorRow({ row }: { row: AdminCreatorRow }) {
   return (
-    <div className="grid grid-cols-1 items-center gap-y-3 border-b border-border/30 px-6 py-4 last:border-0 hover:bg-foreground/[0.03] md:grid-cols-[2fr_1.6fr_1fr_0.8fr_1fr] md:gap-4">
+    <div className="grid grid-cols-1 items-center gap-y-3 border-b border-border/30 px-6 py-4 last:border-0 hover:bg-foreground/[0.03] md:grid-cols-[1.8fr_1.5fr_0.9fr_0.6fr_0.9fr_auto] md:gap-4">
       {/* Creator */}
       <div className="flex min-w-0 items-center gap-3">
         {row.avatarUrl ? (
@@ -213,7 +251,10 @@ function CreatorRow({ row }: { row: AdminCreatorRow }) {
 
       {/* Status */}
       <div>
-        <ClaimBadge claimed={row.claimed} />
+        <div className="flex flex-wrap gap-1.5">
+          <LifecycleBadge status={row.pageStatus} />
+          <ClaimBadge claimed={row.claimed} />
+        </div>
       </div>
 
       {/* Links */}
@@ -224,7 +265,33 @@ function CreatorRow({ row }: { row: AdminCreatorRow }) {
 
       {/* Created */}
       <div className="text-xs text-muted-foreground">{formatCreatedAt(row.createdAt)}</div>
+
+      <Link
+        to="/admin/creators/$creatorProfileId"
+        params={{ creatorProfileId: row.id }}
+        className="btn-ghost inline-flex min-h-10 items-center justify-center gap-1.5 !px-3 !py-2 text-xs"
+        aria-label={`Manage ${row.displayName}`}
+      >
+        <Settings2 className="h-3.5 w-3.5" /> Manage
+      </Link>
     </div>
+  );
+}
+
+function LifecycleBadge({ status }: { status: AdminCreatorRow["pageStatus"] }) {
+  return (
+    <span
+      data-page-status={status}
+      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${
+        status === "published"
+          ? "bg-emerald-400/15 text-emerald-300"
+          : status === "archived"
+            ? "bg-rose-400/15 text-rose-300"
+            : "bg-sky-400/15 text-sky-300"
+      }`}
+    >
+      {status}
+    </span>
   );
 }
 

@@ -1,5 +1,5 @@
 // ============================================================================
-// CABANA — admin creator directory policy (Phase 1, PURE, READ-ONLY)
+// CABANA — admin creator directory policy (PURE)
 // ----------------------------------------------------------------------------
 // Every DECISION the admin creator directory makes lives here: how a query is
 // normalized and clamped, how a search term is made safe for PostgREST, which
@@ -20,11 +20,11 @@
 //   * Reads are PAGINATED, not capped. `rangeForPage` produces an explicit
 //     `.range()` window; there is no unbounded select and no silent truncation.
 //
-// This slice is READ-ONLY. There are no admin write policies on
-// `creator_profiles` / `links` (verified — none exist in the migration chain),
-// so nothing here may imply an edit capability.
+// The list itself performs no mutation. It links to a separately authorized
+// editor whose server actions and SQL RPCs enforce every write.
 // ============================================================================
 import { PUBLIC_SITE_DOMAIN } from "@/lib/site";
+import { isCreatorPageStatus, type CreatorPageStatus } from "@/lib/cabana-creator-pages";
 
 // ─────────────────────────────── View model ────────────────────────────────
 
@@ -40,6 +40,7 @@ export type AdminCreatorRow = {
   buttonStyle: string;
   accentColor: string;
   plan: string;
+  pageStatus: CreatorPageStatus;
   /** Derived server-side from `user_id != null`. An unclaimed page has no owner yet. */
   claimed: boolean;
   linkCount: number;
@@ -51,11 +52,16 @@ export type AdminCreatorRow = {
 };
 
 export type ClaimFilter = "all" | "claimed" | "unclaimed";
+export type LifecycleFilter = "all" | CreatorPageStatus;
 
 const CLAIM_FILTERS: readonly ClaimFilter[] = ["all", "claimed", "unclaimed"];
 
 export function isClaimFilter(value: unknown): value is ClaimFilter {
   return typeof value === "string" && (CLAIM_FILTERS as readonly string[]).includes(value);
+}
+
+export function isLifecycleFilter(value: unknown): value is LifecycleFilter {
+  return value === "all" || isCreatorPageStatus(value);
 }
 
 // ─────────────────────────────── Query normalization ───────────────────────
@@ -64,6 +70,7 @@ export const ADMIN_CREATORS_PAGE_SIZE = 25;
 export const ADMIN_CREATORS_MAX_PAGE_SIZE = 100;
 /** Longer terms are pointless (handles cap well below this) and just widen the ILIKE. */
 export const ADMIN_CREATORS_SEARCH_MAX = 64;
+export const ADMIN_CREATOR_LINKS_PER_PAGE_MAX = 200;
 
 export type AdminCreatorsQuery = {
   /** Zero-based. */
@@ -71,6 +78,7 @@ export type AdminCreatorsQuery = {
   pageSize: number;
   search: string;
   claimed: ClaimFilter;
+  status: LifecycleFilter;
 };
 
 /**
@@ -83,6 +91,7 @@ export function normalizeAdminCreatorsQuery(raw: {
   pageSize?: unknown;
   search?: unknown;
   claimed?: unknown;
+  status?: unknown;
 }): AdminCreatorsQuery {
   const page =
     typeof raw.page === "number" && Number.isFinite(raw.page)
@@ -99,6 +108,7 @@ export function normalizeAdminCreatorsQuery(raw: {
     pageSize,
     search: sanitizeSearchTerm(raw.search),
     claimed: isClaimFilter(raw.claimed) ? raw.claimed : "all",
+    status: isLifecycleFilter(raw.status) ? raw.status : "all",
   };
 }
 
@@ -154,11 +164,12 @@ export type CreatorProfileRow = {
   button_style: string | null;
   accent_color: string | null;
   plan: string | null;
+  page_status: string | null;
   created_at: string;
 };
 
 export const ADMIN_CREATOR_SELECT =
-  "id, user_id, handle, name, bio, headline, avatar_url, theme, button_style, accent_color, plan, created_at";
+  "id, user_id, handle, name, bio, headline, avatar_url, theme, button_style, accent_color, plan, page_status, created_at";
 
 /** Headline wins; otherwise a trimmed bio excerpt; otherwise empty. Never fabricated. */
 export function creatorExcerpt(
@@ -202,6 +213,7 @@ export function mapAdminCreatorRow(row: CreatorProfileRow, linkCount = 0): Admin
     buttonStyle: (row.button_style ?? "").trim() || "rounded",
     accentColor: (row.accent_color ?? "").trim(),
     plan: (row.plan ?? "").trim() || "free",
+    pageStatus: isCreatorPageStatus(row.page_status) ? row.page_status : "published",
     claimed: row.user_id !== null,
     linkCount,
     createdAt: row.created_at,
@@ -292,10 +304,6 @@ export function formatCreatedAt(iso: string): string {
     timeZone: "UTC",
   });
 }
-
-/** The single source of truth for what this read-only slice can and cannot do. */
-export const ADMIN_CREATORS_READONLY_NOTICE =
-  "Read-only directory. Editing a creator's page, inviting a creator, and publishing controls are not built yet.";
 
 /** Why no email column exists — stated plainly rather than shown as a blank cell. */
 export const ADMIN_CREATORS_NO_EMAIL_NOTICE =

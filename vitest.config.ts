@@ -41,6 +41,9 @@ export default defineConfig({
         "src/lib/cabana-admin-creators.ts",
         "src/lib/cabana-creator-pages.ts",
         "src/lib/cabana-admin-roles.ts",
+        "src/lib/cabana-creator-page-view.ts",
+        "src/lib/cabana-admin-creator-page-detail.ts",
+        "src/lib/cabana-admin-creator-editor.ts",
       ],
       thresholds: {
         lines: 95,

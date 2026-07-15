@@ -6,9 +6,9 @@ import { ArrowLeft, Sparkles } from "lucide-react";
  * `FinanceShell` / `ModerationShell` (header + back-to-console link), minus the
  * tab nav — there is only one creator surface in this slice.
  *
- * No demo pill: unlike the finance shells, every row here is REAL
- * `creator_profiles` data. It carries a read-only notice instead, because
- * management (edit / invite / publish) genuinely does not exist yet.
+ * No demo pill: every value here is backed by real creator-profile data and
+ * protected admin reads/actions. Invite and claim remain intentionally out of
+ * scope; owner assignment is a separate exact-UUID workflow in the editor.
  */
 export function CreatorsShell({
   eyebrow,

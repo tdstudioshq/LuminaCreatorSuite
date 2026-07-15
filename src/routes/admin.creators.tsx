@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AdminGate } from "@/components/cabana/admin-finance/AdminGate";
 import { CreatorDirectory } from "@/components/cabana/admin-creators/CreatorDirectory";
 import { CreatorsShell } from "@/components/cabana/admin-creators/CreatorsShell";
-import { ADMIN_CREATORS_READONLY_NOTICE } from "@/lib/cabana-admin-creators";
 
 export const Route = createFileRoute("/admin/creators")({
   head: () => ({
@@ -21,8 +20,7 @@ function CreatorsRoute() {
       <CreatorsShell
         eyebrow="Creator operations"
         title="Creators"
-        description="Every creator profile on CABANA, newest first. Live data read under your own admin authorization — search and filtering run server-side, and results are paginated rather than capped."
-        notice={ADMIN_CREATORS_READONLY_NOTICE}
+        description="Every creator profile on CABANA, newest first. Search and filtering run server-side, results are paginated, and management opens the protected creator-page editor."
       >
         <CreatorDirectory />
       </CreatorsShell>

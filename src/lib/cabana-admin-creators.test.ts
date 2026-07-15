@@ -9,6 +9,7 @@ import {
   creatorExcerpt,
   formatCreatedAt,
   isClaimFilter,
+  isLifecycleFilter,
   mapAdminCreatorPage,
   mapAdminCreatorRow,
   normalizeAdminCreatorsQuery,
@@ -32,6 +33,7 @@ function row(over: Partial<CreatorProfileRow> = {}): CreatorProfileRow {
     button_style: "pill",
     accent_color: "#ff00aa",
     plan: "free",
+    page_status: "published",
     created_at: "2026-03-04T12:00:00.000Z",
     ...over,
   };
@@ -55,6 +57,7 @@ describe("normalizeAdminCreatorsQuery", () => {
       pageSize: ADMIN_CREATORS_PAGE_SIZE,
       search: "",
       claimed: "all",
+      status: "all",
     });
   });
 
@@ -83,6 +86,16 @@ describe("normalizeAdminCreatorsQuery", () => {
   it("falls back to 'all' for an unknown claim filter", () => {
     expect(normalizeAdminCreatorsQuery({ claimed: "banned" }).claimed).toBe("all");
     expect(normalizeAdminCreatorsQuery({ claimed: "unclaimed" }).claimed).toBe("unclaimed");
+  });
+
+  it("accepts only known lifecycle filters", () => {
+    expect(isLifecycleFilter("all")).toBe(true);
+    expect(isLifecycleFilter("draft")).toBe(true);
+    expect(isLifecycleFilter("published")).toBe(true);
+    expect(isLifecycleFilter("archived")).toBe(true);
+    expect(isLifecycleFilter("suspended")).toBe(false);
+    expect(normalizeAdminCreatorsQuery({ status: "suspended" }).status).toBe("all");
+    expect(normalizeAdminCreatorsQuery({ status: "archived" }).status).toBe("archived");
   });
 });
 
@@ -215,6 +228,11 @@ describe("mapAdminCreatorRow", () => {
   it("carries the link count through", () => {
     expect(mapAdminCreatorRow(row(), 4).linkCount).toBe(4);
     expect(mapAdminCreatorRow(row()).linkCount).toBe(0);
+  });
+
+  it("carries a trusted lifecycle state and safely defaults legacy rows", () => {
+    expect(mapAdminCreatorRow(row({ page_status: "draft" })).pageStatus).toBe("draft");
+    expect(mapAdminCreatorRow(row({ page_status: "unknown" })).pageStatus).toBe("published");
   });
 });
 

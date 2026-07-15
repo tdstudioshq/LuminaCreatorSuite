@@ -109,6 +109,7 @@ export function isPlausibleHandle(handle: string): boolean {
 export const FONT_FAMILIES = ["default", "sans", "serif", "mono", "display"] as const;
 export const BACKGROUND_STYLES = ["default", "solid", "gradient", "iridescent"] as const;
 export const BUTTON_STYLES = ["rounded", "pill", "square"] as const;
+export const CREATOR_PAGE_THEMES = ["iridescent", "midnight", "rose", "chrome"] as const;
 
 export function isValidFontFamily(value: unknown): boolean {
   return typeof value === "string" && (FONT_FAMILIES as readonly string[]).includes(value);
@@ -120,6 +121,10 @@ export function isValidBackgroundStyle(value: unknown): boolean {
 
 export function isValidButtonStyle(value: unknown): boolean {
   return typeof value === "string" && (BUTTON_STYLES as readonly string[]).includes(value);
+}
+
+export function isValidCreatorPageTheme(value: unknown): boolean {
+  return typeof value === "string" && (CREATOR_PAGE_THEMES as readonly string[]).includes(value);
 }
 
 /** '' (theme default) or a 6-digit hex color; mirrors creator_profiles_accent_color_hex. */
@@ -145,6 +150,29 @@ export function isValidLinkKind(value: unknown): boolean {
  */
 export function hasHttpScheme(url: unknown): boolean {
   return typeof url === "string" && /^https?:\/\//i.test(url);
+}
+
+/** Strict admin-editor URL validation; unlike the SQL scheme guard, bare placeholders fail. */
+export function isValidHttpUrl(url: unknown): boolean {
+  if (typeof url !== "string" || !hasHttpScheme(url.trim())) return false;
+  try {
+    const parsed = new URL(url.trim());
+    return (
+      (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+      parsed.hostname.length > 0 &&
+      !parsed.username &&
+      !parsed.password
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function isUuid(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  );
 }
 
 export type ReorderValidation = { ok: true } | { ok: false; reason: string };
@@ -215,6 +243,8 @@ export function mapCreatorPageError(err: DbErrorLike): string {
   const code = typeof err === "object" && err ? (err.code ?? "") : "";
   const message = typeof err === "string" ? err : (err?.message ?? "");
 
+  const lower = message.toLowerCase();
+
   switch (code) {
     case "23505": // unique_violation
       return "That handle is already taken.";
@@ -222,11 +252,10 @@ export function mapCreatorPageError(err: DbErrorLike): string {
       return "You are not authorized to perform this action.";
     case "P0002": // no_data_found
       return "That item could not be found.";
-    case "23514": // check_violation
-      return message || "That change is not allowed.";
+    case "23514": // check_violation — only return reviewed, stable meanings below
+      break;
   }
 
-  const lower = message.toLowerCase();
   if (lower.includes("already taken") || lower.includes("duplicate")) {
     return "That handle is already taken.";
   }
@@ -236,5 +265,28 @@ export function mapCreatorPageError(err: DbErrorLike): string {
   if (lower.includes("not found")) {
     return "That item could not be found.";
   }
-  return message || "Something went wrong. Please try again.";
+  if (lower.includes("reserved")) return "That handle is reserved.";
+  if (lower.includes("invalid status transition")) return "That status change is not allowed.";
+  if (lower.includes("destination account already owns")) {
+    return "That creator account already owns a page.";
+  }
+  if (lower.includes("destination account is not a valid creator")) {
+    return "That account is not eligible to own a creator page.";
+  }
+  if (lower.includes("invalid font_family")) return "Invalid font family.";
+  if (lower.includes("invalid background_style")) return "Invalid background style.";
+  if (lower.includes("invalid button_style")) return "Invalid button style.";
+  if (lower.includes("invalid accent_color")) return "Invalid accent color.";
+  if (lower.includes("invalid link kind")) return "Invalid link kind.";
+  if (lower.includes("visibility is required")) return "Link visibility is required.";
+  if (lower.includes("no links provided")) return "No links were provided.";
+  if (
+    lower.includes("duplicate link ids") ||
+    lower.includes("ordered list") ||
+    lower.includes("link cannot be moved")
+  ) {
+    return "The link order could not be saved.";
+  }
+  if (code === "23514") return "That change is not allowed.";
+  return "Something went wrong. Please try again.";
 }

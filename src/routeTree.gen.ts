@@ -57,6 +57,8 @@ import { Route as AdminCreatorsRouteImport } from './routes/admin.creators'
 import { Route as AdminAuditRouteImport } from './routes/admin.audit'
 import { Route as ApiWebhooksStreamRouteImport } from './routes/api.webhooks.stream'
 import { Route as AdminLedgerTransactionIdRouteImport } from './routes/admin.ledger.$transactionId'
+import { Route as AdminCreatorsNewRouteImport } from './routes/admin.creators.new'
+import { Route as AdminCreatorsCreatorProfileIdRouteImport } from './routes/admin.creators.$creatorProfileId'
 
 const ThetejedaRoute = ThetejedaRouteImport.update({
   id: '/thetejeda',
@@ -299,6 +301,17 @@ const AdminLedgerTransactionIdRoute =
     path: '/$transactionId',
     getParentRoute: () => AdminLedgerRoute,
   } as any)
+const AdminCreatorsNewRoute = AdminCreatorsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AdminCreatorsRoute,
+} as any)
+const AdminCreatorsCreatorProfileIdRoute =
+  AdminCreatorsCreatorProfileIdRouteImport.update({
+    id: '/$creatorProfileId',
+    path: '/$creatorProfileId',
+    getParentRoute: () => AdminCreatorsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -322,7 +335,7 @@ export interface FileRoutesByFullPath {
   '/td': typeof TdRoute
   '/thetejeda': typeof ThetejedaRoute
   '/admin/audit': typeof AdminAuditRoute
-  '/admin/creators': typeof AdminCreatorsRoute
+  '/admin/creators': typeof AdminCreatorsRouteWithChildren
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
@@ -347,6 +360,8 @@ export interface FileRoutesByFullPath {
   '/messages/$conversationId': typeof MessagesConversationIdRoute
   '/post/$postId': typeof PostPostIdRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/admin/creators/$creatorProfileId': typeof AdminCreatorsCreatorProfileIdRoute
+  '/admin/creators/new': typeof AdminCreatorsNewRoute
   '/admin/ledger/$transactionId': typeof AdminLedgerTransactionIdRoute
   '/api/webhooks/stream': typeof ApiWebhooksStreamRoute
 }
@@ -371,7 +386,7 @@ export interface FileRoutesByTo {
   '/td': typeof TdRoute
   '/thetejeda': typeof ThetejedaRoute
   '/admin/audit': typeof AdminAuditRoute
-  '/admin/creators': typeof AdminCreatorsRoute
+  '/admin/creators': typeof AdminCreatorsRouteWithChildren
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
@@ -396,6 +411,8 @@ export interface FileRoutesByTo {
   '/messages/$conversationId': typeof MessagesConversationIdRoute
   '/post/$postId': typeof PostPostIdRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/admin/creators/$creatorProfileId': typeof AdminCreatorsCreatorProfileIdRoute
+  '/admin/creators/new': typeof AdminCreatorsNewRoute
   '/admin/ledger/$transactionId': typeof AdminLedgerTransactionIdRoute
   '/api/webhooks/stream': typeof ApiWebhooksStreamRoute
 }
@@ -422,7 +439,7 @@ export interface FileRoutesById {
   '/td': typeof TdRoute
   '/thetejeda': typeof ThetejedaRoute
   '/admin/audit': typeof AdminAuditRoute
-  '/admin/creators': typeof AdminCreatorsRoute
+  '/admin/creators': typeof AdminCreatorsRouteWithChildren
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
@@ -447,6 +464,8 @@ export interface FileRoutesById {
   '/messages/$conversationId': typeof MessagesConversationIdRoute
   '/post/$postId': typeof PostPostIdRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/admin/creators/$creatorProfileId': typeof AdminCreatorsCreatorProfileIdRoute
+  '/admin/creators/new': typeof AdminCreatorsNewRoute
   '/admin/ledger/$transactionId': typeof AdminLedgerTransactionIdRoute
   '/api/webhooks/stream': typeof ApiWebhooksStreamRoute
 }
@@ -499,6 +518,8 @@ export interface FileRouteTypes {
     | '/messages/$conversationId'
     | '/post/$postId'
     | '/dashboard/'
+    | '/admin/creators/$creatorProfileId'
+    | '/admin/creators/new'
     | '/admin/ledger/$transactionId'
     | '/api/webhooks/stream'
   fileRoutesByTo: FileRoutesByTo
@@ -548,6 +569,8 @@ export interface FileRouteTypes {
     | '/messages/$conversationId'
     | '/post/$postId'
     | '/dashboard'
+    | '/admin/creators/$creatorProfileId'
+    | '/admin/creators/new'
     | '/admin/ledger/$transactionId'
     | '/api/webhooks/stream'
   id:
@@ -598,6 +621,8 @@ export interface FileRouteTypes {
     | '/messages/$conversationId'
     | '/post/$postId'
     | '/dashboard/'
+    | '/admin/creators/$creatorProfileId'
+    | '/admin/creators/new'
     | '/admin/ledger/$transactionId'
     | '/api/webhooks/stream'
   fileRoutesById: FileRoutesById
@@ -968,8 +993,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLedgerTransactionIdRouteImport
       parentRoute: typeof AdminLedgerRoute
     }
+    '/admin/creators/new': {
+      id: '/admin/creators/new'
+      path: '/new'
+      fullPath: '/admin/creators/new'
+      preLoaderRoute: typeof AdminCreatorsNewRouteImport
+      parentRoute: typeof AdminCreatorsRoute
+    }
+    '/admin/creators/$creatorProfileId': {
+      id: '/admin/creators/$creatorProfileId'
+      path: '/$creatorProfileId'
+      fullPath: '/admin/creators/$creatorProfileId'
+      preLoaderRoute: typeof AdminCreatorsCreatorProfileIdRouteImport
+      parentRoute: typeof AdminCreatorsRoute
+    }
   }
 }
+
+interface AdminCreatorsRouteChildren {
+  AdminCreatorsCreatorProfileIdRoute: typeof AdminCreatorsCreatorProfileIdRoute
+  AdminCreatorsNewRoute: typeof AdminCreatorsNewRoute
+}
+
+const AdminCreatorsRouteChildren: AdminCreatorsRouteChildren = {
+  AdminCreatorsCreatorProfileIdRoute: AdminCreatorsCreatorProfileIdRoute,
+  AdminCreatorsNewRoute: AdminCreatorsNewRoute,
+}
+
+const AdminCreatorsRouteWithChildren = AdminCreatorsRoute._addFileChildren(
+  AdminCreatorsRouteChildren,
+)
 
 interface AdminLedgerRouteChildren {
   AdminLedgerTransactionIdRoute: typeof AdminLedgerTransactionIdRoute
@@ -985,7 +1038,7 @@ const AdminLedgerRouteWithChildren = AdminLedgerRoute._addFileChildren(
 
 interface AdminRouteChildren {
   AdminAuditRoute: typeof AdminAuditRoute
-  AdminCreatorsRoute: typeof AdminCreatorsRoute
+  AdminCreatorsRoute: typeof AdminCreatorsRouteWithChildren
   AdminFinanceRoute: typeof AdminFinanceRoute
   AdminLedgerRoute: typeof AdminLedgerRouteWithChildren
   AdminPayoutsRoute: typeof AdminPayoutsRoute
@@ -994,7 +1047,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAuditRoute: AdminAuditRoute,
-  AdminCreatorsRoute: AdminCreatorsRoute,
+  AdminCreatorsRoute: AdminCreatorsRouteWithChildren,
   AdminFinanceRoute: AdminFinanceRoute,
   AdminLedgerRoute: AdminLedgerRouteWithChildren,
   AdminPayoutsRoute: AdminPayoutsRoute,
