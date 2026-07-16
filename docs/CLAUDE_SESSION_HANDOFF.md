@@ -16,6 +16,18 @@ Use these documents as the source of truth:
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
 
+## Session update — July 16, 2026 (Stream PR #24 — real-video lifecycle VERIFIED end-to-end; still UNMERGED, still draft)
+
+**The one thing that blocked merge is now done: a real video flowed through the whole system, against production, with explicit owner approval for one throwaway asset.** PR #24 stays **OPEN + DRAFT**; nothing merged, nothing deployed, no SQL applied by this session. `origin/main` untouched.
+
+- **What ran:** one benign **2s 320×240** synthetic clip (~11 KB, generated locally with an isolated `ffmpeg-static`), real **tus** upload to the production Cloudflare Stream account, driven to ready by the **live `cabanagrp.com` webhook**. Then publish, signed playback, unauthorized-access, and full delete — all through the app's real paths. `LIFECYCLE RESULT: PASS | webhook-driven: true`.
+- **Every gate held:** upload ticket → trusted `pending_upload` default · **forged `status='ready'` insert denied** (42501, `20260541`-B) · **pre-ready raw-PostgREST publish denied by the DB trigger** (`20260541`-A) + server-action denial, post stayed `draft` · webhook drove `→ ready` (`ready_at` system-set, duration=2, 320×240) · publish-after-ready OK · signed playback **200** (token carries no UID/secret) · anon `can_view_post` false → no token, unsigned CF **401** · delete cascaded + CF `deleted` + ledger row removed.
+- **Independent verification (separate connections, not the harness's clients):** DB residue via the MCP/Management-API connection = **zero** (no rows by the exact UID `ed259655…` or marker; `stream_videos` back to empty; zero orphan candidates). Cloudflare via a direct API call = **404** for the UID (`result` null), marker search **0** assets → asset gone, no second asset, no active upload/retry.
+- **Migration drift corrected:** `20260541` was found **already applied to cloud** (trigger `posts_publish_media_ready` live; `stream_videos` authenticated INSERT narrowed to the four ticket columns; lifecycle UPDATE denied, service_role only) — contradicting the prior on-branch "cloud stays at 20260540" note. This session applied **no** SQL; the objects were already there when it began. CLAUDE.md updated to match. Generated `types.ts` is unchanged by `20260541` (type-neutral) and still matches cloud.
+- **Gate (this session):** lint 0 errors (6 known shadcn warnings) · tsc clean · **1155 tests / 43 files** · coverage 98.77/96.41/99.77/99.34 (95% gate) · build green (`.vercel/output`) · `git diff --check` clean · **smoke:prod 8✓/0✗/1skip/1flaky** (STREAM-WEBHOOK 401 PASS). `db:validate` from-zero: **NOT run this session** (Docker was down; `20260541`'s runtime behavior is already proven live in prod and its behavioral test `stream_publish_integrity.sql` is committed).
+- **Artifacts cleaned:** the untracked `stream-lifecycle.local.ts` harness + all scratchpad inputs (synthetic MP4, marker, logs, isolated ffmpeg install) removed. Working tree clean except untracked `.claude/`.
+- **Still true:** money demo-only; adult-content production uploads disabled; orphan sweep admin-triggered (no cron). **Merge + deploy remain gated on explicit approval — do not merge or deploy PR #24 without sign-off.**
+
 ## Session update — July 15, 2026 (Stream PR #24 recovered and completed as a full vertical slice — UNMERGED, awaiting approval)
 
 **The Cloudflare Stream workstream is now feature-complete on `stream/5a3-composer-ui`.** PR #24 stays **OPEN and DRAFT**; nothing merged, nothing deployed, no production SQL, no migration added. `origin/main` is untouched at `fa903dc`.
