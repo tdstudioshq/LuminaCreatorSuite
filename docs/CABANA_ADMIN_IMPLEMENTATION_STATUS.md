@@ -102,7 +102,7 @@ Production **now has** `/admin/creators`, `page_status`, creator-page admin RPCs
 
 Still absent: creator detail/editor/new routes, invitation/claim schema and UI, preview controls, public rendering of the new appearance fields, browser E2E tests, production migration application, regenerated Supabase types, and the reserved audit-visibility follow-up (no such migration file currently exists). `src/lib/admin-creator-page-actions.ts` uses a temporary narrow type cast because the generated types reflect production, not the branch schema.
 
-The separate `stream/5a3-composer-ui` branch contains commit `308476b` with upload composer UI and tests. It is unmerged and does not supply playback UI or consume the existing playback actions; it also lacks server-side publish readiness, attached-media deletion, and admin media tooling.
+The separate `stream/5a3-composer-ui` branch contains commit `308476b` with upload composer UI and tests. **[Superseded July 16 2026: the complete Stream vertical slice — composer + playback UI + publish/detach/reconcile — squash-merged to production `main` as `d2b7137` and deployed; the pre-merge description that follows is retained for audit history.]** It is unmerged and does not supply playback UI or consume the existing playback actions; it also lacks server-side publish readiness, attached-media deletion, and admin media tooling.
 
 ## Current admin route matrix
 

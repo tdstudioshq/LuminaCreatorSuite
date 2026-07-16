@@ -345,7 +345,7 @@ Provider (Stripe/payout/media)  ──signed event──▶  /api/webhooks/$prov
 
 **Demo phase:** there is no provider. "Webhooks" are simulated by deterministic client/server actions that create `mock_`-prefixed records and follow the same immutability rules (a succeeded mock transaction is never edited in place). The outbox/idempotency structure should still be modeled so the real provider drops in without reshaping the ledger.
 
-### 6c. Implemented: Cloudflare Stream server actions (PR #24, unmerged)
+### 6c. Implemented: Cloudflare Stream server actions (PR #24, merged to production July 16 2026 as `d2b7137`)
 
 All in `src/lib/stream-actions.ts` unless noted. Every write runs under the CALLER's RLS (`attachSupabaseToken` + `requireSupabaseAuth`); the service role is used only AFTER an authorization gate, never as the gate.
 

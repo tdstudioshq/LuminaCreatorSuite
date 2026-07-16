@@ -132,7 +132,7 @@ Treat this as two releases: **1A** is the hardened base creator-page/editor slic
 - Cover every deletion entry point: creator removal, generic `deletePostMedia`, whole-post deletion, failed-ticket compensation, attached detach, retryable provider tombstones and provider-confirmed remote deletion. Add scheduled orphan cleanup and provider-inventory reconciliation for assets created before a ledger insert.
 - Enforce provider/server metadata limits and choose an approved callback scanner, quarantined-ingress architecture or equivalent. Direct browser-to-Cloudflare tus means CABANA's server does not receive bytes and cannot itself inspect signatures or malware.
 - Add admin media inventory, lifecycle/error history and evidence holds. Moderator preview must be a dedicated reason-required, audited path—not a blanket staff branch in `can_view_post` or broad staff table access.
-- Treat the upload UI in unmerged `origin/stream/5a3-composer-ui` commit `308476b` / draft PR #24 as branch-only. Rebase it onto the authoritative publish, playback and cleanup contracts before merge or enablement.
+- **[Done July 16 2026: PR #24 (the full Stream slice) squash-merged to production as `d2b7137` and deployed; the upload UI is no longer branch-only.]** ~~Treat the upload UI in unmerged `origin/stream/5a3-composer-ui` commit `308476b` / draft PR #24 as branch-only. Rebase it onto the authoritative publish, playback and cleanup contracts before merge or enablement.~~
 
 **Migration dependency:** lifecycle/event history, detach state, deletion jobs/tombstones, retry metadata, evidence holds and narrowly scoped admin access.
 
