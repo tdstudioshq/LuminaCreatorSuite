@@ -49,6 +49,7 @@ import { Route as DashboardHomeRouteImport } from './routes/dashboard.home'
 import { Route as DashboardEarningsRouteImport } from './routes/dashboard.earnings'
 import { Route as DashboardAnalyticsRouteImport } from './routes/dashboard.analytics'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as AdminStreamRouteImport } from './routes/admin.stream'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminPayoutsRouteImport } from './routes/admin.payouts'
 import { Route as AdminLedgerRouteImport } from './routes/admin.ledger'
@@ -260,6 +261,11 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminStreamRoute = AdminStreamRouteImport.update({
+  id: '/stream',
+  path: '/stream',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminReportsRoute = AdminReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -340,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/stream': typeof AdminStreamRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
@@ -391,6 +398,7 @@ export interface FileRoutesByTo {
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/stream': typeof AdminStreamRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
@@ -444,6 +452,7 @@ export interface FileRoutesById {
   '/admin/ledger': typeof AdminLedgerRouteWithChildren
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/stream': typeof AdminStreamRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/analytics': typeof DashboardAnalyticsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
@@ -498,6 +507,7 @@ export interface FileRouteTypes {
     | '/admin/ledger'
     | '/admin/payouts'
     | '/admin/reports'
+    | '/admin/stream'
     | '/auth/callback'
     | '/dashboard/analytics'
     | '/dashboard/earnings'
@@ -549,6 +559,7 @@ export interface FileRouteTypes {
     | '/admin/ledger'
     | '/admin/payouts'
     | '/admin/reports'
+    | '/admin/stream'
     | '/auth/callback'
     | '/dashboard/analytics'
     | '/dashboard/earnings'
@@ -601,6 +612,7 @@ export interface FileRouteTypes {
     | '/admin/ledger'
     | '/admin/payouts'
     | '/admin/reports'
+    | '/admin/stream'
     | '/auth/callback'
     | '/dashboard/analytics'
     | '/dashboard/earnings'
@@ -937,6 +949,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/stream': {
+      id: '/admin/stream'
+      path: '/stream'
+      fullPath: '/admin/stream'
+      preLoaderRoute: typeof AdminStreamRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/reports': {
       id: '/admin/reports'
       path: '/reports'
@@ -1043,6 +1062,7 @@ interface AdminRouteChildren {
   AdminLedgerRoute: typeof AdminLedgerRouteWithChildren
   AdminPayoutsRoute: typeof AdminPayoutsRoute
   AdminReportsRoute: typeof AdminReportsRoute
+  AdminStreamRoute: typeof AdminStreamRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -1052,6 +1072,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminLedgerRoute: AdminLedgerRouteWithChildren,
   AdminPayoutsRoute: AdminPayoutsRoute,
   AdminReportsRoute: AdminReportsRoute,
+  AdminStreamRoute: AdminStreamRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

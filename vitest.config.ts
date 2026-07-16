@@ -44,6 +44,7 @@ export default defineConfig({
         "src/lib/cabana-creator-page-view.ts",
         "src/lib/cabana-admin-creator-page-detail.ts",
         "src/lib/cabana-admin-creator-editor.ts",
+        "src/lib/cabana-composer-media.ts",
       ],
       thresholds: {
         lines: 95,

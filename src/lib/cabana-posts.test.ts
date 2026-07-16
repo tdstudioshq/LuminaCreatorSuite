@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  type FeedPost,
   CAPTION_MAX,
   assertStatusTransition,
+  feedPostHasVideo,
   mapFeedMedia,
   mapFeedPost,
   mapPost,
   mapPostMedia,
   normalizeCaption,
+  partitionFeedMediaIds,
   normalizeNewPost,
   normalizePostCurrency,
   normalizePostMediaInput,
@@ -319,6 +322,80 @@ describe("mapFeedMedia", () => {
     ]);
     expect(out[0]).toEqual({ id: "a", kind: "image", width: 10, height: 20, position: 1 });
     expect(out[1]).toEqual({ id: "b", kind: "image", width: null, height: null, position: 5 });
+  });
+});
+
+describe("partitionFeedMediaIds / feedPostHasVideo", () => {
+  const post = (
+    postId: string,
+    kinds: ("image" | "video" | "audio")[],
+    locked = false,
+  ): FeedPost => ({
+    postId,
+    username: "aurora",
+    displayName: "Aurora",
+    avatarUrl: null,
+    caption: "",
+    visibility: "public",
+    publishedAt: null,
+    locked,
+    media: kinds.map((kind, i) => ({
+      id: `${postId}-${i}`,
+      kind,
+      width: null,
+      height: null,
+      position: i,
+    })),
+  });
+
+  it("detects video from the feed media descriptors", () => {
+    expect(feedPostHasVideo(post("p", ["video"]))).toBe(true);
+    expect(feedPostHasVideo(post("p", ["image", "image"]))).toBe(false);
+    expect(feedPostHasVideo(post("p", []))).toBe(false);
+  });
+
+  it("routes video posts and image posts to their own batches", () => {
+    expect(partitionFeedMediaIds([post("v", ["video"]), post("i", ["image"])])).toEqual({
+      imagePostIds: ["i"],
+      videoPostIds: ["v"],
+    });
+  });
+
+  // Asking for media the server will refuse is waste, and it signals intent.
+  it("excludes locked posts from both batches", () => {
+    expect(partitionFeedMediaIds([post("v", ["video"], true), post("i", ["image"], true)])).toEqual(
+      {
+        imagePostIds: [],
+        videoPostIds: [],
+      },
+    );
+  });
+
+  it("excludes caption-only posts from both batches", () => {
+    expect(partitionFeedMediaIds([post("c", [])])).toEqual({
+      imagePostIds: [],
+      videoPostIds: [],
+    });
+  });
+
+  // The media-mix rule forbids this, but deriving each list independently means
+  // a post that somehow carried both still renders both rather than losing one.
+  it("puts a mixed post in both batches rather than dropping either", () => {
+    expect(partitionFeedMediaIds([post("m", ["video", "image"])])).toEqual({
+      imagePostIds: ["m"],
+      videoPostIds: ["m"],
+    });
+  });
+
+  it("treats audio as non-video media", () => {
+    expect(partitionFeedMediaIds([post("a", ["audio"])])).toEqual({
+      imagePostIds: ["a"],
+      videoPostIds: [],
+    });
+  });
+
+  it("handles an empty feed", () => {
+    expect(partitionFeedMediaIds([])).toEqual({ imagePostIds: [], videoPostIds: [] });
   });
 });
 

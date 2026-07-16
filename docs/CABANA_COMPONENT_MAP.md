@@ -77,7 +77,7 @@ App shell (__root.tsx)
 
 ### Posts & feed (`cabana/posts/`)
 
-`PostsDashboard` (creator manage view), `PostComposer` (visibility + price authoring), `PostCard`, `PostMediaGallery`, `PostVisibilityBadge`, `LockedContentGate` (entitlement-driven, purchase-unlock CTA), `EngagementBar` (like/save/comment), `CommentList`, `CommentComposer`, `HomeFeed` (`/feed`), `PostDetail` (`/post/$postId`), `FeedBatchScope` (H-08 batched media/engagement prefetch — pairs with `src/lib/feed-batch-context.ts`).
+`PostsDashboard` (creator manage view), `PostComposer` (visibility + price authoring), `PostCard`, `PostMediaGallery`, `PostVisibilityBadge`, `LockedContentGate` (entitlement-driven, purchase-unlock CTA), `EngagementBar` (like/save/comment), `CommentList`, `CommentComposer`, `HomeFeed` (`/feed`), `PostDetail` (`/post/$postId`), `FeedBatchScope` (H-08 batched media/engagement/**playback** prefetch — pairs with `src/lib/feed-batch-context.ts`), `VideoUploadCard` (5A.3 upload surface — pure projection of `cabana-composer-media`), `StreamVideoPlayer` (5B signed playback — poster-first, click-to-mount Cloudflare iframe; nothing autoplays). `PostMediaGallery` forks on `hasVideo`: video → `useStreamPlayback`, images → `usePostMediaUrls`.
 
 ### Messaging (`cabana/messaging/`)
 

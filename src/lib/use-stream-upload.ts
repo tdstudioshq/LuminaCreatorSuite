@@ -44,6 +44,7 @@ import {
   attachStreamVideoToPost,
   createStreamUploadTicket,
   deleteStreamVideo,
+  detachStreamVideoFromPost,
   getStreamVideoStatus,
 } from "@/lib/stream-actions";
 import {
@@ -78,6 +79,8 @@ export type StreamUploadServerActions = {
   attachVideo: (input: { postId: string; streamVideoId: string }) => Promise<unknown>;
   getVideoStatus: (input: { streamVideoId: string }) => Promise<{ status: StreamVideoStatus }>;
   deleteVideo: (input: { streamVideoId: string }) => Promise<unknown>;
+  /** Detach an ATTACHED video from its post, then reclaim it (5A.4). */
+  detachVideo: (input: { streamVideoId: string }) => Promise<unknown>;
 };
 
 export type StreamUploadControllerDeps = {
@@ -122,6 +125,7 @@ export function createServerStreamUploadActions(): StreamUploadServerActions {
     attachVideo: (input) => attachStreamVideoToPost({ data: input }),
     getVideoStatus: (input) => getStreamVideoStatus({ data: input }),
     deleteVideo: (input) => deleteStreamVideo({ data: input }),
+    detachVideo: (input) => detachStreamVideoFromPost({ data: input }),
   };
 }
 
@@ -178,6 +182,8 @@ export type StreamUploadController = {
   retry: () => boolean;
   cancel: () => boolean;
   reset: () => boolean;
+  /** Detach an attached video from its post, reclaim it, and clear the session. */
+  removeAttached: () => Promise<boolean>;
   /** Re-arms a disposed controller (React StrictMode's mount→unmount→mount). */
   activate: () => void;
   /** Aborts the transport, stops timers, and silences every late callback. */
@@ -318,7 +324,7 @@ export function createStreamUploadController(
     if (disposed || myRun !== runId) {
       // The session is gone (unmount, or reset after a debt-free cancel) but
       // the server minted a row + Cloudflare asset. Best-effort reclaim; the
-      // server-side orphan sweep is the backstop.
+      // server-side orphan sweep (`stream-reconcile-actions`) is the backstop.
       void Promise.resolve(deps.actions.deleteVideo({ streamVideoId: ticket.streamVideoId })).catch(
         () => {},
       );
@@ -510,13 +516,57 @@ export function createStreamUploadController(
     } catch {
       if (disposed || myRun !== runId) return;
       // Debt stays visible (cleanupRequired remains true; reset stays
-      // blocked). The server-side orphan sweep is the terminal backstop.
+      // blocked). The server-side orphan sweep (`stream-reconcile-actions`,
+      // admin-triggered) is the terminal backstop.
       if (cleanupAttempts >= UPLOAD_RETRY_LIMITS.cleanup) return;
       scheduleCleanup(computeUploadRetryDelayMs("cleanup", cleanupAttempts));
       return;
     }
     if (disposed || myRun !== runId) return;
     dispatch({ type: "cleanup_completed" }); // the ONLY thing that clears debt
+  }
+
+  // ── detach (5A.4) ──────────────────────────────────────────────────────────
+
+  /**
+   * Remove an ATTACHED video: detach its post_media row, reclaim the asset, and
+   * clear the session. This is the flow that pays the `detachRequired` debt the
+   * machine records but cannot settle on its own.
+   *
+   * Only legal from `ready` or from a canceled session carrying detach debt —
+   * the two states where a post_media row may exist. In every other phase the
+   * ordinary cancel → cleanup → reset path already applies and this would be a
+   * second, racing way to destroy the same asset.
+   *
+   * The session is only cleared on SUCCESS. A failed detach leaves the composer
+   * exactly as it was, still showing the video that is still attached, because
+   * clearing it would tell the creator their video is gone while the post still
+   * references it — the precise lie this module exists to prevent.
+   */
+  async function removeAttached(): Promise<boolean> {
+    if (disposed) return false;
+    // Narrow per phase: only these two carry a video that may be attached, and
+    // only `canceled` allows a null id (a cancel before the ticket landed).
+    const streamVideoId =
+      session.phase === "ready"
+        ? session.streamVideoId
+        : session.phase === "canceled" && session.detachRequired
+          ? session.streamVideoId
+          : null;
+    if (streamVideoId === null) return false;
+
+    const myRun = runId;
+    try {
+      await deps.actions.detachVideo({ streamVideoId });
+    } catch {
+      return false; // Still attached — say nothing false.
+    }
+    if (disposed || myRun !== runId) return false;
+
+    // The asset is gone, so any recorded debt is settled; that is what lets the
+    // machine's reset gate open.
+    if (session.phase === "canceled") dispatch({ type: "cleanup_completed" });
+    return reset();
   }
 
   // ── reset / lifecycle ──────────────────────────────────────────────────────
@@ -570,6 +620,7 @@ export function createStreamUploadController(
     retry,
     cancel,
     reset,
+    removeAttached,
     activate: () => {
       disposed = false;
     },
@@ -597,6 +648,8 @@ export type StreamUploadApi = StreamUploadFlags & {
   retry: () => boolean;
   cancel: () => boolean;
   reset: () => boolean;
+  /** Detach an attached video server-side, reclaim it, then clear the session. */
+  removeAttached: () => Promise<boolean>;
 };
 
 /**
@@ -643,6 +696,7 @@ export function useStreamUpload(options?: UseStreamUploadOptions): StreamUploadA
       retry: controller.retry,
       cancel: controller.cancel,
       reset: controller.reset,
+      removeAttached: controller.removeAttached,
     }),
     [controller, snapshot],
   );

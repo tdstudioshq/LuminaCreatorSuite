@@ -161,6 +161,9 @@ function attachDeps(overrides: Partial<Parameters<typeof executeAttachFlow>[0]> 
     deleteMedia: async (id) => {
       log.push(`delete-media:${id}`);
     },
+    syncMediaStatus: async (id, status) => {
+      log.push(`sync-media:${id}:${status}`);
+    },
     ...overrides,
   };
   return { deps, log };
@@ -181,6 +184,63 @@ describe("executeAttachFlow", () => {
       getOwnVideo: async () => ({ id: SV_ID, uid: UID, status: "ready" }),
     });
     expect((await executeAttachFlow(deps, ATTACH_INPUT)).processingStatus).toBe("ready");
+  });
+
+  // The status stamped at insert is read BEFORE the media row exists, so a
+  // lifecycle write landing in that window updates nothing. Left uncorrected the
+  // row sits at "processing" forever, because the status-refresh flow
+  // short-circuits on a terminal video and never revisits the media.
+  it("corrects the media row when the video went ready during the insert window", async () => {
+    let reads = 0;
+    const { deps, log } = attachDeps({
+      // 1st read (pre-insert) = processing → stamped. 2nd (post-insert) = ready.
+      getOwnVideo: async () => ({
+        id: SV_ID,
+        uid: UID,
+        status: ++reads <= 1 ? "processing" : "ready",
+      }),
+    });
+    const media = await executeAttachFlow(deps, ATTACH_INPUT);
+    expect(log[0]).toBe(`insert:${OWNER}/stream/${UID}:processing`);
+    expect(log).toContain("sync-media:media-1:ready");
+    expect(media.mediaId).toBe("media-1");
+  });
+
+  it("corrects the media row when the video errored during the insert window", async () => {
+    let reads = 0;
+    const { deps, log } = attachDeps({
+      getOwnVideo: async () => ({
+        id: SV_ID,
+        uid: UID,
+        status: ++reads <= 1 ? "processing" : "error",
+      }),
+    });
+    await executeAttachFlow(deps, ATTACH_INPUT);
+    expect(log).toContain("sync-media:media-1:error");
+  });
+
+  it("does not touch the media row when the status did not move", async () => {
+    const { deps, log } = attachDeps();
+    await executeAttachFlow(deps, ATTACH_INPUT);
+    expect(log.some((l) => l.startsWith("sync-media:"))).toBe(false);
+  });
+
+  // Attachment already succeeded; convergence is guaranteed by the refresh flow.
+  it("still returns the attachment when the corrective sync fails", async () => {
+    let reads = 0;
+    const { deps } = attachDeps({
+      getOwnVideo: async () => ({
+        id: SV_ID,
+        uid: UID,
+        status: ++reads <= 1 ? "processing" : "ready",
+      }),
+      syncMediaStatus: async () => {
+        throw new Error("network");
+      },
+    });
+    await expect(executeAttachFlow(deps, ATTACH_INPUT)).resolves.toMatchObject({
+      mediaId: "media-1",
+    });
   });
 
   it("rejects an invisible (non-owned) video and an error-state video", async () => {
@@ -273,6 +333,20 @@ describe("executeStatusRefreshFlow", () => {
       expect(result.refreshed).toBe(false);
     }
     expect(cfCalled).toBe(false);
+  });
+
+  // A terminal row writes NOTHING — no Cloudflare call, no video update, and no
+  // media update. Cosmetic media skew is repaired at its source in the attach
+  // flow, so this path stays free of write amplification on every poll and every
+  // duplicate webhook redelivery.
+  it("writes nothing at all for terminal rows", async () => {
+    const { deps, log } = refreshDeps();
+    const result = await executeStatusRefreshFlow(
+      deps,
+      videoRow({ status: "ready", width: 1920, height: 1080 }),
+    );
+    expect(result.refreshed).toBe(false);
+    expect(log).toEqual([]);
   });
 
   it("applies a ready flip with CAS guard and updates media lifecycle columns only", async () => {

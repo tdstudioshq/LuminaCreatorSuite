@@ -362,6 +362,42 @@ export function assertPublishableMedia(processingStatuses: readonly string[]): v
   throw new Error("This post's video is still processing. Publish once it is ready.");
 }
 
+/** A `post_media` row joined to its `stream_videos` lifecycle row, if any. */
+export type PublishMediaRow = {
+  storageBucket: string;
+  processingStatus: string;
+  /** `stream_videos.status`, or null when the join found no lifecycle row. */
+  streamStatus: StreamVideoStatus | null;
+};
+
+/**
+ * The status the publish gate must judge a media row by.
+ *
+ * For a Stream row the AUTHORITY is `stream_videos.status`, never the row's own
+ * `processing_status`: the lifecycle writer syncs `processing_status` on a
+ * best-effort basis, so a row whose webhook landed before the media row existed
+ * can sit at "processing" forever while the video is genuinely ready. Judging
+ * the video by the video's own status makes that skew unpublishable-blocking
+ * instead of permanent, and costs nothing when the two agree.
+ *
+ * A Stream-bucket row with NO lifecycle row is unpublishable by design: the
+ * composite FK makes it unreachable, so seeing one means the invariant broke and
+ * we must fail closed rather than guess.
+ *
+ * Non-Stream rows (images) keep their own `processing_status`, which the schema
+ * defaults to "ready" — so image-only posts are unaffected.
+ */
+export function resolveMediaProcessingStatus(row: PublishMediaRow): string {
+  if (row.storageBucket !== STREAM_STORAGE_BUCKET) return row.processingStatus;
+  if (row.streamStatus === null) return "error";
+  return processingStatusForStream(row.streamStatus);
+}
+
+/** Convenience: judge a joined media set straight from rows. */
+export function assertPublishableMediaRows(rows: readonly PublishMediaRow[]): void {
+  assertPublishableMedia(rows.map(resolveMediaProcessingStatus));
+}
+
 // ───────────────── Cloudflare wire contracts: playback URLs ─────────────────
 // Signed playback substitutes the TOKEN for the video UID in the same URL
 // templates (verified: /iframe, /manifest/video.m3u8, /manifest/video.mpd,
@@ -395,6 +431,19 @@ export type StreamPlaybackUrls = {
   dash: string;
   thumbnail: string;
 };
+
+/**
+ * Runtime as `m:ss` for a playback badge, or null when it is not yet known.
+ *
+ * Returns null rather than "0:00" for an unknown duration: Cloudflare reports it
+ * only once encoding finishes, and a confident "0:00" on a real video is a lie
+ * the viewer would read as a broken upload.
+ */
+export function formatStreamDuration(seconds: number | null): string | null {
+  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) return null;
+  const total = Math.round(seconds);
+  return `${Math.floor(total / 60)}:${(total % 60).toString().padStart(2, "0")}`;
+}
 
 /**
  * Build the four playback URLs for a signed token on a customer subdomain.
@@ -817,6 +866,22 @@ export type OrphanReason =
   | "never_attached"
   | "stuck_processing";
 
+/** Operator-facing label for why a video was selected for reclamation. */
+export function orphanReasonLabel(reason: OrphanReason): string {
+  switch (reason) {
+    case "upload_expired":
+      return "Upload ticket expired";
+    case "stale_pending":
+      return "Upload never started";
+    case "failed":
+      return "Encoding failed";
+    case "never_attached":
+      return "Never added to a post";
+    case "stuck_processing":
+      return "Stuck processing";
+  }
+}
+
 export type OrphanGracePeriods = {
   pendingMs: number;
   errorMs: number;
@@ -827,7 +892,13 @@ export type OrphanGracePeriods = {
 export const DEFAULT_ORPHAN_GRACE: OrphanGracePeriods = {
   pendingMs: 24 * 60 * 60 * 1000,
   errorMs: 24 * 60 * 60 * 1000,
-  readyUnattachedMs: 24 * 60 * 60 * 1000,
+  // 7 days, NOT 24h: a `ready` unattached video is a real upload a creator has
+  // not composed into a post yet, so this window is the length of time we let
+  // them take. A day strands anyone who uploads Friday and writes Monday —
+  // deleting finished work is far worse than storing it for a week. The other
+  // windows stay short because they reclaim failures and abandoned tickets,
+  // which nobody is coming back for.
+  readyUnattachedMs: 7 * 24 * 60 * 60 * 1000,
   processingStuckMs: 7 * 24 * 60 * 60 * 1000,
 };
 

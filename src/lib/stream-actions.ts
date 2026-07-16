@@ -327,6 +327,8 @@ export type AttachFlowDeps = {
   /** Kinds AFTER insert, for the compensating mix re-check. */
   recheckKinds: (postId: string) => Promise<string[]>;
   deleteMedia: (mediaId: string) => Promise<void>;
+  /** Correct a media row whose status was stamped from a stale read. */
+  syncMediaStatus: (mediaId: string, processingStatus: string) => Promise<void>;
 };
 
 /**
@@ -367,6 +369,24 @@ export async function executeAttachFlow(
     }
     throw new Error("This post's media changed while attaching. Try again.");
   }
+
+  // The status we stamped above was read BEFORE the row existed. If the video
+  // went terminal in that window, the lifecycle writer's sync found no media row
+  // to update, so re-read and correct it here. Best-effort: the status-refresh
+  // flow re-asserts terminal media state too, so a failure here self-heals on
+  // the next poll rather than stranding the row.
+  try {
+    const fresh = await deps.getOwnVideo(input.streamVideoId);
+    if (fresh && fresh.status !== video.status) {
+      await deps.syncMediaStatus(
+        media.mediaId,
+        processingStatusForStream(fresh.status as StreamVideoStatus),
+      );
+    }
+  } catch {
+    // Ignore — attachment itself succeeded; convergence is guaranteed elsewhere.
+  }
+
   return media;
 }
 
@@ -431,6 +451,13 @@ export const attachStreamVideoToPost = createServerFn({ method: "POST" })
         recheckKinds: fetchKinds,
         deleteMedia: async (mediaId) => {
           await supabase.from("post_media").delete().eq("id", mediaId);
+        },
+        syncMediaStatus: async (mediaId, processingStatus) => {
+          const { error } = await supabase
+            .from("post_media")
+            .update({ processing_status: processingStatus })
+            .eq("id", mediaId);
+          if (error) throw new Error(error.message);
         },
       },
       { ...data, ownerUserId: userId },
@@ -511,6 +538,13 @@ export async function executeStatusRefreshFlow(
   });
 
   // Terminal rows never change — skip the Cloudflare round-trip entirely.
+  //
+  // Deliberately does NOT re-sync the media row: `post_media.processing_status`
+  // has no functional reader (the publish gate and playback both judge a video by
+  // `stream_videos.status`, precisely because this column can lag), so repairing
+  // cosmetic skew here would buy nothing and cost a write on every duplicate
+  // webhook and poll. The skew is prevented at its source instead — see the
+  // post-insert correction in `executeAttachFlow`.
   if (isTerminalStreamStatus(video.status)) return fromRow(false);
 
   let snapshot: StreamVideoSnapshot | null;
@@ -771,6 +805,56 @@ export async function executeDeleteFlow(
   await deps.deleteRow(video.id);
   return { streamVideoId: video.id, deleted: true };
 }
+
+/**
+ * Detach a Stream video from whatever post holds it, then reclaim it
+ * (Checkpoint 5A.4) — the flow `deleteStreamVideo` deliberately refuses.
+ *
+ * `deleteStreamVideo` rejects an ATTACHED video on purpose: removing a live
+ * post's media must be an explicit decision, never a cascade or a background
+ * side effect. This IS that explicit decision, so it does the two steps in the
+ * only safe order — drop the `post_media` row first so the post immediately
+ * stops referencing the asset, and only then destroy the asset. The reverse
+ * would leave a post pointing at a destroyed video.
+ *
+ * Ownership is RLS's job at every step: the caller can only see their own
+ * `stream_videos` row, and can only delete `post_media` rows they own. A
+ * foreign id is simply invisible, so this cannot touch another creator's video.
+ *
+ * Best-effort remote reclaim: the detach is what the creator asked for and it
+ * has already succeeded by then, so a Cloudflare outage must not fail the
+ * request. The `stream_videos` row survives unattached, which is exactly what
+ * the orphan sweep reclaims.
+ */
+export const detachStreamVideoFromPost = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseToken, requireSupabaseAuth])
+  .inputValidator((raw: { streamVideoId?: unknown }) => ({
+    streamVideoId: normalizeUuid(raw?.streamVideoId, "stream video id"),
+  }))
+  .handler(async ({ context, data }): Promise<{ streamVideoId: string; detached: true }> => {
+    const { supabase } = context;
+    const { data: video, error: videoError } = await supabase
+      .from("stream_videos")
+      .select("id, uid")
+      .eq("id", data.streamVideoId)
+      .maybeSingle();
+    if (videoError) throw new Error(videoError.message);
+    if (!video) throw new Error("Video not found.");
+
+    const { error: detachError } = await supabase
+      .from("post_media")
+      .delete()
+      .eq("stream_video_id", video.id);
+    if (detachError) throw new Error(detachError.message);
+
+    try {
+      const { reclaimStreamVideos } = await import("@/lib/stream-reclaim.server");
+      await reclaimStreamVideos(supabase, [{ id: video.id, uid: video.uid }]);
+    } catch {
+      // The detach stands; the sweep reclaims the asset later.
+    }
+    return { streamVideoId: video.id, detached: true };
+  });
 
 export const deleteStreamVideo = createServerFn({ method: "POST" })
   .middleware([attachSupabaseToken, requireSupabaseAuth])

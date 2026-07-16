@@ -15,6 +15,7 @@ import {
 import { useMemo, useState } from "react";
 import { PostCard } from "@/components/cabana/posts/PostCard";
 import { FeedBatchScope } from "@/components/cabana/posts/FeedBatchScope";
+import { partitionFeedMediaIds } from "@/lib/cabana-posts";
 import { EmptyState } from "@/components/cabana/EmptyState";
 import { SocialShell } from "@/components/cabana/social/SocialShell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -297,6 +298,8 @@ function DiscoveryMixedFeed({
   hasMore: boolean;
   onLoadMore: () => void;
 }) {
+  const feedPosts = items.flatMap((it) => (it.kind === "post" ? [it.post] : []));
+  const { imagePostIds, videoPostIds } = partitionFeedMediaIds(feedPosts);
   return (
     <section className="space-y-4">
       <SectionHeader
@@ -311,14 +314,9 @@ function DiscoveryMixedFeed({
         <EmptyFeedState />
       ) : (
         <FeedBatchScope
-          mediaPostIds={items
-            .flatMap((it) => (it.kind === "post" ? [it.post] : []))
-            .filter((p) => !p.locked && p.media.length > 0)
-            .map((p) => p.postId)}
-          engagementPostIds={items
-            .flatMap((it) => (it.kind === "post" ? [it.post] : []))
-            .filter((p) => !p.locked)
-            .map((p) => p.postId)}
+          mediaPostIds={imagePostIds}
+          videoPostIds={videoPostIds}
+          engagementPostIds={feedPosts.filter((p) => !p.locked).map((p) => p.postId)}
         >
           <div className="grid gap-4 lg:grid-cols-2">
             {items.map((item, index) =>
@@ -417,7 +415,8 @@ function PostsSection({
         <InlineEmptyState label={emptyLabel ?? `No ${title.toLowerCase()} yet.`} icon={icon} />
       ) : (
         <FeedBatchScope
-          mediaPostIds={posts.filter((p) => !p.locked && p.media.length > 0).map((p) => p.postId)}
+          mediaPostIds={partitionFeedMediaIds(posts).imagePostIds}
+          videoPostIds={partitionFeedMediaIds(posts).videoPostIds}
           engagementPostIds={posts.filter((p) => !p.locked).map((p) => p.postId)}
         >
           <div className="space-y-4">
