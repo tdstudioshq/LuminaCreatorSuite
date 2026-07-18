@@ -4,7 +4,7 @@
 >
 > Severity: 🔴 blocker for production · 🟠 important · 🟡 cleanup. Plan only.
 >
-> Last reconciled against the tree: **July 11, 2026** (backlog-program Phase-0). HEAD `8b482b4`, **`main == origin/main`** (pushed, CI green); cloud current through `20260532` (both `20260531`+`20260532` applied + live-verified); production Vercel deploy READY from `8b482b4`. The prior "HEAD `4567c71` / 9 commits ahead / push pending" header was stale. Repo now holds **22 migrations** (`20260511`→`20260532`) and **19 SQL behavioral suites**.
+> Last reconciled against the tree: **July 18, 2026** (post-Stream-release verification). HEAD `8dfa44f`, **`main == origin/main`**; cloud current through `20260541` (Stream publish trigger + narrowed grant live-verified); production Vercel deploy READY from `8dfa44f` (Stream merge `d2b7137` + docs). Repo now holds **31 migrations** (`20260511`→`20260541`) and **28 SQL behavioral suites**.
 
 ---
 

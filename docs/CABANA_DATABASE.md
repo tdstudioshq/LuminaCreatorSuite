@@ -3,9 +3,9 @@
 > Target production schema for the full creator-subscription platform, plus the documented current state.
 >
 > **This document is partially stale (flagged July 11, 2026).** Its §1 write-up stops around Phase 7,
-> but the implemented schema now spans **30 migrations (`20260511`→`20260540`)** (range updated July 15, 2026) — posts, engagement,
+> but the implemented schema now spans **31 migrations (`20260511`→`20260541`)** (range updated July 18, 2026) — posts, engagement,
 > creator subscriptions, messaging, the monetization ledger, notifications, moderation, admin payouts,
-> the notification engine, creator analytics, audience insights, Cloudflare Stream video (`20260536`), and
+> the notification engine, creator analytics, audience insights, Cloudflare Stream video (`20260536` + publish integrity `20260541`, cloud + prod July 16, 2026), and
 > **admin creator-page management (Phase 2A, `20260537`–`20260540`, cloud + prod July 15, 2026)** — draft/published/archived
 > page visibility, 8 audited admin SECURITY DEFINER RPCs, restricted moderator audit visibility + revoked direct
 > `user_roles` DML, and one-page-per-owner + protected lifecycle/ownership columns — are all live against real tables +

@@ -1,6 +1,6 @@
 # CABANA — Claude Agent Session Handoff
 
-> Prepared June 25, 2026 · Last updated July 15, 2026
+> Prepared June 25, 2026 · Last updated July 18, 2026
 >
 > Workspace: `/Users/tdstudiosny/LuminaCreatorSuite`
 
@@ -15,6 +15,14 @@ Use these documents as the source of truth:
 1. [`CABANA_ARCHITECTURE.md`](../CABANA_ARCHITECTURE.md)
 2. [`docs/CABANA_BUILD_ROADMAP.md`](./CABANA_BUILD_ROADMAP.md)
 3. This handoff
+
+## Session update — July 18, 2026 (post-release verification — Stream release re-confirmed healthy; stale status docs corrected)
+
+**No code, schema, or deploy action — verification + docs only.** This session received the merge/deploy approval for PR #24 and found the release **already executed by the July 16 session** (PR #24 MERGED as `d2b7137`, production deploy `dpl_JDWXsAD5…` READY, docs `8dfa44f`); per the "stop if expected state differs" gate it re-verified instead of re-merging.
+
+- **Re-verified (all healthy, 2 days post-release):** `smoke:prod` **8✓/0✗/1skip/1flaky** (DEPLOY-FRESHNESS + STREAM-WEBHOOK-401 PASS; realtime flaky-passed on retry; admin-finance skip = empty ledger). DB via MCP (read-only): `posts_publish_media_ready` trigger + function installed; `stream_videos` authenticated INSERT = exactly the four ticket columns, **no** authenticated UPDATE, service_role full lifecycle; `stream_videos` empty, prior test UID `ed259655…` zero rows, zero orphan candidates. Deployed app: all routes serve the shell, security headers present, JS chunks scanned — **zero** secret markers, no SSR'd playback tokens. Main tree: full Stream slice present, `vitest.config.ts` coverage set intact at 26 entries, creator-page migrations byte-identical to `15cb8ad`, no test artifacts, untracked = `.claude/` only.
+- **Docs corrected (stale pre-merge live-status text):** CLAUDE.md §Stream tail ("stays open + draft" → merged/deployed), route map (`/admin/stream` unmerged-note; webhook "not yet registered" → live since July 13), DATABASE.md banner (31 migrations → `20260541`), TECH_DEBT.md header re-stamp (July 18, HEAD `8dfa44f`, 31 migrations / 28 suites, cloud `20260541`), ADMIN_GAP_MATRIX (`STREAM` shipped; playback row Done-marker), ADMIN_IMPLEMENTATION_STATUS (production-state paragraph + mock-vs-live rows for Stream and creator pages), ADMIN_ROADMAP blocker #7 SHIPPED annotation, GEMINI.md Stream bullet (sync rule). Dated historical entries left untouched.
+- **Still true:** money demo-only; adult uploads disabled; orphan sweep admin/manual (no cron); cross-reload upload recovery absent by design; invite/claim + staff MFA separate workstreams; `20260541` governance note stands (applied-by actor/time unconfirmed; contents match the committed, from-zero-tested migration).
 
 ## Session update — July 16, 2026 (Stream PR #24 — MERGED + DEPLOYED to production; Stream is now LIVE)
 

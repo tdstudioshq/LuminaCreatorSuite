@@ -105,7 +105,7 @@
 | `/admin/ledger`                     | admin.ledger.tsx                     | Client `AdminGate` (admin) | ✅ real ledger explorer + CSV export (Phase 8C.1)                                                                                            |
 | `/admin/ledger/$transactionId`      | admin.ledger.$transactionId.tsx      | Client `AdminGate` (admin) | ✅ transaction detail (Phase 8C.1)                                                                                                           |
 | `/admin/payouts`                    | admin.payouts.tsx                    | Client `AdminGate` (admin) | ✅ real payout review queue — approve/hold/release/reject/mark-paid (Phase 8C.2, demo money)                                                 |
-| `/admin/stream`                     | admin.stream.tsx                     | Client `AdminGate` (admin) | ✅ Stream orphan sweep — dry-run report + bounded reclaim of unreferenced Cloudflare assets (5A.4, **PR #24, unmerged**)                     |
+| `/admin/stream`                     | admin.stream.tsx                     | Client `AdminGate` (admin) | ✅ Stream orphan sweep — dry-run report + bounded reclaim of unreferenced Cloudflare assets (5A.4; shipped July 16 2026, PR #24 `d2b7137`)   |
 | `/admin/creators`                   | admin.creators.tsx                   | Client `AdminGate` (admin) | ✅ live creator directory over real `creator_profiles` (Phase 2A; paginated; `user_id`/email never wired to the browser)                     |
 | `/admin/creators/new`               | admin.creators.new.tsx               | Client `AdminGate` (admin) | ✅ admin creator-page create form (Phase 2A; audited SECURITY DEFINER RPC)                                                                   |
 | `/admin/creators/$creatorProfileId` | admin.creators.$creatorProfileId.tsx | Client `AdminGate` (admin) | ✅ admin creator-page editor — identity/appearance/links/lifecycle/ownership/preview/audit (Phase 2A; cloud `20260540`, prod July 15 2026)   |
@@ -117,8 +117,8 @@
   Stream lifecycle webhook. No component; the handler (dynamically imported
   `stream-webhook.server.ts`) verifies the `Webhook-Signature` HMAC before touching anything,
   then applies a compare-and-set lifecycle update to `stream_videos` + linked `post_media`.
-  Unsigned/invalid → 401; malformed payload → 400; unknown UID → 200 no-op. Not yet registered
-  with Cloudflare (registration is a separate, approval-gated step).
+  Unsigned/invalid → 401; malformed payload → 400; unknown UID → 200 no-op. Registered with
+  Cloudflare and LIVE in production at `cabanagrp.com/api/webhooks/stream` since July 13 2026.
 
 ## 3. Planned Routes
 
